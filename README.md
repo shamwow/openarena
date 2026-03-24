@@ -6,8 +6,10 @@ A browser-based multiplayer card game built with React, TypeScript, and Vite. Th
 
 ```bash
 npm install
-npm run dev          # Start dev server
+npm run build
 ```
+
+Then start the dev server with `npm run dev`.
 
 ## Scripts
 
