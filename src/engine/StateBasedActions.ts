@@ -12,10 +12,16 @@ interface SBAAction {
 }
 
 export class StateBasedActions {
+  private zoneManager: ZoneManager;
+  private eventBus: EventBus;
+
   constructor(
-    private zoneManager: ZoneManager,
-    private eventBus: EventBus,
-  ) {}
+    zoneManager: ZoneManager,
+    eventBus: EventBus,
+  ) {
+    this.zoneManager = zoneManager;
+    this.eventBus = eventBus;
+  }
 
   /**
    * Check and apply state-based actions.
@@ -147,7 +153,7 @@ export class StateBasedActions {
       }
     }
 
-    for (const [_name, legends] of legendaryByName) {
+    for (const legends of legendaryByName.values()) {
       if (legends.length > 1) {
         // Keep the one with highest timestamp (most recently entered), sacrifice the rest
         legends.sort((a, b) => b.timestamp - a.timestamp);

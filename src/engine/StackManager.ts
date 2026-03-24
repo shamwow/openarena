@@ -2,20 +2,23 @@ import { v4 as uuid } from 'uuid';
 import type {
   GameState, StackEntry, ObjectId, PlayerId, CardInstance,
   EffectContext, ActivatedAbilityDef, TriggeredAbilityDef,
-  GameEvent, ManaCost, StackEntryType as StackEntryTypeEnum,
+  GameEvent,
 } from './types';
 import { GameEventType, StackEntryType, CardType } from './types';
 import { findCard, getNextTimestamp } from './GameState';
 import type { EventBus } from './EventBus';
 import type { ZoneManager } from './ZoneManager';
-import type { ManaManager } from './ManaManager';
-
 export class StackManager {
+  private eventBus: EventBus;
+  private zoneManager: ZoneManager;
+
   constructor(
-    private eventBus: EventBus,
-    private zoneManager: ZoneManager,
-    private manaManager: ManaManager,
-  ) {}
+    eventBus: EventBus,
+    zoneManager: ZoneManager,
+  ) {
+    this.eventBus = eventBus;
+    this.zoneManager = zoneManager;
+  }
 
   /** Push a spell onto the stack */
   castSpell(
@@ -24,7 +27,6 @@ export class StackManager {
     controller: PlayerId,
     targets: (ObjectId | PlayerId)[],
     xValue?: number,
-    additionalCost?: ManaCost
   ): StackEntry {
     // Remove card from hand
     this.removeFromCurrentZone(state, card);
@@ -97,7 +99,7 @@ export class StackManager {
       type: GameEventType.ABILITY_ACTIVATED,
       timestamp: getNextTimestamp(state),
       sourceId: source.objectId,
-    } as GameEvent;
+    };
     state.eventLog.push(event);
     this.eventBus.emit(event);
 
@@ -110,7 +112,7 @@ export class StackManager {
     source: CardInstance,
     ability: TriggeredAbilityDef,
     controller: PlayerId,
-    triggeringEvent: GameEvent,
+    _triggeringEvent: GameEvent,
     targets: (ObjectId | PlayerId)[] = []
   ): StackEntry {
     const entry: StackEntry = {
@@ -155,7 +157,7 @@ export class StackManager {
         type: GameEventType.SPELL_COUNTERED,
         timestamp: getNextTimestamp(state),
         objectId: entry.sourceId,
-      } as GameEvent;
+      };
       state.eventLog.push(counterEvent);
       this.eventBus.emit(counterEvent);
       return;
@@ -186,7 +188,7 @@ export class StackManager {
       type: GameEventType.SPELL_RESOLVED,
       timestamp: getNextTimestamp(state),
       objectId: entry.sourceId,
-    } as GameEvent;
+    };
     state.eventLog.push(resolvedEvent);
     this.eventBus.emit(resolvedEvent);
   }
@@ -206,13 +208,13 @@ export class StackManager {
       type: GameEventType.SPELL_COUNTERED,
       timestamp: getNextTimestamp(state),
       objectId: entry.sourceId,
-    } as GameEvent;
+    };
     state.eventLog.push(event);
     this.eventBus.emit(event);
   }
 
   /** Check if a split second spell is on the stack */
-  hasSplitSecond(_state: GameState): boolean {
+  hasSplitSecond(): boolean {
     // We'll implement split second tracking later when cards need it
     return false;
   }

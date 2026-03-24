@@ -1,5 +1,5 @@
 import type {
-  CardDefinition, CardType, ManaCost, ManaColor, Keyword,
+  CardDefinition, CardType, ManaColor, Keyword,
   AbilityDefinition, ActivatedAbilityDef, TriggeredAbilityDef,
   StaticAbilityDef, SpellAbilityDef, Cost, TriggerCondition,
   EffectFn, TargetSpec, StaticEffectDef,
@@ -134,7 +134,7 @@ export class CardBuilder {
         const color = await ctx.choices.chooseOne(
           'Choose a color of mana to add',
           ['W', 'U', 'B', 'R', 'G'] as (keyof import('../engine/types').ManaPool)[],
-          (c) => ({ W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green' }[c] ?? c)
+          (c) => ({ W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green', C: 'Colorless' }[c] ?? c)
         );
         ctx.game.addMana(ctx.controller, color, 1);
       },
@@ -231,7 +231,7 @@ export class CardBuilder {
     const ability: ActivatedAbilityDef = {
       kind: 'activated',
       cost: {
-        custom: (_game, source, _player) => {
+        custom: (_game, source) => {
           const currentLoyalty = source.counters['loyalty'] ?? 0;
           if (loyaltyCost < 0 && currentLoyalty < Math.abs(loyaltyCost)) return false;
           return true;

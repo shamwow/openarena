@@ -93,7 +93,7 @@ export class EventBus {
 
     for (const playerId of state.turnOrder) {
       if (state.players[playerId].hasLost) continue;
-      const battlefield = state.zones[playerId][('BATTLEFIELD' as 'BATTLEFIELD')];
+      const battlefield = state.zones[playerId].BATTLEFIELD;
       if (!battlefield) continue;
 
       for (const card of battlefield) {
@@ -176,27 +176,27 @@ export class EventBus {
 
       case 'upkeep':
         if (event.type !== 'STEP_CHANGE' || event.step !== 'UPKEEP') return false;
-        return this.matchesTurnOwner(trigger.whose, event.activePlayer, source.controller, state);
+        return this.matchesTurnOwner(trigger.whose, event.activePlayer, source.controller);
 
       case 'end-step':
         if (event.type !== 'STEP_CHANGE' || event.step !== 'END') return false;
-        return this.matchesTurnOwner(trigger.whose, event.activePlayer, source.controller, state);
+        return this.matchesTurnOwner(trigger.whose, event.activePlayer, source.controller);
 
       case 'draw-card':
         if (event.type !== 'DREW_CARD') return false;
-        return this.matchesPlayerFilter(trigger.whose, event.player, source.controller, state);
+        return this.matchesPlayerFilter(trigger.whose, event.player, source.controller);
 
       case 'gain-life':
         if (event.type !== 'LIFE_GAINED') return false;
-        return this.matchesPlayerFilter(trigger.whose, event.player, source.controller, state);
+        return this.matchesPlayerFilter(trigger.whose, event.player, source.controller);
 
       case 'lose-life':
         if (event.type !== 'LIFE_LOST') return false;
-        return this.matchesPlayerFilter(trigger.whose, event.player, source.controller, state);
+        return this.matchesPlayerFilter(trigger.whose, event.player, source.controller);
 
       case 'discard':
         if (event.type !== 'DISCARDED') return false;
-        return this.matchesPlayerFilter(trigger.whose, event.player, source.controller, state);
+        return this.matchesPlayerFilter(trigger.whose, event.player, source.controller);
 
       case 'tap':
         if (event.type !== 'TAPPED') return false;
@@ -214,7 +214,6 @@ export class EventBus {
     whose: 'yours' | 'each' | 'opponents' | undefined,
     activePlayer: PlayerId,
     sourceController: PlayerId,
-    _state: GameState
   ): boolean {
     if (!whose || whose === 'each') return true;
     if (whose === 'yours') return activePlayer === sourceController;
@@ -226,7 +225,6 @@ export class EventBus {
     whose: 'yours' | 'opponents' | 'any' | undefined,
     eventPlayer: PlayerId,
     sourceController: PlayerId,
-    _state: GameState
   ): boolean {
     if (!whose || whose === 'any') return true;
     if (whose === 'yours') return eventPlayer === sourceController;

@@ -126,7 +126,7 @@ export const ShivanDragon = CardBuilder.create('Shivan Dragon')
   .flying()
   .activated(
     { mana: { generic: 0, W: 0, U: 0, B: 0, R: 1, G: 0, C: 0, X: 0 } },
-    (_ctx) => {
+    () => {
       // +1/+0 until end of turn (handled via continuous effects in full impl)
     },
     { description: '{R}: Shivan Dragon gets +1/+0 until end of turn.' }
@@ -150,11 +150,6 @@ export const InfernalPlunge = CardBuilder.create('Inferno Titan')
   .subtypes('Giant')
   .stats(6, 6)
   .etbEffect(async (ctx) => {
-    // Deal 3 damage divided
-    const targets = [
-      ...ctx.game.getBattlefield({ types: [CardType.CREATURE] }),
-      ...ctx.game.getActivePlayers(),
-    ];
     // Simplified: deal 3 to one target
     const validCreatures = ctx.game.getBattlefield({ types: [CardType.CREATURE] });
     if (validCreatures.length > 0) {

@@ -35,9 +35,9 @@ interface PlayerPanelProps {
   registerZoneAnchor: (key: string, node: HTMLElement | null) => void;
 }
 
-type OpenZoneDialog = Zone.GRAVEYARD | Zone.EXILE | null;
+type OpenZoneDialog = typeof Zone.GRAVEYARD | typeof Zone.EXILE | null;
 
-type RailAnchorZone = Zone.COMMAND | Zone.EXILE | Zone.GRAVEYARD;
+type RailAnchorZone = typeof Zone.COMMAND | typeof Zone.EXILE | typeof Zone.GRAVEYARD;
 
 interface HandRailCard {
   card: CardInstance;
@@ -188,7 +188,7 @@ function ZonePile({
   onClick,
   registerZoneAnchor,
 }: {
-  zone: Zone.LIBRARY | Zone.GRAVEYARD | Zone.EXILE;
+  zone: typeof Zone.LIBRARY | typeof Zone.GRAVEYARD | typeof Zone.EXILE;
   count: number;
   side: 'left' | 'right';
   onClick?: () => void;

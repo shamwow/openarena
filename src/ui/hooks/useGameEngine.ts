@@ -13,6 +13,45 @@ export interface UseGameEngineReturn {
   newGame: () => void;
 }
 
+function createEngine(
+  setState: React.Dispatch<React.SetStateAction<GameState | null>>,
+  setLegalActions: React.Dispatch<React.SetStateAction<PlayerAction[]>>,
+  setGameLog: React.Dispatch<React.SetStateAction<GameEvent[]>>,
+  setPendingChoice: React.Dispatch<React.SetStateAction<ChoiceRequest | null>>,
+): GameEngineImpl {
+  const engine = new GameEngineImpl(prebuiltDecks);
+
+  // Subscribe to state changes
+  engine.onStateChange((newState: GameState) => {
+    setState({ ...newState });
+    // Recompute legal actions for the priority player
+    if (newState.priorityPlayer) {
+      setLegalActions(engine.getLegalActions(newState.priorityPlayer));
+    } else {
+      setLegalActions([]);
+    }
+  });
+
+  // Subscribe to game log events
+  engine.onGameLog((event: GameEvent) => {
+    setGameLog((prev) => [...prev, event]);
+  });
+
+  // Subscribe to choice requests
+  engine.onChoiceRequest((req: ChoiceRequest) => {
+    setPendingChoice(req);
+  });
+
+  // Set initial state
+  const initialState = engine.getState();
+  setState({ ...initialState });
+  if (initialState.priorityPlayer) {
+    setLegalActions(engine.getLegalActions(initialState.priorityPlayer));
+  }
+
+  return engine;
+}
+
 export function useGameEngine(): UseGameEngineReturn {
   const engineRef = useRef<GameEngineImpl | null>(null);
   const [state, setState] = useState<GameState | null>(null);
@@ -20,42 +59,9 @@ export function useGameEngine(): UseGameEngineReturn {
   const [pendingChoice, setPendingChoice] = useState<ChoiceRequest | null>(null);
   const [legalActions, setLegalActions] = useState<PlayerAction[]>([]);
 
-  const initEngine = useCallback(() => {
-    const engine = new GameEngineImpl(prebuiltDecks);
-    engineRef.current = engine;
-
-    // Subscribe to state changes
-    engine.onStateChange((newState: GameState) => {
-      setState({ ...newState });
-      // Recompute legal actions for the priority player
-      if (newState.priorityPlayer) {
-        setLegalActions(engine.getLegalActions(newState.priorityPlayer));
-      } else {
-        setLegalActions([]);
-      }
-    });
-
-    // Subscribe to game log events
-    engine.onGameLog((event: GameEvent) => {
-      setGameLog((prev) => [...prev, event]);
-    });
-
-    // Subscribe to choice requests
-    engine.onChoiceRequest((req: ChoiceRequest) => {
-      setPendingChoice(req);
-    });
-
-    // Set initial state
-    const initialState = engine.getState();
-    setState({ ...initialState });
-    if (initialState.priorityPlayer) {
-      setLegalActions(engine.getLegalActions(initialState.priorityPlayer));
-    }
-  }, []);
-
   useEffect(() => {
-    initEngine();
-  }, [initEngine]);
+    engineRef.current = createEngine(setState, setLegalActions, setGameLog, setPendingChoice);
+  }, []);
 
   const submitAction = useCallback((action: PlayerAction) => {
     if (engineRef.current) {
@@ -74,8 +80,8 @@ export function useGameEngine(): UseGameEngineReturn {
     setGameLog([]);
     setPendingChoice(null);
     setLegalActions([]);
-    initEngine();
-  }, [initEngine]);
+    engineRef.current = createEngine(setState, setLegalActions, setGameLog, setPendingChoice);
+  }, []);
 
   return {
     state,

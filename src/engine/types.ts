@@ -10,79 +10,85 @@ export type Timestamp = number; // Monotonically increasing
 
 // --- Enums ---
 
-export enum Phase {
-  BEGINNING = 'BEGINNING',
-  PRECOMBAT_MAIN = 'PRECOMBAT_MAIN',
-  COMBAT = 'COMBAT',
-  POSTCOMBAT_MAIN = 'POSTCOMBAT_MAIN',
-  ENDING = 'ENDING',
-}
+export const Phase = {
+  BEGINNING: 'BEGINNING',
+  PRECOMBAT_MAIN: 'PRECOMBAT_MAIN',
+  COMBAT: 'COMBAT',
+  POSTCOMBAT_MAIN: 'POSTCOMBAT_MAIN',
+  ENDING: 'ENDING',
+} as const;
+export type Phase = (typeof Phase)[keyof typeof Phase];
 
-export enum Step {
-  UNTAP = 'UNTAP',
-  UPKEEP = 'UPKEEP',
-  DRAW = 'DRAW',
-  MAIN = 'MAIN',
-  BEGINNING_OF_COMBAT = 'BEGINNING_OF_COMBAT',
-  DECLARE_ATTACKERS = 'DECLARE_ATTACKERS',
-  DECLARE_BLOCKERS = 'DECLARE_BLOCKERS',
-  FIRST_STRIKE_DAMAGE = 'FIRST_STRIKE_DAMAGE',
-  COMBAT_DAMAGE = 'COMBAT_DAMAGE',
-  END_OF_COMBAT = 'END_OF_COMBAT',
-  END = 'END',
-  CLEANUP = 'CLEANUP',
-}
+export const Step = {
+  UNTAP: 'UNTAP',
+  UPKEEP: 'UPKEEP',
+  DRAW: 'DRAW',
+  MAIN: 'MAIN',
+  BEGINNING_OF_COMBAT: 'BEGINNING_OF_COMBAT',
+  DECLARE_ATTACKERS: 'DECLARE_ATTACKERS',
+  DECLARE_BLOCKERS: 'DECLARE_BLOCKERS',
+  FIRST_STRIKE_DAMAGE: 'FIRST_STRIKE_DAMAGE',
+  COMBAT_DAMAGE: 'COMBAT_DAMAGE',
+  END_OF_COMBAT: 'END_OF_COMBAT',
+  END: 'END',
+  CLEANUP: 'CLEANUP',
+} as const;
+export type Step = (typeof Step)[keyof typeof Step];
 
-export enum Zone {
-  LIBRARY = 'LIBRARY',
-  HAND = 'HAND',
-  BATTLEFIELD = 'BATTLEFIELD',
-  GRAVEYARD = 'GRAVEYARD',
-  EXILE = 'EXILE',
-  STACK = 'STACK',
-  COMMAND = 'COMMAND',
-}
+export const Zone = {
+  LIBRARY: 'LIBRARY',
+  HAND: 'HAND',
+  BATTLEFIELD: 'BATTLEFIELD',
+  GRAVEYARD: 'GRAVEYARD',
+  EXILE: 'EXILE',
+  STACK: 'STACK',
+  COMMAND: 'COMMAND',
+} as const;
+export type Zone = (typeof Zone)[keyof typeof Zone];
 
-export enum ManaColor {
-  WHITE = 'W',
-  BLUE = 'U',
-  BLACK = 'B',
-  RED = 'R',
-  GREEN = 'G',
-  COLORLESS = 'C',
-}
+export const ManaColor = {
+  WHITE: 'W',
+  BLUE: 'U',
+  BLACK: 'B',
+  RED: 'R',
+  GREEN: 'G',
+  COLORLESS: 'C',
+} as const;
+export type ManaColor = (typeof ManaColor)[keyof typeof ManaColor];
 
-export enum CardType {
-  CREATURE = 'Creature',
-  INSTANT = 'Instant',
-  SORCERY = 'Sorcery',
-  ENCHANTMENT = 'Enchantment',
-  ARTIFACT = 'Artifact',
-  PLANESWALKER = 'Planeswalker',
-  LAND = 'Land',
-  BATTLE = 'Battle',
-}
+export const CardType = {
+  CREATURE: 'Creature',
+  INSTANT: 'Instant',
+  SORCERY: 'Sorcery',
+  ENCHANTMENT: 'Enchantment',
+  ARTIFACT: 'Artifact',
+  PLANESWALKER: 'Planeswalker',
+  LAND: 'Land',
+  BATTLE: 'Battle',
+} as const;
+export type CardType = (typeof CardType)[keyof typeof CardType];
 
-export enum Keyword {
-  FLYING = 'Flying',
-  FIRST_STRIKE = 'First Strike',
-  DOUBLE_STRIKE = 'Double Strike',
-  TRAMPLE = 'Trample',
-  DEATHTOUCH = 'Deathtouch',
-  LIFELINK = 'Lifelink',
-  VIGILANCE = 'Vigilance',
-  HASTE = 'Haste',
-  REACH = 'Reach',
-  HEXPROOF = 'Hexproof',
-  SHROUD = 'Shroud',
-  INDESTRUCTIBLE = 'Indestructible',
-  MENACE = 'Menace',
-  FLASH = 'Flash',
-  DEFENDER = 'Defender',
-  PROTECTION = 'Protection',
-  WARD = 'Ward',
-  UNBLOCKABLE = 'Unblockable',
-}
+export const Keyword = {
+  FLYING: 'Flying',
+  FIRST_STRIKE: 'First Strike',
+  DOUBLE_STRIKE: 'Double Strike',
+  TRAMPLE: 'Trample',
+  DEATHTOUCH: 'Deathtouch',
+  LIFELINK: 'Lifelink',
+  VIGILANCE: 'Vigilance',
+  HASTE: 'Haste',
+  REACH: 'Reach',
+  HEXPROOF: 'Hexproof',
+  SHROUD: 'Shroud',
+  INDESTRUCTIBLE: 'Indestructible',
+  MENACE: 'Menace',
+  FLASH: 'Flash',
+  DEFENDER: 'Defender',
+  PROTECTION: 'Protection',
+  WARD: 'Ward',
+  UNBLOCKABLE: 'Unblockable',
+} as const;
+export type Keyword = (typeof Keyword)[keyof typeof Keyword];
 
 // --- Mana ---
 
@@ -293,9 +299,8 @@ export interface CardFilter {
   custom?: (card: CardInstance, game: GameState) => boolean;
 }
 
-export interface SpellFilter extends CardFilter {
-  // Additional filters specific to spells on the stack
-}
+// Additional filters specific to spells on the stack
+export type SpellFilter = CardFilter;
 
 // --- Targeting ---
 
@@ -360,19 +365,20 @@ export type ReplacementFn = (
 
 // --- Continuous Effects (Layer System) ---
 
-export enum Layer {
-  COPY = 1,
-  CONTROL = 2,
-  TEXT = 3,
-  TYPE = 4,
-  COLOR = 5,
-  ABILITY = 6,
-  PT_CDA = 70,       // 7a: characteristic-defining abilities
-  PT_SET = 71,        // 7b: set P/T to specific values
-  PT_MODIFY = 72,     // 7c: +N/+N or -N/-N
-  PT_COUNTERS = 73,   // 7d: counters
-  PT_SWITCH = 74,     // 7e: switch P/T
-}
+export const Layer = {
+  COPY: 1,
+  CONTROL: 2,
+  TEXT: 3,
+  TYPE: 4,
+  COLOR: 5,
+  ABILITY: 6,
+  PT_CDA: 70,       // 7a: characteristic-defining abilities
+  PT_SET: 71,        // 7b: set P/T to specific values
+  PT_MODIFY: 72,     // 7c: +N/+N or -N/-N
+  PT_COUNTERS: 73,   // 7d: counters
+  PT_SWITCH: 74,     // 7e: switch P/T
+} as const;
+export type Layer = (typeof Layer)[keyof typeof Layer];
 
 export interface ContinuousEffect {
   id: ObjectId;
@@ -401,55 +407,56 @@ export interface ReplacementEffect {
 
 // --- Events ---
 
-export enum GameEventType {
+export const GameEventType = {
   // Zone transitions
-  ZONE_CHANGE = 'ZONE_CHANGE',
-  ENTERS_BATTLEFIELD = 'ENTERS_BATTLEFIELD',
-  LEAVES_BATTLEFIELD = 'LEAVES_BATTLEFIELD',
+  ZONE_CHANGE: 'ZONE_CHANGE',
+  ENTERS_BATTLEFIELD: 'ENTERS_BATTLEFIELD',
+  LEAVES_BATTLEFIELD: 'LEAVES_BATTLEFIELD',
 
   // Turn structure
-  PHASE_CHANGE = 'PHASE_CHANGE',
-  STEP_CHANGE = 'STEP_CHANGE',
-  TURN_START = 'TURN_START',
+  PHASE_CHANGE: 'PHASE_CHANGE',
+  STEP_CHANGE: 'STEP_CHANGE',
+  TURN_START: 'TURN_START',
 
   // Spells and abilities
-  SPELL_CAST = 'SPELL_CAST',
-  ABILITY_ACTIVATED = 'ABILITY_ACTIVATED',
-  ABILITY_TRIGGERED = 'ABILITY_TRIGGERED',
-  SPELL_RESOLVED = 'SPELL_RESOLVED',
-  SPELL_COUNTERED = 'SPELL_COUNTERED',
+  SPELL_CAST: 'SPELL_CAST',
+  ABILITY_ACTIVATED: 'ABILITY_ACTIVATED',
+  ABILITY_TRIGGERED: 'ABILITY_TRIGGERED',
+  SPELL_RESOLVED: 'SPELL_RESOLVED',
+  SPELL_COUNTERED: 'SPELL_COUNTERED',
 
   // Permanent events
-  TAPPED = 'TAPPED',
-  UNTAPPED = 'UNTAPPED',
-  DESTROYED = 'DESTROYED',
-  SACRIFICED = 'SACRIFICED',
-  EXILED = 'EXILED',
+  TAPPED: 'TAPPED',
+  UNTAPPED: 'UNTAPPED',
+  DESTROYED: 'DESTROYED',
+  SACRIFICED: 'SACRIFICED',
+  EXILED: 'EXILED',
 
   // Combat
-  ATTACKS = 'ATTACKS',
-  BLOCKS = 'BLOCKS',
-  COMBAT_DAMAGE_DEALT = 'COMBAT_DAMAGE_DEALT',
+  ATTACKS: 'ATTACKS',
+  BLOCKS: 'BLOCKS',
+  COMBAT_DAMAGE_DEALT: 'COMBAT_DAMAGE_DEALT',
 
   // Player events
-  DAMAGE_DEALT = 'DAMAGE_DEALT',
-  LIFE_GAINED = 'LIFE_GAINED',
-  LIFE_LOST = 'LIFE_LOST',
-  DREW_CARD = 'DREW_CARD',
-  DISCARDED = 'DISCARDED',
-  PLAYER_LOST = 'PLAYER_LOST',
-  PLAYER_WON = 'PLAYER_WON',
+  DAMAGE_DEALT: 'DAMAGE_DEALT',
+  LIFE_GAINED: 'LIFE_GAINED',
+  LIFE_LOST: 'LIFE_LOST',
+  DREW_CARD: 'DREW_CARD',
+  DISCARDED: 'DISCARDED',
+  PLAYER_LOST: 'PLAYER_LOST',
+  PLAYER_WON: 'PLAYER_WON',
 
   // Mana
-  MANA_PRODUCED = 'MANA_PRODUCED',
+  MANA_PRODUCED: 'MANA_PRODUCED',
 
   // Counters
-  COUNTER_ADDED = 'COUNTER_ADDED',
-  COUNTER_REMOVED = 'COUNTER_REMOVED',
+  COUNTER_ADDED: 'COUNTER_ADDED',
+  COUNTER_REMOVED: 'COUNTER_REMOVED',
 
   // Token
-  TOKEN_CREATED = 'TOKEN_CREATED',
-}
+  TOKEN_CREATED: 'TOKEN_CREATED',
+} as const;
+export type GameEventType = (typeof GameEventType)[keyof typeof GameEventType];
 
 export interface BaseGameEvent {
   type: GameEventType;
@@ -458,7 +465,7 @@ export interface BaseGameEvent {
 }
 
 export interface ZoneChangeEvent extends BaseGameEvent {
-  type: GameEventType.ZONE_CHANGE;
+  type: typeof GameEventType.ZONE_CHANGE;
   objectId: ObjectId;
   fromZone: Zone;
   toZone: Zone;
@@ -466,27 +473,27 @@ export interface ZoneChangeEvent extends BaseGameEvent {
 }
 
 export interface EntersBattlefieldEvent extends BaseGameEvent {
-  type: GameEventType.ENTERS_BATTLEFIELD;
+  type: typeof GameEventType.ENTERS_BATTLEFIELD;
   objectId: ObjectId;
   controller: PlayerId;
 }
 
 export interface LeavesBattlefieldEvent extends BaseGameEvent {
-  type: GameEventType.LEAVES_BATTLEFIELD;
+  type: typeof GameEventType.LEAVES_BATTLEFIELD;
   objectId: ObjectId;
   controller: PlayerId;
   destination: Zone;
 }
 
 export interface SpellCastEvent extends BaseGameEvent {
-  type: GameEventType.SPELL_CAST;
+  type: typeof GameEventType.SPELL_CAST;
   objectId: ObjectId;
   castBy: PlayerId;
   spellTypes: CardType[];
 }
 
 export interface DamageDealtEvent extends BaseGameEvent {
-  type: GameEventType.DAMAGE_DEALT;
+  type: typeof GameEventType.DAMAGE_DEALT;
   sourceId: ObjectId;
   targetId: ObjectId | PlayerId;
   amount: number;
@@ -495,93 +502,108 @@ export interface DamageDealtEvent extends BaseGameEvent {
 }
 
 export interface LifeGainedEvent extends BaseGameEvent {
-  type: GameEventType.LIFE_GAINED;
+  type: typeof GameEventType.LIFE_GAINED;
   player: PlayerId;
   amount: number;
 }
 
 export interface LifeLostEvent extends BaseGameEvent {
-  type: GameEventType.LIFE_LOST;
+  type: typeof GameEventType.LIFE_LOST;
   player: PlayerId;
   amount: number;
 }
 
 export interface DrewCardEvent extends BaseGameEvent {
-  type: GameEventType.DREW_CARD;
+  type: typeof GameEventType.DREW_CARD;
   player: PlayerId;
   objectId: ObjectId;
 }
 
 export interface DiscardedEvent extends BaseGameEvent {
-  type: GameEventType.DISCARDED;
+  type: typeof GameEventType.DISCARDED;
   player: PlayerId;
   objectId: ObjectId;
 }
 
 export interface TappedEvent extends BaseGameEvent {
-  type: GameEventType.TAPPED;
+  type: typeof GameEventType.TAPPED;
   objectId: ObjectId;
 }
 
 export interface UntappedEvent extends BaseGameEvent {
-  type: GameEventType.UNTAPPED;
+  type: typeof GameEventType.UNTAPPED;
   objectId: ObjectId;
 }
 
 export interface DestroyedEvent extends BaseGameEvent {
-  type: GameEventType.DESTROYED;
+  type: typeof GameEventType.DESTROYED;
   objectId: ObjectId;
 }
 
 export interface SacrificedEvent extends BaseGameEvent {
-  type: GameEventType.SACRIFICED;
+  type: typeof GameEventType.SACRIFICED;
   objectId: ObjectId;
   controller: PlayerId;
 }
 
 export interface StepChangeEvent extends BaseGameEvent {
-  type: GameEventType.STEP_CHANGE;
+  type: typeof GameEventType.STEP_CHANGE;
   phase: Phase;
   step: Step;
   activePlayer: PlayerId;
 }
 
 export interface TurnStartEvent extends BaseGameEvent {
-  type: GameEventType.TURN_START;
+  type: typeof GameEventType.TURN_START;
   activePlayer: PlayerId;
   turnNumber: number;
 }
 
 export interface AttacksEvent extends BaseGameEvent {
-  type: GameEventType.ATTACKS;
+  type: typeof GameEventType.ATTACKS;
   attackerId: ObjectId;
   defendingPlayer: PlayerId;
 }
 
 export interface BlocksEvent extends BaseGameEvent {
-  type: GameEventType.BLOCKS;
+  type: typeof GameEventType.BLOCKS;
   blockerId: ObjectId;
   attackerId: ObjectId;
 }
 
 export interface CounterAddedEvent extends BaseGameEvent {
-  type: GameEventType.COUNTER_ADDED;
+  type: typeof GameEventType.COUNTER_ADDED;
   objectId: ObjectId;
   counterType: string;
   amount: number;
 }
 
 export interface PlayerLostEvent extends BaseGameEvent {
-  type: GameEventType.PLAYER_LOST;
+  type: typeof GameEventType.PLAYER_LOST;
   player: PlayerId;
   reason: string;
 }
 
 export interface ManaProducedEvent extends BaseGameEvent {
-  type: GameEventType.MANA_PRODUCED;
+  type: typeof GameEventType.MANA_PRODUCED;
   player: PlayerId;
   color: keyof ManaPool;
   amount: number;
+}
+
+export interface AbilityActivatedEvent extends BaseGameEvent {
+  type: typeof GameEventType.ABILITY_ACTIVATED;
+  sourceId: ObjectId;
+}
+
+export interface SpellResolvedEvent extends BaseGameEvent {
+  type: typeof GameEventType.SPELL_RESOLVED;
+  objectId: ObjectId;
+}
+
+export interface SpellCounteredEvent extends BaseGameEvent {
+  type: typeof GameEventType.SPELL_COUNTERED;
+  objectId: ObjectId;
 }
 
 export type GameEvent =
@@ -604,27 +626,31 @@ export type GameEvent =
   | BlocksEvent
   | CounterAddedEvent
   | PlayerLostEvent
-  | ManaProducedEvent;
+  | ManaProducedEvent
+  | AbilityActivatedEvent
+  | SpellResolvedEvent
+  | SpellCounteredEvent;
 
 // --- Player Actions ---
 
-export enum ActionType {
-  CAST_SPELL = 'CAST_SPELL',
-  ACTIVATE_ABILITY = 'ACTIVATE_ABILITY',
-  PLAY_LAND = 'PLAY_LAND',
-  DECLARE_ATTACKERS = 'DECLARE_ATTACKERS',
-  DECLARE_BLOCKERS = 'DECLARE_BLOCKERS',
-  PASS_PRIORITY = 'PASS_PRIORITY',
-  CONCEDE = 'CONCEDE',
-  PAY_MANA = 'PAY_MANA',
-  CHOOSE_TARGETS = 'CHOOSE_TARGETS',
-  MULLIGAN_KEEP = 'MULLIGAN_KEEP',
-  MULLIGAN_TAKE = 'MULLIGAN_TAKE',
-  COMMANDER_TO_COMMAND_ZONE = 'COMMANDER_TO_COMMAND_ZONE',
-}
+export const ActionType = {
+  CAST_SPELL: 'CAST_SPELL',
+  ACTIVATE_ABILITY: 'ACTIVATE_ABILITY',
+  PLAY_LAND: 'PLAY_LAND',
+  DECLARE_ATTACKERS: 'DECLARE_ATTACKERS',
+  DECLARE_BLOCKERS: 'DECLARE_BLOCKERS',
+  PASS_PRIORITY: 'PASS_PRIORITY',
+  CONCEDE: 'CONCEDE',
+  PAY_MANA: 'PAY_MANA',
+  CHOOSE_TARGETS: 'CHOOSE_TARGETS',
+  MULLIGAN_KEEP: 'MULLIGAN_KEEP',
+  MULLIGAN_TAKE: 'MULLIGAN_TAKE',
+  COMMANDER_TO_COMMAND_ZONE: 'COMMANDER_TO_COMMAND_ZONE',
+} as const;
+export type ActionType = (typeof ActionType)[keyof typeof ActionType];
 
 export interface CastSpellAction {
-  type: ActionType.CAST_SPELL;
+  type: typeof ActionType.CAST_SPELL;
   playerId: PlayerId;
   cardId: ObjectId;
   targets?: (ObjectId | PlayerId)[];
@@ -632,7 +658,7 @@ export interface CastSpellAction {
 }
 
 export interface ActivateAbilityAction {
-  type: ActionType.ACTIVATE_ABILITY;
+  type: typeof ActionType.ACTIVATE_ABILITY;
   playerId: PlayerId;
   sourceId: ObjectId;
   abilityIndex: number;
@@ -640,35 +666,35 @@ export interface ActivateAbilityAction {
 }
 
 export interface PlayLandAction {
-  type: ActionType.PLAY_LAND;
+  type: typeof ActionType.PLAY_LAND;
   playerId: PlayerId;
   cardId: ObjectId;
 }
 
 export interface DeclareAttackersAction {
-  type: ActionType.DECLARE_ATTACKERS;
+  type: typeof ActionType.DECLARE_ATTACKERS;
   playerId: PlayerId;
   attackers: Array<{ attackerId: ObjectId; defendingPlayer: PlayerId }>;
 }
 
 export interface DeclareBlockersAction {
-  type: ActionType.DECLARE_BLOCKERS;
+  type: typeof ActionType.DECLARE_BLOCKERS;
   playerId: PlayerId;
   blockers: Array<{ blockerId: ObjectId; attackerId: ObjectId }>;
 }
 
 export interface PassPriorityAction {
-  type: ActionType.PASS_PRIORITY;
+  type: typeof ActionType.PASS_PRIORITY;
   playerId: PlayerId;
 }
 
 export interface ConcedeAction {
-  type: ActionType.CONCEDE;
+  type: typeof ActionType.CONCEDE;
   playerId: PlayerId;
 }
 
 export interface CommanderToCommandZoneAction {
-  type: ActionType.COMMANDER_TO_COMMAND_ZONE;
+  type: typeof ActionType.COMMANDER_TO_COMMAND_ZONE;
   playerId: PlayerId;
   cardId: ObjectId;
 }
@@ -685,11 +711,12 @@ export type PlayerAction =
 
 // --- Stack ---
 
-export enum StackEntryType {
-  SPELL = 'SPELL',
-  ACTIVATED_ABILITY = 'ACTIVATED_ABILITY',
-  TRIGGERED_ABILITY = 'TRIGGERED_ABILITY',
-}
+export const StackEntryType = {
+  SPELL: 'SPELL',
+  ACTIVATED_ABILITY: 'ACTIVATED_ABILITY',
+  TRIGGERED_ABILITY: 'TRIGGERED_ABILITY',
+} as const;
+export type StackEntryType = (typeof StackEntryType)[keyof typeof StackEntryType];
 
 export interface StackEntry {
   id: ObjectId;
@@ -765,7 +792,7 @@ export interface GameState {
   eventLog: GameEvent[];
   priorityPlayer: PlayerId | null;
   passedPriority: Set<PlayerId>;
-  pendingTriggers: Array<{ ability: TriggeredAbilityDef; source: CardInstance; event: GameEvent }>;
+  pendingTriggers: Array<{ ability: TriggeredAbilityDef; source: CardInstance; event: GameEvent; controller: PlayerId }>;
   waitingForChoice: boolean;
   isGameOver: boolean;
   winner: PlayerId | null;

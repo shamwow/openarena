@@ -6,7 +6,7 @@ import type {
 } from './types';
 import {
   GameEventType, ActionType, CardType, Step,
-  emptyManaCost, parseManaCost, StackEntryType,
+  StackEntryType,
 } from './types';
 import { createInitialGameState, drawInitialHands, findCard, getNextTimestamp, type DeckConfig } from './GameState';
 import { EventBus } from './EventBus';
@@ -54,9 +54,9 @@ export class GameEngineImpl implements IGameEngine {
     this.manaManager = new ManaManager(this.eventBus);
     this.turnManager = new TurnManager(this.eventBus, this.zoneManager, this.manaManager);
     this.priorityManager = new PriorityManager();
-    this.stackManager = new StackManager(this.eventBus, this.zoneManager, this.manaManager);
+    this.stackManager = new StackManager(this.eventBus, this.zoneManager);
     this.sbaChecker = new StateBasedActions(this.zoneManager, this.eventBus);
-    this.combatManager = new CombatManager(this.eventBus, this.zoneManager);
+    this.combatManager = new CombatManager(this.eventBus);
     this.continuousEffects = new ContinuousEffectsEngine();
 
     // Create initial game state

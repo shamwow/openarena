@@ -5,7 +5,7 @@ import { CardView } from './CardView';
 
 interface ZoneDialogProps {
   playerName: string;
-  zone: Zone.GRAVEYARD | Zone.EXILE;
+  zone: typeof Zone.GRAVEYARD | typeof Zone.EXILE;
   cards: CardInstance[];
   previewCardId: string | null;
   touchFriendly: boolean;
@@ -14,7 +14,7 @@ interface ZoneDialogProps {
   onClose: () => void;
 }
 
-function getZoneTitle(zone: Zone.GRAVEYARD | Zone.EXILE): string {
+function getZoneTitle(zone: typeof Zone.GRAVEYARD | typeof Zone.EXILE): string {
   return zone === Zone.GRAVEYARD ? 'Graveyard' : 'Exile';
 }
 

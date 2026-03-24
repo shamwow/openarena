@@ -1,5 +1,5 @@
-import type { GameState, ContinuousEffect, CardInstance, PlayerId } from './types';
-import { Layer, CardType } from './types';
+import type { GameState, ContinuousEffect, CardInstance } from './types';
+import { CardType } from './types';
 
 /**
  * Implements the MTG Layer System (rule 613) for applying continuous effects.
@@ -99,9 +99,10 @@ export class ContinuousEffectsEngine {
     switch (effect.duration.type) {
       case 'static': {
         // Expires when source leaves the battlefield
+        const { sourceId } = effect.duration;
         let found = false;
         for (const pid of state.turnOrder) {
-          if (state.zones[pid].BATTLEFIELD.some(c => c.objectId === effect.duration.sourceId)) {
+          if (state.zones[pid].BATTLEFIELD.some(c => c.objectId === sourceId)) {
             found = true;
             break;
           }

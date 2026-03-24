@@ -4,7 +4,11 @@ import { getNextTimestamp } from './GameState';
 import type { EventBus } from './EventBus';
 
 export class ManaManager {
-  constructor(private eventBus: EventBus) {}
+  private eventBus: EventBus;
+
+  constructor(eventBus: EventBus) {
+    this.eventBus = eventBus;
+  }
 
   addMana(state: GameState, player: PlayerId, color: keyof ManaPool, amount: number): void {
     state.players[player].manaPool[color] += amount;
@@ -242,7 +246,7 @@ export class ManaManager {
    * or null if not enough mana can be produced.
    */
   autoTapForCost(
-    state: GameState,
+    _state: GameState,
     player: PlayerId,
     cost: ManaCost,
     battlefield: import('./types').CardInstance[]
