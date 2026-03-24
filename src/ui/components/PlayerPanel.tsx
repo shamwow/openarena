@@ -37,10 +37,15 @@ interface PlayerPanelProps {
 
 type OpenZoneDialog = Zone.GRAVEYARD | Zone.EXILE | null;
 
-interface PlayableZoneGroup {
-  zone: Zone.COMMAND | Zone.EXILE | Zone.GRAVEYARD;
-  label: string;
-  cards: CardInstance[];
+type RailAnchorZone = Zone.COMMAND | Zone.EXILE | Zone.GRAVEYARD;
+
+interface HandRailCard {
+  card: CardInstance;
+  railIndex: number;
+}
+
+function isRailAnchorZone(zone: Zone): zone is RailAnchorZone {
+  return zone === Zone.COMMAND || zone === Zone.EXILE || zone === Zone.GRAVEYARD;
 }
 
 const MANA_COLORS: Record<keyof ManaPool, string> = {
@@ -74,7 +79,13 @@ function ManaPoolDisplay({ pool }: { pool: ManaPool }) {
   );
 }
 
-function HiddenHandFan({ count }: { count: number }) {
+function HiddenHandFan({
+  count,
+  featuredCard,
+}: {
+  count: number;
+  featuredCard?: React.ReactNode;
+}) {
   const fanCount = Math.min(6, count);
 
   if (count === 0) {
@@ -82,17 +93,22 @@ function HiddenHandFan({ count }: { count: number }) {
   }
 
   return (
-    <div className="arena-hidden-hand-fan" title={`${count} cards in hand`}>
+    <div
+      className="arena-hidden-hand-fan"
+      title={`${count} cards in hand`}
+      style={{ ['--fan-count' as string]: `${fanCount}` } as React.CSSProperties}
+    >
       <div className="arena-hidden-hand-fan__cards" aria-hidden="true">
         {Array.from({ length: fanCount }).map((_, index) => (
           <div
             key={`hidden-${index}`}
             className="arena-card arena-card-back"
-            data-variant="mini"
+            data-variant="hand"
             style={{ ['--fan-index' as string]: `${index}` } as React.CSSProperties}
           />
         ))}
       </div>
+      {featuredCard ? <div className="arena-hidden-hand-fan__featured">{featuredCard}</div> : null}
       <div className="arena-hidden-hand-fan__count">{count}</div>
     </div>
   );
@@ -230,12 +246,7 @@ function ZonePile({
   );
 }
 
-function collectPlayableGroups(
-  command: CardInstance[],
-  exile: CardInstance[],
-  graveyard: CardInstance[],
-  legalActions: PlayerAction[],
-): PlayableZoneGroup[] {
+function collectPlayableCardIds(legalActions: PlayerAction[]): Set<string> {
   const playableCardIds = new Set<string>();
 
   for (const action of legalActions) {
@@ -247,23 +258,23 @@ function collectPlayableGroups(
     }
   }
 
-  const groups: PlayableZoneGroup[] = [];
+  return playableCardIds;
+}
 
-  if (command.length > 0) {
-    groups.push({ zone: Zone.COMMAND, label: 'Command', cards: command });
-  }
-
-  const exileCards = exile.filter((card) => playableCardIds.has(card.objectId));
-  if (exileCards.length > 0) {
-    groups.push({ zone: Zone.EXILE, label: 'Exile', cards: exileCards });
-  }
-
-  const graveyardCards = graveyard.filter((card) => playableCardIds.has(card.objectId));
-  if (graveyardCards.length > 0) {
-    groups.push({ zone: Zone.GRAVEYARD, label: 'Graveyard', cards: graveyardCards });
-  }
-
-  return groups;
+function buildHandRailCards(
+  command: CardInstance[],
+  hand: CardInstance[],
+  exile: CardInstance[],
+  graveyard: CardInstance[],
+  legalActions: PlayerAction[],
+): CardInstance[] {
+  const playableCardIds = collectPlayableCardIds(legalActions);
+  return [
+    ...command,
+    ...hand,
+    ...exile.filter((card) => playableCardIds.has(card.objectId)),
+    ...graveyard.filter((card) => playableCardIds.has(card.objectId)),
+  ];
 }
 
 export const PlayerPanel: React.FC<PlayerPanelProps> = ({
@@ -308,11 +319,29 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
 
   const lifeState = getLifeDanger(player);
   const infoSide = seat.position.endsWith('right') ? 'left' : 'right';
-  const playableGroups = collectPlayableGroups(command, exile, graveyard, legalActions);
-  const hasRailContent =
-    hand.length > 0 ||
-    playableGroups.some((group) => group.cards.length > 0) ||
-    seat.handHidden;
+  const orderedRailCards = buildHandRailCards(command, hand, exile, graveyard, legalActions);
+  const renderedRailCards = (
+    seat.handHidden
+      ? orderedRailCards.filter((card) => card.zone !== Zone.HAND)
+      : orderedRailCards
+  ).map((card, railIndex) => ({ card, railIndex }));
+  const hiddenFeaturedRailCard =
+    seat.handHidden
+      ? renderedRailCards.find(({ card }) => card.zone === Zone.COMMAND) ?? null
+      : null;
+  const visibleRailCards =
+    hiddenFeaturedRailCard == null
+      ? renderedRailCards
+      : renderedRailCards.filter(({ card }) => card.objectId !== hiddenFeaturedRailCard.card.objectId);
+  const showHiddenHandFan = seat.handHidden && hand.length > 0;
+  const hasRailContent = showHiddenHandFan || renderedRailCards.length > 0;
+
+  const anchorCardIds = new Map<RailAnchorZone, string>();
+  for (const { card } of renderedRailCards) {
+    if (isRailAnchorZone(card.zone) && !anchorCardIds.has(card.zone)) {
+      anchorCardIds.set(card.zone, card.objectId);
+    }
+  }
 
   const getHandPresentation = (index: number): { scale: number; lift: number } => {
     if (touchFriendly || hoveredHandIndex == null) {
@@ -344,6 +373,49 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
 
   const dialogCards =
     openZoneDialog === Zone.GRAVEYARD ? graveyard : openZoneDialog === Zone.EXILE ? exile : [];
+
+  const renderRailCard = (
+    { card, railIndex }: HandRailCard,
+    wrapperClassName?: string,
+  ) => {
+    const presentation = getHandPresentation(railIndex);
+    const anchorZone =
+      isRailAnchorZone(card.zone) && anchorCardIds.get(card.zone) === card.objectId
+        ? card.zone
+        : null;
+    const baseZIndex = seat.handHidden ? 20 + railIndex : Math.max(1, railIndex + 1);
+
+    return (
+      <div
+        key={card.objectId}
+        className={wrapperClassName ? `arena-seat__hand-card ${wrapperClassName}` : 'arena-seat__hand-card'}
+        ref={anchorZone ? (node) => registerZoneAnchor(`${player.id}:${anchorZone}`, node) : undefined}
+        onMouseEnter={() => setHoveredHandIndex(railIndex)}
+        style={{
+          zIndex: hoveredHandIndex === railIndex ? 30 : baseZIndex,
+        }}
+      >
+        <CardView
+          card={card}
+          variant="hand"
+          legalActions={legalActions}
+          onAction={onAction}
+          onPreview={onPreview}
+          onPreviewClear={onPreviewClear}
+          isPreviewed={previewCardId === card.objectId}
+          previewMode={touchFriendly ? 'tap' : 'hover'}
+          scale={presentation.scale}
+          lift={presentation.lift}
+          draggableAction={getPrimaryCardAction(card, legalActions)}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          isDragging={draggingCardId === card.objectId}
+          sourceZone={card.zone}
+          mountRef={(node) => registerCardElement(card.objectId, node)}
+        />
+      </div>
+    );
+  };
 
   return (
     <section
@@ -472,77 +544,24 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
           onMouseLeave={() => setHoveredHandIndex(null)}
         >
           {hasRailContent ? (
-            <div className="arena-seat__hand-line">
-              {seat.handHidden ? (
-                <HiddenHandFan count={hand.length} />
-              ) : (
-                <div className="arena-seat__hand-cards">
-                  {hand.map((card, index) => {
-                    const presentation = getHandPresentation(index);
-                    return (
-                      <div
-                        key={card.objectId}
-                        className="arena-seat__hand-card"
-                        onMouseEnter={() => setHoveredHandIndex(index)}
-                        style={{
-                          zIndex: hoveredHandIndex === index ? 12 : Math.max(1, index),
-                        }}
-                      >
-                        <CardView
-                          card={card}
-                          variant="hand"
-                          legalActions={legalActions}
-                          onAction={onAction}
-                          onPreview={onPreview}
-                          onPreviewClear={onPreviewClear}
-                          isPreviewed={previewCardId === card.objectId}
-                          previewMode={touchFriendly ? 'tap' : 'hover'}
-                          scale={presentation.scale}
-                          lift={presentation.lift}
-                          draggableAction={getPrimaryCardAction(card, legalActions)}
-                          onDragStart={onDragStart}
-                          onDragEnd={onDragEnd}
-                          isDragging={draggingCardId === card.objectId}
-                          sourceZone={card.zone}
-                          mountRef={(node) => registerCardElement(card.objectId, node)}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {playableGroups.map((group) => (
-                <div
-                  key={group.zone}
-                  className="arena-seat__playable-group"
-                  data-zone={group.zone}
-                  ref={(node) => registerZoneAnchor(`${player.id}:${group.zone}`, node)}
-                >
-                  <div className="arena-seat__playable-group-label">{group.label}</div>
-                  <div className="arena-seat__playable-group-cards">
-                    {group.cards.map((card) => (
-                      <CardView
-                        key={card.objectId}
-                        card={card}
-                        variant="hand"
-                        legalActions={legalActions}
-                        onAction={onAction}
-                        onPreview={onPreview}
-                        onPreviewClear={onPreviewClear}
-                        isPreviewed={previewCardId === card.objectId}
-                        previewMode={touchFriendly ? 'tap' : 'hover'}
-                        draggableAction={getPrimaryCardAction(card, legalActions)}
-                        onDragStart={onDragStart}
-                        onDragEnd={onDragEnd}
-                        isDragging={draggingCardId === card.objectId}
-                        sourceZone={card.zone}
-                        mountRef={(node) => registerCardElement(card.objectId, node)}
-                      />
-                    ))}
+            <div className="arena-seat__hand-scroll">
+              <div className="arena-seat__hand-rail" data-has-fan={showHiddenHandFan}>
+                {showHiddenHandFan ? (
+                  <HiddenHandFan
+                    count={hand.length}
+                    featuredCard={
+                      hiddenFeaturedRailCard
+                        ? renderRailCard(hiddenFeaturedRailCard, 'arena-hidden-hand-fan__featured-card')
+                        : undefined
+                    }
+                  />
+                ) : null}
+                {visibleRailCards.length > 0 ? (
+                  <div className="arena-seat__hand-cards">
+                    {visibleRailCards.map((railCard) => renderRailCard(railCard))}
                   </div>
-                </div>
-              ))}
+                ) : null}
+              </div>
             </div>
           ) : (
             <div className="arena-seat__rail-empty">No cards ready</div>

@@ -523,121 +523,115 @@ select {
 }
 
 .arena-seat__hand-area {
+  --arena-hand-hover-clearance-top: 72px;
+  --arena-hand-hover-clearance-side: 18px;
+  --arena-hand-fan-overlap: 24px;
   min-width: 0;
   min-height: 122px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  overflow-x: auto;
-  overflow-y: visible;
-  padding-bottom: 4px;
+  overflow: visible;
 }
 
-.arena-seat__hand-line {
+.arena-seat__hand-area[data-hidden="true"] {
+  --arena-hand-fan-overlap: 28px;
+}
+
+.arena-seat__hand-scroll {
+  width: calc(100% + (var(--arena-hand-hover-clearance-side) * 2));
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: var(--arena-hand-hover-clearance-top) 0 10px;
+  margin:
+    calc(var(--arena-hand-hover-clearance-top) * -1)
+    calc(var(--arena-hand-hover-clearance-side) * -1)
+    0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overscroll-behavior-x: contain;
+  scroll-padding-inline: var(--arena-hand-hover-clearance-side);
+}
+
+.arena-seat__hand-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.arena-seat__hand-rail {
   width: max-content;
   min-width: 100%;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: 18px;
+  gap: 0;
 }
 
-.arena-seat__hand-cards,
-.arena-seat__playable-group-cards {
+.arena-seat__hand-rail[data-has-fan="true"] {
+  gap: 0;
+}
+
+.arena-seat__hand-cards {
   display: flex;
   align-items: flex-end;
   gap: 0;
   min-width: 0;
+  width: max-content;
+  flex: 0 0 auto;
+}
+
+.arena-seat__hand-rail[data-has-fan="true"] .arena-seat__hand-cards {
+  margin-left: calc(var(--arena-hand-fan-overlap) * -1);
 }
 
 .arena-seat__hand-card {
   position: relative;
 }
 
-.arena-seat__playable-groups {
-  display: flex;
-  align-items: flex-end;
-  gap: 16px;
-}
-
-.arena-seat__playable-group {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  min-height: 128px;
-  padding: 18px 14px 8px 12px;
-  border-radius: 18px;
-  border: 1px solid rgba(215, 174, 105, 0.22);
-  background:
-    linear-gradient(180deg, rgba(14, 24, 35, 0.88), rgba(8, 15, 24, 0.54)),
-    rgba(255, 255, 255, 0.03);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    inset 0 -18px 28px rgba(0, 0, 0, 0.2);
-  overflow: visible;
-}
-
-.arena-seat__playable-group[data-zone="COMMAND"] {
-  border-color: rgba(215, 174, 105, 0.32);
-  background:
-    linear-gradient(180deg, rgba(61, 45, 20, 0.28), rgba(8, 15, 24, 0.56)),
-    rgba(255, 255, 255, 0.03);
-}
-
-.arena-seat__playable-group[data-zone="EXILE"] {
-  border-color: rgba(240, 106, 83, 0.26);
-  background:
-    linear-gradient(180deg, rgba(72, 28, 18, 0.26), rgba(8, 15, 24, 0.56)),
-    rgba(255, 255, 255, 0.03);
-}
-
-.arena-seat__playable-group[data-zone="GRAVEYARD"] {
-  border-color: rgba(113, 153, 170, 0.24);
-  background:
-    linear-gradient(180deg, rgba(27, 44, 58, 0.26), rgba(8, 15, 24, 0.56)),
-    rgba(255, 255, 255, 0.03);
-}
-
-.arena-seat__playable-group-label {
-  position: absolute;
-  top: 8px;
-  left: 10px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: rgba(7, 13, 21, 0.78);
-  color: var(--arena-text-muted);
-  font-size: 0.64rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.arena-seat__playable-group-cards {
-  padding-right: 12px;
+.arena-seat__hand-cards > .arena-seat__hand-card:last-child .arena-card {
+  margin-right: 0;
 }
 
 .arena-hidden-hand-fan {
+  --arena-hidden-fan-card-width: 126px;
+  --arena-hidden-fan-card-height: 176px;
+  --arena-hidden-fan-step: 18px;
+  --arena-hidden-fan-feature-overlap: 30px;
+  --arena-hidden-fan-spread-width: calc(
+    ((var(--fan-count, 1) - 1) * var(--arena-hidden-fan-step)) +
+      var(--arena-hidden-fan-card-width)
+  );
   position: relative;
-  width: 142px;
-  height: 110px;
+  flex: 0 0 auto;
+  width: calc(
+    var(--arena-hidden-fan-spread-width) +
+      var(--arena-hidden-fan-card-width) -
+      var(--arena-hidden-fan-feature-overlap)
+  );
+  height: var(--arena-hidden-fan-card-height);
 }
 
 .arena-hidden-hand-fan__cards {
   position: relative;
-  width: 126px;
-  height: 90px;
+  width: var(--arena-hidden-fan-spread-width);
+  height: var(--arena-hidden-fan-card-height);
 }
 
 .arena-hidden-hand-fan__cards .arena-card-back {
   position: absolute;
-  left: calc(var(--fan-index) * 12px);
-  top: calc(var(--fan-index) * 3px);
-  transform: rotate(calc((var(--fan-index) - 2) * 3deg));
+  left: calc(var(--fan-index) * var(--arena-hidden-fan-step));
+  top: 0;
+  transform: rotate(calc((var(--fan-index) - 2.5) * 3deg));
+  transform-origin: center bottom;
+  z-index: calc(var(--fan-index) + 1);
+  margin-right: 0;
 }
 
 .arena-hidden-hand-fan__count {
   position: absolute;
-  right: 0;
-  bottom: 2px;
+  left: 10px;
+  bottom: 8px;
   min-width: 28px;
   min-height: 28px;
   display: grid;
@@ -648,6 +642,23 @@ select {
   color: var(--arena-text);
   font-size: 0.82rem;
   font-weight: 700;
+  z-index: 8;
+}
+
+.arena-hidden-hand-fan__featured {
+  position: absolute;
+  left: calc(
+    var(--arena-hidden-fan-spread-width) - var(--arena-hidden-fan-feature-overlap)
+  );
+  bottom: 0;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.arena-hidden-hand-fan__featured-card .arena-card {
+  --card-rotation: 8deg;
+  transform-origin: 20% bottom;
+  margin-right: 0;
 }
 
 .arena-seat__rail-empty {
@@ -722,8 +733,33 @@ select {
 .arena-card[data-variant="hand"] {
   --card-width: 126px;
   --card-height: 176px;
-  margin-right: -34px;
+  --card-zone-accent: transparent;
+  --card-zone-glow: transparent;
+  --card-zone-tint-top: transparent;
+  --card-zone-tint-bottom: transparent;
+  margin-right: -43px;
   transform-origin: center bottom;
+}
+
+.arena-card[data-variant="hand"][data-source-zone="COMMAND"] {
+  --card-zone-accent: rgba(233, 202, 130, 0.84);
+  --card-zone-glow: rgba(226, 185, 94, 0.24);
+  --card-zone-tint-top: rgba(226, 185, 94, 0.2);
+  --card-zone-tint-bottom: rgba(226, 185, 94, 0.08);
+}
+
+.arena-card[data-variant="hand"][data-source-zone="EXILE"] {
+  --card-zone-accent: rgba(240, 135, 118, 0.54);
+  --card-zone-glow: rgba(225, 102, 78, 0.16);
+  --card-zone-tint-top: rgba(225, 102, 78, 0.12);
+  --card-zone-tint-bottom: rgba(225, 102, 78, 0.05);
+}
+
+.arena-card[data-variant="hand"][data-source-zone="GRAVEYARD"] {
+  --card-zone-accent: rgba(144, 182, 204, 0.52);
+  --card-zone-glow: rgba(94, 152, 188, 0.14);
+  --card-zone-tint-top: rgba(94, 152, 188, 0.1);
+  --card-zone-tint-bottom: rgba(94, 152, 188, 0.04);
 }
 
 .arena-card[data-variant="battlefield"] {
@@ -779,6 +815,37 @@ select {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
     rgba(3, 6, 12, 0.74);
+}
+
+.arena-card__frame::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: calc(var(--arena-card-radius) - 2px);
+  border: 1px solid var(--card-zone-accent, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      var(--card-zone-tint-top, transparent),
+      transparent 38%,
+      transparent 68%,
+      var(--card-zone-tint-bottom, transparent)
+    );
+  box-shadow:
+    inset 0 0 0 1px var(--card-zone-glow, transparent),
+    inset 0 0 28px var(--card-zone-glow, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--arena-motion),
+    border-color var(--arena-motion),
+    box-shadow var(--arena-motion);
+}
+
+.arena-card[data-variant="hand"][data-source-zone="COMMAND"] .arena-card__frame::before,
+.arena-card[data-variant="hand"][data-source-zone="EXILE"] .arena-card__frame::before,
+.arena-card[data-variant="hand"][data-source-zone="GRAVEYARD"] .arena-card__frame::before {
+  opacity: 1;
 }
 
 .arena-card__frame::after {
@@ -1392,11 +1459,21 @@ select {
   }
 
   .arena-seat__hand-area {
-    padding-bottom: 2px;
+    --arena-hand-hover-clearance-top: 56px;
+    --arena-hand-hover-clearance-side: 14px;
+    --arena-hand-fan-overlap: 18px;
+    min-height: 112px;
   }
 
-  .arena-seat__hand-line {
-    gap: 14px;
+  .arena-seat__hand-area[data-hidden="true"] {
+    --arena-hand-fan-overlap: 22px;
+  }
+
+  .arena-seat__hand-scroll {
+    width: calc(100% + (var(--arena-hand-hover-clearance-side) * 2));
+    padding-top: var(--arena-hand-hover-clearance-top);
+    margin-top: calc(var(--arena-hand-hover-clearance-top) * -1);
+    margin-inline: calc(var(--arena-hand-hover-clearance-side) * -1);
   }
 
   .arena-zone-pile {
@@ -1415,19 +1492,19 @@ select {
   }
 
   .arena-hidden-hand-fan {
-    width: 124px;
-    height: 96px;
+    --arena-hidden-fan-card-width: 98px;
+    --arena-hidden-fan-card-height: 136px;
+    --arena-hidden-fan-step: 14px;
+    --arena-hidden-fan-feature-overlap: 24px;
   }
 
   .arena-hidden-hand-fan__cards {
-    width: 112px;
-    height: 82px;
   }
 
   .arena-card[data-variant="hand"] {
     --card-width: 98px;
     --card-height: 136px;
-    margin-right: -22px;
+    margin-right: -28px;
   }
 
   .arena-card[data-variant="battlefield"] {
@@ -1537,32 +1614,34 @@ select {
   }
 
   .arena-seat__hand-area {
+    --arena-hand-hover-clearance-top: 50px;
+    --arena-hand-hover-clearance-side: 12px;
+    --arena-hand-fan-overlap: 16px;
     justify-content: flex-start;
-    padding-bottom: 4px;
+    min-height: 96px;
   }
 
-  .arena-seat__hand-line {
+  .arena-seat__hand-area[data-hidden="true"] {
+    --arena-hand-fan-overlap: 16px;
+  }
+
+  .arena-seat__hand-scroll {
+    width: calc(100% + (var(--arena-hand-hover-clearance-side) * 2));
+    padding-top: var(--arena-hand-hover-clearance-top);
+    margin-top: calc(var(--arena-hand-hover-clearance-top) * -1);
+    margin-inline: calc(var(--arena-hand-hover-clearance-side) * -1);
+  }
+
+  .arena-seat__hand-rail {
     justify-content: flex-start;
-    gap: 10px;
-  }
-
-  .arena-seat__playable-group-label {
-    font-size: 0.58rem;
-  }
-
-  .arena-seat__playable-group {
-    min-height: 114px;
-    padding: 16px 10px 6px 8px;
   }
 
   .arena-hidden-hand-fan {
-    width: 104px;
-    height: 86px;
+    --arena-hidden-fan-step: 12px;
+    --arena-hidden-fan-feature-overlap: 20px;
   }
 
   .arena-hidden-hand-fan__cards {
-    width: 94px;
-    height: 72px;
   }
 
   .arena-card[data-variant="hand"] {

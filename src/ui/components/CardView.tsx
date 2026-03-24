@@ -69,6 +69,7 @@ export const CardView: React.FC<CardViewProps> = ({
   const hasAction = interactionAction != null;
   const stats = getStats(card);
   const counterEntries = Object.entries(card.counters).filter(([, count]) => count > 0);
+  const resolvedSourceZone = sourceZone ?? card.zone;
 
   const handlePreview = () => {
     onPreview?.(card);
@@ -104,7 +105,7 @@ export const CardView: React.FC<CardViewProps> = ({
       card,
       action: draggableAction,
       playerId: draggableAction.playerId,
-      sourceZone: sourceZone ?? card.zone,
+      sourceZone: resolvedSourceZone,
       hiddenSource: false,
     });
   };
@@ -124,6 +125,7 @@ export const CardView: React.FC<CardViewProps> = ({
       data-selected={previewMode === 'tap' && isPreviewed}
       data-tapped={card.tapped}
       data-dragging={isDragging}
+      data-source-zone={resolvedSourceZone}
       draggable={draggableAction != null && onDragStart != null && variant !== 'flight'}
       onDragStart={handleDragStart}
       onDragEnd={onDragEnd}
