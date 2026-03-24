@@ -113,7 +113,7 @@ export const redDeck: DeckConfig = {
     Cards.ShivanDragon,
     Cards.GoblinGuide,
     Cards.GoblinGuide,
-    Cards.InfernalPlunge,
+    Cards.InfernoTitan,
     Cards.SolemnSimulacrum,
     Cards.LightningBolt,
     Cards.LightningBolt,

@@ -143,7 +143,7 @@ export const GoblinGuide = CardBuilder.create('Goblin Guide')
   .oracleText('Haste')
   .build();
 
-export const InfernalPlunge = CardBuilder.create('Inferno Titan')
+export const InfernoTitan = CardBuilder.create('Inferno Titan')
   .id('inferno-titan')
   .cost('{4}{R}{R}')
   .types(CardType.CREATURE)
