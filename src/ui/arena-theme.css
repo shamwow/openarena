@@ -998,6 +998,17 @@ select {
   background: rgba(39, 87, 119, 0.82);
 }
 
+/* Hand cards: hide overlays -- card info is shown in the preview pane */
+.arena-card[data-variant="hand"] .arena-card__chrome,
+.arena-card[data-variant="hand"] .arena-card__footer,
+.arena-card[data-variant="hand"] .arena-card__status-stack {
+  display: none;
+}
+
+.arena-card[data-variant="hand"] .arena-card__surface {
+  background: none;
+}
+
 .arena-mana-cost {
   display: inline-flex;
   align-items: center;
