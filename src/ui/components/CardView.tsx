@@ -67,7 +67,7 @@ export const CardView: React.FC<CardViewProps> = ({
   const interactionAction = getPrimaryCardAction(card, legalActions);
   const imageUrl = art.normal ?? art.png ?? art.artCrop;
   const hasAction = interactionAction != null;
-  const stats = getStats(card);
+  const stats = variant !== 'hand' ? getStats(card) : null;
   const counterEntries = Object.entries(card.counters).filter(([, count]) => count > 0);
   const resolvedSourceZone = sourceZone ?? card.zone;
 
@@ -110,10 +110,10 @@ export const CardView: React.FC<CardViewProps> = ({
     });
   };
 
-  const oracleSnippet = card.definition.oracleText
+  const oracleSnippet = variant !== 'hand' ? card.definition.oracleText
     .split('\n')
     .map((line) => line.trim())
-    .filter(Boolean)[0];
+    .filter(Boolean)[0] : undefined;
 
   return (
     <div
@@ -157,45 +157,51 @@ export const CardView: React.FC<CardViewProps> = ({
             <div className="arena-card__placeholder" />
           )}
         </div>
-        <div className="arena-card__surface" />
+        {variant !== 'hand' && <div className="arena-card__surface" />}
 
-        <div className="arena-card__chrome">
-          <div className="arena-card__name">{card.definition.name}</div>
-          {variant !== 'mini' && <ManaCostView cost={card.definition.manaCost} />}
-        </div>
-
-        <div className="arena-card__status-stack">
-          {card.markedDamage > 0 && (
-            <span className="arena-card__badge" data-kind="damage">
-              {card.markedDamage} dmg
-            </span>
-          )}
-          {card.summoningSick && card.definition.types.includes(CardType.CREATURE) && (
-            <span className="arena-card__badge" data-kind="sick">
-              summoning
-            </span>
-          )}
-          {card.tapped && (
-            <span className="arena-card__badge" data-kind="tap">
-              tapped
-            </span>
-          )}
-          {counterEntries.map(([counterType, count]) => (
-            <span key={counterType} className="arena-card__badge" data-kind="counter">
-              {count} {counterType}
-            </span>
-          ))}
-        </div>
-
-        <div className="arena-card__footer">
-          <div style={{ display: 'grid', gap: 6, minWidth: 0 }}>
-            <div className="arena-card__type">{getTypeLine(card)}</div>
-            {variant !== 'mini' && oracleSnippet ? (
-              <div className="arena-card__text-chip">{oracleSnippet}</div>
-            ) : null}
+        {variant !== 'hand' && (
+          <div className="arena-card__chrome">
+            <div className="arena-card__name">{card.definition.name}</div>
+            {variant !== 'mini' && <ManaCostView cost={card.definition.manaCost} />}
           </div>
-          {stats ? <div className="arena-card__stats">{stats}</div> : null}
-        </div>
+        )}
+
+        {variant !== 'hand' && (
+          <div className="arena-card__status-stack">
+            {card.markedDamage > 0 && (
+              <span className="arena-card__badge" data-kind="damage">
+                {card.markedDamage} dmg
+              </span>
+            )}
+            {card.summoningSick && card.definition.types.includes(CardType.CREATURE) && (
+              <span className="arena-card__badge" data-kind="sick">
+                summoning
+              </span>
+            )}
+            {card.tapped && (
+              <span className="arena-card__badge" data-kind="tap">
+                tapped
+              </span>
+            )}
+            {counterEntries.map(([counterType, count]) => (
+              <span key={counterType} className="arena-card__badge" data-kind="counter">
+                {count} {counterType}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {variant !== 'hand' && (
+          <div className="arena-card__footer">
+            <div style={{ display: 'grid', gap: 6, minWidth: 0 }}>
+              <div className="arena-card__type">{getTypeLine(card)}</div>
+              {variant !== 'mini' && oracleSnippet ? (
+                <div className="arena-card__text-chip">{oracleSnippet}</div>
+              ) : null}
+            </div>
+            {stats ? <div className="arena-card__stats">{stats}</div> : null}
+          </div>
+        )}
       </div>
     </div>
   );
