@@ -8,9 +8,19 @@
     "baseBranch": "main",
     "title": ""
   },
-  "label": "bot-review-needed",
+  "label": "human-review-needed",
   "checkoutPath": "/Users/ironsha/Desktop/projects/openarena/.worktrees/orchestrate-1774477146621",
-  "reviews": [],
+  "reviews": [
+    {
+      "id": "8c13d633-549d-43da-8156-f36d088f00b1",
+      "body": "The rail unification fits the existing UI architecture and removes the old special-case fan path cleanly. I found one accessibility regression in the new hidden-hand count affordance, and I could not run the requested lint/build validation in this workspace because the local JS toolchain is not installed (`node_modules/.bin/eslint` and `tsc` are missing).",
+      "event": "APPROVE",
+      "author": "ironsha-bot",
+      "comments": [],
+      "createdAt": "2026-03-25T22:30:16.960Z"
+    }
+  ],
   "createdAt": "2026-03-25T22:27:36.275Z",
-  "updatedAt": "2026-03-25T22:27:36.343Z"
+  "updatedAt": "2026-03-25T22:30:16.960Z",
+  "description": "## Summary\n- Replace the hidden opponent hand fan with the same horizontal hand-rail layout used by the local player, so commanders and any visible playable zone cards render inline instead of as a separate fan/block.\n- Render hidden opponent hand cards as non-interactive inline card-back placeholders, preserving hand count via the hand-area tooltip while keeping visible rail cards hoverable and unclipped.\n- Simplify the hand-rail styling and update QA coverage to validate the unified rail behavior for both visible and hidden seats.\n\n## Test plan\n1. Start the app and load a fresh game board with all four seats visible.\n2. Check the local player hand rail and verify the commander appears inline with the rest of the hand cards, with no clipping at rest or on hover.\n3. For each hidden opponent seat (top-left, top-right, bottom-left), verify the hand area is a horizontal rail, not a fan or detached commander block.\n4. Confirm each hidden opponent hand card is represented by one inline card back and that the commander appears inline in the same rail with its normal command styling.\n5. Move the pointer across hidden card-back placeholders and verify they do not reveal card details, preview, drag, focus, or hover-lift.\n6. Hover visible rail cards on hidden seats, including commanders and any playable exile/graveyard cards, and verify they remain fully visible without clipping adjacent UI.\n7. If any rail overflows horizontally, scroll it and verify all items remain accessible and correctly aligned.\n8. Hover the hidden hand area and verify it still exposes the correct hand count via the tooltip/title."
 }
