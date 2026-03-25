@@ -737,6 +737,7 @@ select {
   --card-zone-glow: transparent;
   --card-zone-tint-top: transparent;
   --card-zone-tint-bottom: transparent;
+  flex-shrink: 0;
   margin-right: -43px;
   transform-origin: center bottom;
 }
