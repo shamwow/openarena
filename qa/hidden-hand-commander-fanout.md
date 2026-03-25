@@ -1,7 +1,7 @@
-# Hidden Hand Commander Fanout
+# Hidden Hand Rail
 
 ## Purpose
-Verify that, in a freshly loaded game, each hidden opponent seat renders its commander as part of the hidden-hand fanout rather than as a separate card placed beside the fan.
+Verify that each hidden opponent seat now renders a single horizontal hand rail with inline commanders and hidden-hand card backs, with no remaining fan layout.
 
 ## Preconditions
 - The app is running and a new game has just loaded.
@@ -11,31 +11,31 @@ Verify that, in a freshly loaded game, each hidden opponent seat renders its com
 
 ## Test Steps
 1. Load the app and wait for the initial game board to finish rendering.
-2. Focus only on the three hidden opponent seats.
-3. For each hidden seat, inspect the relationship between the hidden-hand fan and the commander card.
-4. Check whether the commander visually continues the fanout of hidden cards rather than standing alone beside it.
-5. Verify that the commander occupies the outer visible edge of the fanout rather than sitting centered over the middle of the fan.
-6. Verify that most of the commander sits outside the spread of hidden card backs, with only a trailing slice overlapping the fan.
-7. Hover the commander on each hidden seat and verify that the hovered state remains fully visible.
-8. Compare the commander against the local visible-seat commander only for border treatment, not for layout.
+2. Focus only on the three hidden opponent seats: top-left, top-right, and bottom-left.
+3. For each hidden seat, inspect the entire rail from left to right.
+4. Confirm that no fan, arc, or detached commander block is present.
+5. Verify that the commander is integrated directly into the rail with the rest of the seat's rail items.
+6. Verify that the hidden hand is represented by a sequence of card backs in the rail, one per hidden hand card.
+7. Move the pointer across hidden placeholders and confirm they do not preview, drag, focus, or reveal card information.
+8. Hover any visible rail cards on hidden seats, such as the commander or visible playable exile/graveyard cards, and verify that hover lift remains fully visible.
+9. If a hidden seat has a long rail, scroll horizontally and confirm the full rail remains accessible without collisions against zone piles, viewport edges, or the phase bar.
 
 ## Expected Results
-1. Each hidden opponent seat shows a hidden-hand fan and a visible commander.
+1. Each hidden opponent seat shows a horizontal hand rail.
 2. For each hidden seat:
-   - The commander is visually part of the hidden-hand fanout.
-   - The commander continues the same card grouping as the hidden hand instead of appearing as an isolated upright card.
-   - The commander is positioned as the outer visible card of the fan.
-   - The commander follows the fan arc and is not centered over the middle of the hidden cards.
-   - Most of the commander body sits outside the hidden fan, with only a narrow trailing overlap into the spread.
-   - The commander does not cover the middle of the fan or read like it has been placed on top of the fan.
-   - There is no detached gap between the fan and the commander that makes them read as separate UI groups.
-   - The commander remains identifiable via its distinct border.
-   - The commander is not clipped at rest.
-   - Hovering the commander does not introduce clipping.
+   - No fan layout is present.
+   - No detached commander block is present.
+   - The commander is visible inline in the same rail and remains identifiable via its distinct border treatment.
+   - The hidden hand is shown only as rail card backs.
+   - Hidden placeholders do not reveal names, art, previews, actions, dragging, or focus affordances.
+   - Hidden placeholders do not rotate, arc, or hover-lift.
+   - Visible rail cards still hover cleanly without clipping.
+   - The rail remains horizontally scrollable when it grows long.
+3. All three hidden seat positions pass the same expectations despite their different board placement.
 
 ## Failure Notes / Evidence To Capture
 - Which hidden seat failed: top-left, top-right, or bottom-left.
-- Whether the commander was detached from the fan, upright beside the fan, centered over the fan instead of on the outer edge, too far inward over the fan, missing entirely, or clipped.
+- Whether a fan still appeared, the commander was detached, the hidden hand count looked wrong, visible rail cards clipped, hidden placeholders acted interactive, or long rails were not scrollable.
 - Whether the problem appeared only on hover or also at rest.
 - A full-board screenshot plus a close crop of the failing hidden seat.
 - The viewport size and browser used for the check.
