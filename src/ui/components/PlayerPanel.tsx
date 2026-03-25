@@ -9,6 +9,7 @@ import type {
 import { ActionType, CardType, Zone } from '../../engine/types';
 import type { DragCardPayload, SeatMeta } from '../types';
 import { getPrimaryCardAction } from '../utils/gameView';
+import { useHandSizing } from '../hooks/useHandSizing';
 import { CardView } from './CardView';
 import { ZoneDialog } from './ZoneDialog';
 
@@ -325,6 +326,8 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
       ? orderedRailCards.filter((card) => card.zone !== Zone.HAND)
       : orderedRailCards
   ).map((card, railIndex) => ({ card, railIndex }));
+  const handSizing = useHandSizing(renderedRailCards.length);
+
   const hiddenFeaturedRailCard =
     seat.handHidden
       ? renderedRailCards.find(({ card }) => card.zone === Zone.COMMAND) ?? null
@@ -539,13 +542,16 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
 
         <div
           className="arena-seat__hand-area"
-          ref={(node) => registerZoneAnchor(`${player.id}:HAND`, node)}
+          ref={(node) => {
+            registerZoneAnchor(`${player.id}:HAND`, node);
+            handSizing.containerRef(node);
+          }}
           data-hidden={seat.handHidden}
           onMouseLeave={() => setHoveredHandIndex(null)}
         >
           {hasRailContent ? (
             <div className="arena-seat__hand-scroll">
-              <div className="arena-seat__hand-rail" data-has-fan={showHiddenHandFan}>
+              <div className="arena-seat__hand-rail" data-has-fan={showHiddenHandFan} style={handSizing.style}>
                 {showHiddenHandFan ? (
                   <HiddenHandFan
                     count={hand.length}

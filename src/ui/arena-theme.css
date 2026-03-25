@@ -541,17 +541,13 @@ select {
 .arena-seat__hand-scroll {
   width: calc(100% + (var(--arena-hand-hover-clearance-side) * 2));
   min-width: 0;
-  overflow-x: auto;
+  overflow-x: clip;
   overflow-y: hidden;
   padding: var(--arena-hand-hover-clearance-top) 0 10px;
   margin:
     calc(var(--arena-hand-hover-clearance-top) * -1)
     calc(var(--arena-hand-hover-clearance-side) * -1)
     0;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  overscroll-behavior-x: contain;
-  scroll-padding-inline: var(--arena-hand-hover-clearance-side);
 }
 
 .arena-seat__hand-scroll::-webkit-scrollbar {
@@ -560,8 +556,7 @@ select {
 }
 
 .arena-seat__hand-rail {
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -577,8 +572,6 @@ select {
   align-items: flex-end;
   gap: 0;
   min-width: 0;
-  width: max-content;
-  flex: 0 0 auto;
 }
 
 .arena-seat__hand-rail[data-has-fan="true"] .arena-seat__hand-cards {
@@ -731,14 +724,19 @@ select {
 }
 
 .arena-card[data-variant="hand"] {
-  --card-width: 126px;
-  --card-height: 176px;
+  --card-width: var(--hand-card-width, 126px);
+  --card-height: var(--hand-card-height, 176px);
   --card-zone-accent: transparent;
   --card-zone-glow: transparent;
   --card-zone-tint-top: transparent;
   --card-zone-tint-bottom: transparent;
-  margin-right: -43px;
+  flex-shrink: 0;
+  margin-right: var(--hand-card-overlap, -43px);
   transform-origin: center bottom;
+  transition:
+    width var(--arena-motion),
+    height var(--arena-motion),
+    margin-right var(--arena-motion);
 }
 
 .arena-card[data-variant="hand"][data-source-zone="COMMAND"] {
@@ -1502,9 +1500,9 @@ select {
   }
 
   .arena-card[data-variant="hand"] {
-    --card-width: 98px;
-    --card-height: 136px;
-    margin-right: -28px;
+    --card-width: var(--hand-card-width, 98px);
+    --card-height: var(--hand-card-height, 136px);
+    margin-right: var(--hand-card-overlap, -28px);
   }
 
   .arena-card[data-variant="battlefield"] {
@@ -1645,6 +1643,6 @@ select {
   }
 
   .arena-card[data-variant="hand"] {
-    margin-right: -10px;
+    margin-right: var(--hand-card-overlap, -10px);
   }
 }
