@@ -24,6 +24,9 @@ dist-ssr
 *.sln
 *.sw?
 
+# Playwright transient output
+artifacts/
+
 # Local state for PR generation
 .ironsha/*
 
