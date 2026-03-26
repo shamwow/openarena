@@ -526,7 +526,7 @@ select {
 .arena-seat__hand-area {
   --arena-hand-hover-clearance-top: 72px;
   --arena-hand-hover-clearance-side: 18px;
-  --arena-hand-fan-overlap: 24px;
+  --arena-hand-hidden-placeholder-opacity: 0.92;
   min-width: 0;
   min-height: 122px;
   display: flex;
@@ -536,7 +536,7 @@ select {
 }
 
 .arena-seat__hand-area[data-hidden="true"] {
-  --arena-hand-fan-overlap: 28px;
+  --arena-hand-hidden-placeholder-opacity: 0.88;
 }
 
 .arena-seat__hand-scroll {
@@ -568,97 +568,18 @@ select {
   gap: 0;
 }
 
-.arena-seat__hand-rail[data-has-fan="true"] {
-  gap: 0;
-}
-
-.arena-seat__hand-cards {
-  display: flex;
-  align-items: flex-end;
-  gap: 0;
-  min-width: 0;
-  width: max-content;
-  flex: 0 0 auto;
-}
-
-.arena-seat__hand-rail[data-has-fan="true"] .arena-seat__hand-cards {
-  margin-left: calc(var(--arena-hand-fan-overlap) * -1);
-}
-
 .arena-seat__hand-card {
   position: relative;
-}
-
-.arena-seat__hand-cards > .arena-seat__hand-card:last-child .arena-card {
-  margin-right: 0;
-}
-
-.arena-hidden-hand-fan {
-  --arena-hidden-fan-card-width: 126px;
-  --arena-hidden-fan-card-height: 176px;
-  --arena-hidden-fan-step: 18px;
-  --arena-hidden-fan-feature-overlap: 30px;
-  --arena-hidden-fan-spread-width: calc(
-    ((var(--fan-count, 1) - 1) * var(--arena-hidden-fan-step)) +
-      var(--arena-hidden-fan-card-width)
-  );
-  position: relative;
   flex: 0 0 auto;
-  width: calc(
-    var(--arena-hidden-fan-spread-width) +
-      var(--arena-hidden-fan-card-width) -
-      var(--arena-hidden-fan-feature-overlap)
-  );
-  height: var(--arena-hidden-fan-card-height);
 }
 
-.arena-hidden-hand-fan__cards {
-  position: relative;
-  width: var(--arena-hidden-fan-spread-width);
-  height: var(--arena-hidden-fan-card-height);
+.arena-seat__hand-card--placeholder {
+  pointer-events: none;
 }
 
-.arena-hidden-hand-fan__cards .arena-card-back {
-  position: absolute;
-  left: calc(var(--fan-index) * var(--arena-hidden-fan-step));
-  top: 0;
-  transform: rotate(calc((var(--fan-index) - 2.5) * 3deg));
-  transform-origin: center bottom;
-  z-index: calc(var(--fan-index) + 1);
-  margin-right: 0;
-}
-
-.arena-hidden-hand-fan__count {
-  position: absolute;
-  left: 10px;
-  bottom: 8px;
-  min-width: 28px;
-  min-height: 28px;
-  display: grid;
-  place-items: center;
-  padding: 0 8px;
-  border-radius: 999px;
-  background: rgba(7, 13, 21, 0.84);
-  color: var(--arena-text);
-  font-size: 0.82rem;
-  font-weight: 700;
-  z-index: 8;
-}
-
-.arena-hidden-hand-fan__featured {
-  position: absolute;
-  left: calc(
-    var(--arena-hidden-fan-spread-width) - var(--arena-hidden-fan-feature-overlap)
-  );
-  bottom: 0;
-  z-index: 10;
-  pointer-events: auto;
-}
-
-.arena-hidden-hand-fan__featured-card .arena-card {
-  --card-rotation: 8deg;
-  transform-origin: 20% bottom;
-  margin-right: 0;
+.arena-seat__hand-card--placeholder .arena-card {
+  opacity: var(--arena-hand-hidden-placeholder-opacity);
+  pointer-events: none;
 }
 
 .arena-seat__rail-empty {
@@ -1434,12 +1355,7 @@ select {
   .arena-seat__hand-area {
     --arena-hand-hover-clearance-top: 56px;
     --arena-hand-hover-clearance-side: 14px;
-    --arena-hand-fan-overlap: 18px;
     min-height: 112px;
-  }
-
-  .arena-seat__hand-area[data-hidden="true"] {
-    --arena-hand-fan-overlap: 22px;
   }
 
   .arena-seat__hand-scroll {
@@ -1462,16 +1378,6 @@ select {
   .arena-zone-pile__card {
     width: 60px;
     height: 82px;
-  }
-
-  .arena-hidden-hand-fan {
-    --arena-hidden-fan-card-width: 98px;
-    --arena-hidden-fan-card-height: 136px;
-    --arena-hidden-fan-step: 14px;
-    --arena-hidden-fan-feature-overlap: 24px;
-  }
-
-  .arena-hidden-hand-fan__cards {
   }
 
   .arena-card[data-variant="hand"] {
@@ -1589,13 +1495,8 @@ select {
   .arena-seat__hand-area {
     --arena-hand-hover-clearance-top: 50px;
     --arena-hand-hover-clearance-side: 12px;
-    --arena-hand-fan-overlap: 16px;
     justify-content: flex-start;
     min-height: 96px;
-  }
-
-  .arena-seat__hand-area[data-hidden="true"] {
-    --arena-hand-fan-overlap: 16px;
   }
 
   .arena-seat__hand-scroll {
@@ -1609,15 +1510,9 @@ select {
     justify-content: flex-start;
   }
 
-  .arena-hidden-hand-fan {
-    --arena-hidden-fan-step: 12px;
-    --arena-hidden-fan-feature-overlap: 20px;
-  }
-
-  .arena-hidden-hand-fan__cards {
-  }
-
   .arena-card[data-variant="hand"] {
-    margin-right: -10px;
+    --card-width: 88px;
+    --card-height: 122px;
+    margin-right: -14px;
   }
 }

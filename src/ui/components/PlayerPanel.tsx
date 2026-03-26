@@ -44,6 +44,11 @@ interface HandRailCard {
   railIndex: number;
 }
 
+interface HandRailPlaceholder {
+  placeholderIndex: number;
+  railIndex: number;
+}
+
 function isRailAnchorZone(zone: Zone): zone is RailAnchorZone {
   return zone === Zone.COMMAND || zone === Zone.EXILE || zone === Zone.GRAVEYARD;
 }
@@ -75,41 +80,6 @@ function ManaPoolDisplay({ pool }: { pool: ManaPool }) {
           <strong>{pool[color]}</strong>
         </span>
       ))}
-    </div>
-  );
-}
-
-function HiddenHandFan({
-  count,
-  featuredCard,
-}: {
-  count: number;
-  featuredCard?: React.ReactNode;
-}) {
-  const fanCount = Math.min(6, count);
-
-  if (count === 0) {
-    return null;
-  }
-
-  return (
-    <div
-      className="arena-hidden-hand-fan"
-      title={`${count} cards in hand`}
-      style={{ ['--fan-count' as string]: `${fanCount}` } as React.CSSProperties}
-    >
-      <div className="arena-hidden-hand-fan__cards" aria-hidden="true">
-        {Array.from({ length: fanCount }).map((_, index) => (
-          <div
-            key={`hidden-${index}`}
-            className="arena-card arena-card-back"
-            data-variant="hand"
-            style={{ ['--fan-index' as string]: `${index}` } as React.CSSProperties}
-          />
-        ))}
-      </div>
-      {featuredCard ? <div className="arena-hidden-hand-fan__featured">{featuredCard}</div> : null}
-      <div className="arena-hidden-hand-fan__count">{count}</div>
     </div>
   );
 }
@@ -320,26 +290,45 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
   const lifeState = getLifeDanger(player);
   const infoSide = seat.position.endsWith('right') ? 'left' : 'right';
   const orderedRailCards = buildHandRailCards(command, hand, exile, graveyard, legalActions);
-  const renderedRailCards = (
-    seat.handHidden
-      ? orderedRailCards.filter((card) => card.zone !== Zone.HAND)
-      : orderedRailCards
-  ).map((card, railIndex) => ({ card, railIndex }));
-  const hiddenFeaturedRailCard =
-    seat.handHidden
-      ? renderedRailCards.find(({ card }) => card.zone === Zone.COMMAND) ?? null
-      : null;
-  const visibleRailCards =
-    hiddenFeaturedRailCard == null
-      ? renderedRailCards
-      : renderedRailCards.filter(({ card }) => card.objectId !== hiddenFeaturedRailCard.card.objectId);
-  const showHiddenHandFan = seat.handHidden && hand.length > 0;
-  const hasRailContent = showHiddenHandFan || renderedRailCards.length > 0;
+  const visibleRailCards = seat.handHidden
+    ? orderedRailCards.filter((card) => card.zone !== Zone.HAND)
+    : orderedRailCards;
+  const hiddenRailPlaceholders: HandRailPlaceholder[] = seat.handHidden
+    ? Array.from({ length: hand.length }, (_, placeholderIndex) => ({
+        placeholderIndex,
+        railIndex: placeholderIndex,
+      }))
+    : [];
+  const commandRailCards = visibleRailCards.filter((card) => card.zone === Zone.COMMAND);
+  const nonCommandRailCards = visibleRailCards.filter((card) => card.zone !== Zone.COMMAND);
+  const handRailEntries = seat.handHidden
+    ? [
+        ...hiddenRailPlaceholders.map((placeholder) => ({
+          kind: 'placeholder' as const,
+          ...placeholder,
+        })),
+        ...commandRailCards.map((card, index) => ({
+          kind: 'card' as const,
+          card,
+          railIndex: hiddenRailPlaceholders.length + index,
+        })),
+        ...nonCommandRailCards.map((card, index) => ({
+          kind: 'card' as const,
+          card,
+          railIndex: hiddenRailPlaceholders.length + commandRailCards.length + index,
+        })),
+      ]
+    : visibleRailCards.map((card, railIndex) => ({
+        kind: 'card' as const,
+        card,
+        railIndex,
+      }));
+  const hasRailContent = handRailEntries.length > 0;
 
   const anchorCardIds = new Map<RailAnchorZone, string>();
-  for (const { card } of renderedRailCards) {
-    if (isRailAnchorZone(card.zone) && !anchorCardIds.has(card.zone)) {
-      anchorCardIds.set(card.zone, card.objectId);
+  for (const item of handRailEntries) {
+    if (item.kind === 'card' && isRailAnchorZone(item.card.zone) && !anchorCardIds.has(item.card.zone)) {
+      anchorCardIds.set(item.card.zone, item.card.objectId);
     }
   }
 
@@ -416,6 +405,19 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
       </div>
     );
   };
+
+  const renderHiddenRailPlaceholder = ({ placeholderIndex, railIndex }: HandRailPlaceholder) => (
+    <div
+      key={`hidden-placeholder-${placeholderIndex}`}
+      className="arena-seat__hand-card arena-seat__hand-card--placeholder"
+      aria-hidden="true"
+      style={{
+        zIndex: 1 + railIndex,
+      }}
+    >
+      <div className="arena-card arena-card-back" data-variant="hand" aria-hidden="true" />
+    </div>
+  );
 
   return (
     <section
@@ -545,22 +547,12 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
         >
           {hasRailContent ? (
             <div className="arena-seat__hand-scroll">
-              <div className="arena-seat__hand-rail" data-has-fan={showHiddenHandFan}>
-                {showHiddenHandFan ? (
-                  <HiddenHandFan
-                    count={hand.length}
-                    featuredCard={
-                      hiddenFeaturedRailCard
-                        ? renderRailCard(hiddenFeaturedRailCard, 'arena-hidden-hand-fan__featured-card')
-                        : undefined
-                    }
-                  />
-                ) : null}
-                {visibleRailCards.length > 0 ? (
-                  <div className="arena-seat__hand-cards">
-                    {visibleRailCards.map((railCard) => renderRailCard(railCard))}
-                  </div>
-                ) : null}
+              <div className="arena-seat__hand-rail" data-hidden={seat.handHidden}>
+                {handRailEntries.map((entry) =>
+                  entry.kind === 'placeholder'
+                    ? renderHiddenRailPlaceholder(entry)
+                    : renderRailCard(entry),
+                )}
               </div>
             </div>
           ) : (

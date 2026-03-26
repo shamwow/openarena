@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "pr": {
+    "owner": "shamwow",
+    "repo": "openarena",
+    "number": 0,
+    "branch": "orchestrate-1774492624253",
+    "baseBranch": "main",
+    "title": ""
+  },
+  "label": "bot-review-needed",
+  "passLabels": [],
+  "checkoutPath": "/Users/ironsha/Desktop/projects/openarena/.worktrees/orchestrate-1774492624253",
+  "reviews": [],
+  "createdAt": "2026-03-26T02:50:50.161Z",
+  "updatedAt": "2026-03-26T02:50:50.229Z"
+}
