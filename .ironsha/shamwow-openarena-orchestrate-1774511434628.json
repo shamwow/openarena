@@ -9,7 +9,8 @@
     "title": "Remove in-card text overlays from battlefield cards"
   },
   "passLabels": [
-    "code-review-passed"
+    "code-review-passed",
+    "qa-review-passed"
   ],
   "checkoutPath": "/Users/ironsha/Desktop/projects/openarena/.worktrees/orchestrate-1774511434628",
   "reviews": [
@@ -341,9 +342,17 @@
         }
       ],
       "createdAt": "2026-03-26T08:27:33.298Z"
+    },
+    {
+      "id": "497dd169-26bb-4120-8d97-df7101bab53d",
+      "phase": "qa",
+      "event": "APPROVE",
+      "author": "ironsha-bot",
+      "comments": [],
+      "createdAt": "2026-03-26T08:41:04.956Z"
     }
   ],
   "createdAt": "2026-03-26T08:09:38.302Z",
-  "updatedAt": "2026-03-26T08:37:54.177Z",
+  "updatedAt": "2026-03-26T08:41:04.956Z",
   "description": "**Summary**\n- Restore compact always-visible battlefield state in `CardView`, with deterministic on-card badge coverage for damage, summoning sickness, and counters plus persistent creature stats pills.\n- Keep PR-facing review media staged under `.ironsha/pr-media/` instead of repo-local `artifacts/` paths.\n\n**Test plan**\n1. Run `npm run lint` and `npm run build` from the repo root.\n2. Start the app in dev mode with `npm run dev -- --host 127.0.0.1 --port 0`, open `/?test-game-state=priority-reset-demo`, and wait for `.arena-board` plus `Pass Priority`.\n3. Verify the preset shows `Talrand, Sky Summoner`, `Rhystic Study`, `Blood Artist`, `Swiftfoot Boots`, `Command Tower`, and `Sol Ring`, with the current phase marker on `Main 1`.\n4. Confirm `Talrand, Sky Summoner` shows the on-card badges `Damage 1`, `Summoning sick`, and `+1/+1 x2`, plus a visible `4/4` stats pill. Confirm `Blood Artist` still shows a visible `0/1` stats pill on the battlefield.\n5. Click `Pass Priority` once and verify the phase marker advances to `Main 2`.\n6. Use `Open settings` -> `New Game`, wait for `.arena-board` plus `Pass Priority` again, and verify the preset resets back to `Main 1` with the same Talrand badge/state treatment still visible.\n\n**Visual evidence**\n- `.ironsha/pr-media/priority-reset-demo-initial-full.png` — Captured with Playwright after loading `http://127.0.0.1:<PORT>/?test-game-state=priority-reset-demo` and waiting for `.arena-board` plus `Pass Priority`. Proves the reviewed preset loads into `Main 1` with the expected named permanents and an interactive pass-priority state.\n- `.ironsha/pr-media/priority-reset-demo-talrand-badges.png` — Captured with Playwright from that same initial `priority-reset-demo` load using a locator screenshot of `.arena-card[title=\"Talrand, Sky Summoner\"]`. Proves the compact battlefield chrome renders `Damage 1`, `Summoning sick`, `+1/+1 x2`, and a `4/4` stats pill on the card itself.\n- `.ironsha/pr-media/priority-reset-demo-after-reset-full.png` — Captured with Playwright from the same browser session after clicking `Pass Priority`, then `Open settings` -> `New Game`, and waiting for `.arena-board` plus `Pass Priority` again. Proves the deterministic preset returns to the reviewed `Main 1` board state after reset.\n- `.ironsha/pr-media/priority-reset-demo-flow.webm` — Playwright browser-context recording of that same interaction sequence: load `/?test-game-state=priority-reset-demo`, click `Pass Priority`, then click `Open settings` -> `New Game`. Proves the end-to-end `Main 1` -> `Main 2` -> reset flow used for the screenshots."
 }
