@@ -831,6 +831,48 @@ select {
   inset: 0;
 }
 
+.arena-card__badges {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-content: flex-start;
+  pointer-events: none;
+}
+
+.arena-card__badge,
+.arena-card__stats,
+.arena-card__placeholder-label {
+  border: 1px solid rgba(255, 244, 218, 0.16);
+  background: rgba(8, 13, 22, 0.82);
+  color: #f8efe1;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+}
+
+.arena-card__badge {
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+.arena-card__stats {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  border-radius: 10px;
+  padding: 3px 7px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
 .arena-card-back,
 .arena-card__placeholder {
   width: 100%;
@@ -840,6 +882,24 @@ select {
     radial-gradient(circle at 30% 24%, rgba(222, 192, 139, 0.15), transparent 20%),
     linear-gradient(145deg, #162635, #0a131e 50%, #04090f 100%);
   position: relative;
+}
+
+.arena-card__placeholder {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 8px;
+}
+
+.arena-card__placeholder-label {
+  width: 100%;
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  text-wrap: balance;
 }
 
 .arena-mana-cost {
