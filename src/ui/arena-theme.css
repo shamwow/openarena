@@ -38,7 +38,7 @@ body {
     linear-gradient(145deg, #0b1621 0%, #071019 45%, #03070d 100%);
   color: var(--arena-text);
   font-family: var(--arena-font);
-  overflow: hidden;
+  overflow: clip;
 }
 
 * {
@@ -56,7 +56,6 @@ select {
   position: relative;
   width: 100vw;
   height: 100vh;
-  overflow: hidden;
   isolation: isolate;
   background:
     radial-gradient(circle at center, rgba(28, 69, 78, 0.28), transparent 38%),
@@ -542,7 +541,7 @@ select {
 .arena-seat__hand-scroll {
   width: calc(100% + (var(--arena-hand-hover-clearance-side) * 2));
   min-width: 0;
-  overflow-x: auto;
+  overflow: visible;
   padding: var(--arena-hand-hover-clearance-top) 0 10px;
   margin:
     calc(var(--arena-hand-hover-clearance-top) * -1)
