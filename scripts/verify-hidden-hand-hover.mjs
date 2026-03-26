@@ -1,4 +1,4 @@
-import { mkdir } from 'node:fs/promises';
+import { mkdir, rm } from 'node:fs/promises';
 import { chromium } from 'playwright';
 
 const port = process.argv[2] ?? process.env.PORT;
@@ -9,7 +9,7 @@ if (!port) {
 
 const baseUrl = `http://127.0.0.1:${port}`;
 const presetUrl = `${baseUrl}/?test-game-state=hidden-hand-hover-demo`;
-const artifactDir = 'artifacts';
+const artifactDir = '.ironsha/pr-media';
 const videoDir = `${artifactDir}/videos`;
 const hiddenNames = ['Counterspell', 'Brainstorm', 'Ponder'];
 
@@ -25,6 +25,7 @@ const context = await browser.newContext({
   },
 });
 const page = await context.newPage();
+const recordedVideo = page.video();
 
 await page.goto(presetUrl, { waitUntil: 'networkidle' });
 await page.locator('.arena-board').waitFor();
@@ -43,10 +44,9 @@ if ((await concealedCards.count()) < 3) {
 
 await visibleRailCard.waitFor();
 await page.locator('.arena-card[title="Rhystic Study"]').waitFor();
-await page.locator('.arena-card[title="Arcane Signet"]').waitFor();
 
-await page.screenshot({ path: `${artifactDir}/hidden-hand-hover-demo-board-initial.png`, fullPage: true });
-await opponentHandArea.screenshot({ path: `${artifactDir}/hidden-hand-hover-demo-opponent-hand-initial.png` });
+await page.screenshot({ path: `${artifactDir}/hidden-hand-hover-demo-initial-board.png`, fullPage: true });
+await opponentHandArea.screenshot({ path: `${artifactDir}/hidden-hand-hover-demo-opponent-rail-initial.png` });
 
 const firstConcealed = concealedCards.nth(0);
 const secondConcealed = concealedCards.nth(1);
@@ -78,8 +78,8 @@ for (const hiddenName of hiddenNames) {
   }
 }
 
-await opponentHandArea.screenshot({ path: `${artifactDir}/hidden-hand-hover-demo-opponent-hand-hover-first.png` });
-await previewPane.screenshot({ path: `${artifactDir}/hidden-hand-hover-demo-preview-hidden-first.png` });
+await opponentHandArea.screenshot({ path: `${artifactDir}/hidden-hand-hover-demo-opponent-rail-hover-first.png` });
+await previewPane.screenshot({ path: `${artifactDir}/hidden-hand-hover-demo-preview-hidden-card.png` });
 
 await secondConcealed.hover();
 
@@ -97,7 +97,7 @@ for (const hiddenName of hiddenNames) {
   }
 }
 
-await opponentHandArea.screenshot({ path: `${artifactDir}/hidden-hand-hover-demo-opponent-hand-hover-second.png` });
+await opponentHandArea.screenshot({ path: `${artifactDir}/hidden-hand-hover-demo-opponent-rail-hover-second.png` });
 
 await visibleRailCard.hover();
 const visiblePreviewText = await previewPane.innerText();
@@ -150,6 +150,14 @@ for (const hiddenName of hiddenNames) {
 }
 
 await context.close();
+if (!recordedVideo) {
+  throw new Error('Expected Playwright video recording to be available.');
+}
+const rawVideoPath = await recordedVideo.path();
+await recordedVideo.saveAs(`${artifactDir}/hidden-hand-hover-demo-session.webm`);
+if (rawVideoPath !== `${artifactDir}/hidden-hand-hover-demo-session.webm`) {
+  await rm(rawVideoPath, { force: true });
+}
 await browser.close();
 
 console.log(`Verified hidden hand hover concealment at ${presetUrl}`);
