@@ -6,12 +6,63 @@
     "number": 0,
     "branch": "orchestrate-1774492624253",
     "baseBranch": "main",
-    "title": ""
+    "title": "Unify hidden opponent hands with the rail layout"
   },
-  "label": "bot-review-needed",
-  "passLabels": [],
+  "label": "bot-changes-needed",
+  "passLabels": [
+    "agent-code-review-passed"
+  ],
   "checkoutPath": "/Users/ironsha/Desktop/projects/openarena/.worktrees/orchestrate-1774492624253",
-  "reviews": [],
+  "reviews": [
+    {
+      "id": "35d4fd91-b82b-4fba-9a47-bbb4a7445c2b",
+      "phase": "code",
+      "body": "The rail refactor is directionally sound, but I found two regressions: the hidden commander can now be visually buried under later visible rail cards, and the hidden-hand count is no longer exposed to assistive tech. The repo also has unrelated pre-existing lint/build failures, but nothing in this diff appears to add to them.",
+      "event": "COMMENT",
+      "author": "ironsha-bot",
+      "comments": [],
+      "createdAt": "2026-03-26T02:53:13.594Z"
+    },
+    {
+      "id": "5d865851-4fff-438e-9064-84fae864e0d5",
+      "phase": "qa",
+      "body": "The implementation and QA docs are aligned on the new hidden-hand rail behavior, and the test plan does describe how to get the app into the correct fresh-game state. The review is blocked because the PR description does not actually include the required Playwright visual evidence, so I cannot validate any screenshot/video links or confirm the recorded interaction state.",
+      "event": "COMMENT",
+      "author": "ironsha-bot",
+      "comments": [
+        {
+          "id": "70bd1437-260a-4b5f-b210-d3cc1037873a",
+          "path": null,
+          "line": null,
+          "body": "Blocking: the PR's \"Visual evidence\" section is a placeholder only. This is an interactive React/web UI change, so I need actual Playwright-captured media links showing the app loaded into the fresh-game state and the hidden hand rail at rest, on hover, and while scrolled. Without those links I cannot verify that the evidence is GitHub-hosted, opens correctly, uses the right branch/media branch, or renders inline where expected.",
+          "author": "ironsha-bot",
+          "reactions": [
+            {
+              "content": "rocket",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T02:58:11.665Z"
+            },
+            {
+              "content": "+1",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T02:58:11.665Z"
+            }
+          ],
+          "replies": [
+            {
+              "id": "5e47ecba-b7f3-4af7-a334-ec01d112832e",
+              "body": "Replaced the placeholder Visual evidence section with concrete GitHub-hosted Playwright artifacts on the published `pr-media` branch, including desktop and mobile screenshots plus desktop and mobile videos. The PR description now states the tool and browser state shown by each artifact and also adds the linked Playwright capture run to the test plan.",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T02:58:11.595Z"
+            }
+          ],
+          "createdAt": "2026-03-26T02:53:39.975Z"
+        }
+      ],
+      "createdAt": "2026-03-26T02:53:39.975Z"
+    }
+  ],
   "createdAt": "2026-03-26T02:50:50.161Z",
-  "updatedAt": "2026-03-26T02:50:50.229Z"
+  "updatedAt": "2026-03-26T02:58:11.665Z",
+  "description": "**Summary**\n- Replaced the hidden-opponent hand fan with a single horizontal hand-rail flow so hidden seats now render face-down placeholders inline with the rest of the hand UI.\n- Updated `PlayerPanel` and the arena theme CSS to remove fan-specific geometry, keep hidden cards non-interactive, and preserve hover/scroll behavior across desktop and mobile breakpoints.\n- Refreshed the QA docs to match the new rail-based behavior and to verify that no card content leaks or interaction gaps remain.\n\n**Test plan**\n- Launch the app and start a fresh game.\n- Confirm the local seat renders a horizontal hand rail and that cards remain fully visible while hovering and horizontally scrolling.\n- Inspect each hidden opponent seat and verify it renders a horizontal rail of face-down placeholders inline with the commander, with no detached fan shape.\n- Hover the hidden commander cards and scroll the hidden rails horizontally to confirm the commander stays attached to the row and does not clip.\n- Verify the hidden placeholders do not expose face-up card information and do not intercept interactions intended for visible cards.\n- Review the linked Playwright captures below to confirm the fresh-game board state, the hidden rail at rest, the hovered commander state, and the horizontally scrolled state in the actual browser.\n- Run `npm run lint` and `npm run build` to catch regressions in the UI code and styles.\n\n**Visual evidence**\n- Desktop screenshot, Playwright, fresh game at rest with the hidden hand rail loaded: ![Desktop rest](https://github.com/shamwow/openarena/blob/pr-media/media/desktop-rest.png?raw=1)\n- Desktop screenshot, Playwright, hidden commander hovered in the fresh-game board: ![Desktop hover](https://github.com/shamwow/openarena/blob/pr-media/media/desktop-hover.png?raw=1)\n- Desktop screenshot, Playwright, hidden rail horizontally scrolled in the fresh-game board: ![Desktop scrolled](https://github.com/shamwow/openarena/blob/pr-media/media/desktop-scrolled.png?raw=1)\n- Desktop video, Playwright, fresh-game board showing rest, hover, and horizontal scroll states: [Desktop video](https://github.com/shamwow/openarena/blob/pr-media/media/desktop.webm)\n- Mobile screenshot, Playwright, fresh-game board at the narrow viewport: ![Mobile rest](https://github.com/shamwow/openarena/blob/pr-media/media/mobile-rest.png?raw=1)\n- Mobile video, Playwright, fresh-game board at the narrow viewport showing the same rail layout: [Mobile video](https://github.com/shamwow/openarena/blob/pr-media/media/mobile.webm)"
 }
