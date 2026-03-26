@@ -29,6 +29,8 @@ artifacts/
 
 # Local state for PR generation
 .ironsha/*
+!.ironsha/pr-media/
+!.ironsha/pr-media/**
 
 # PR plan files
 .plan.md
