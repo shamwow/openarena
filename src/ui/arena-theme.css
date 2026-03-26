@@ -826,9 +826,46 @@ select {
   pointer-events: none;
 }
 
+.arena-card__surface {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at top center, rgba(255, 255, 255, 0.1), transparent 30%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(1, 4, 9, 0.2));
+}
+
 .arena-card__image-wrap {
   position: absolute;
   inset: 0;
+}
+
+.arena-card__chrome {
+  position: absolute;
+  inset-inline: 8px;
+  top: 8px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.arena-card__name {
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(7, 13, 21, 0.72);
+  color: #f7f1df;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  font-weight: 600;
+  backdrop-filter: blur(6px);
+}
+
+.arena-card[data-variant="mini"] .arena-card__name {
+  font-size: 0.62rem;
+  padding: 4px 6px;
 }
 
 .arena-card__badges {
@@ -871,6 +908,43 @@ select {
   font-weight: 800;
   letter-spacing: 0.04em;
   pointer-events: none;
+}
+
+.arena-card__footer {
+  position: absolute;
+  inset-inline: 8px;
+  bottom: 8px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.arena-card__meta {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.arena-card__type,
+.arena-card__text-chip {
+  padding: 5px 8px;
+  border-radius: 10px;
+  background: rgba(7, 13, 21, 0.76);
+  backdrop-filter: blur(6px);
+  color: #f0e2bc;
+  font-size: 0.68rem;
+  line-height: 1.2;
+}
+
+.arena-card__type {
+  color: var(--arena-text-soft);
+}
+
+.arena-card__footer .arena-card__stats {
+  position: static;
 }
 
 .arena-card-back,

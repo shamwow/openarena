@@ -3,6 +3,7 @@ import { CardType, type CardInstance, type PlayerAction, type Zone } from '../..
 import { useCardArt } from '../hooks/useCardArt';
 import type { DragCardPayload } from '../types';
 import { getPrimaryCardAction, isTokenCard } from '../utils/gameView';
+import { ManaCostView } from './ManaCostView';
 
 interface CardViewProps {
   card: CardInstance;
@@ -29,6 +30,15 @@ function formatCounterLabel(counterType: string, amount: number): string {
   }
 
   return `${counterType} ${amount}`;
+}
+
+function getTypeLine(card: CardInstance): string {
+  const left = [...card.definition.supertypes, ...card.definition.types].join(' ');
+  if (card.definition.subtypes.length === 0) {
+    return left;
+  }
+
+  return `${left} - ${card.definition.subtypes.join(' ')}`;
 }
 
 export const CardView: React.FC<CardViewProps> = ({
@@ -76,6 +86,10 @@ export const CardView: React.FC<CardViewProps> = ({
     : loyalty != null
       ? `Loyalty ${loyalty}`
       : null;
+  const oracleSnippet = card.definition.oracleText
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)[0];
 
   const handlePreview = () => {
     onPreview?.(card);
@@ -161,6 +175,13 @@ export const CardView: React.FC<CardViewProps> = ({
             </div>
           )}
         </div>
+        {!isBattlefieldCard ? <div className="arena-card__surface" /> : null}
+        {!isBattlefieldCard ? (
+          <div className="arena-card__chrome">
+            <div className="arena-card__name">{card.definition.name}</div>
+            {variant !== 'mini' ? <ManaCostView cost={card.definition.manaCost} /> : null}
+          </div>
+        ) : null}
         {isBattlefieldCard && battlefieldBadges.length > 0 ? (
           <div className="arena-card__badges">
             {battlefieldBadges.map((badge) => (
@@ -173,6 +194,17 @@ export const CardView: React.FC<CardViewProps> = ({
         {isBattlefieldCard && battlefieldStats ? (
           <div className="arena-card__stats">
             {battlefieldStats}
+          </div>
+        ) : null}
+        {!isBattlefieldCard ? (
+          <div className="arena-card__footer">
+            <div className="arena-card__meta">
+              <div className="arena-card__type">{getTypeLine(card)}</div>
+              {variant !== 'mini' && oracleSnippet ? (
+                <div className="arena-card__text-chip">{oracleSnippet}</div>
+              ) : null}
+            </div>
+            {battlefieldStats ? <div className="arena-card__stats">{battlefieldStats}</div> : null}
           </div>
         ) : null}
       </div>
