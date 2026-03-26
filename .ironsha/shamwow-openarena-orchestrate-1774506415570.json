@@ -205,9 +205,52 @@
         }
       ],
       "createdAt": "2026-03-26T07:17:13.340Z"
+    },
+    {
+      "id": "d1b698e5-d35c-4277-979c-94b4306b2cb1",
+      "phase": "qa",
+      "event": "REQUEST_CHANGES",
+      "author": "ironsha-bot",
+      "comments": [
+        {
+          "id": "4451bc8b-35f4-4e0c-8acc-5974d52dcae6",
+          "path": null,
+          "line": null,
+          "body": "Blocking: the PR still adds review media outside the allowed staged publish path. In addition to the `.ironsha/pr-media/...` files referenced in `Visual evidence`, this diff also adds duplicate screenshots/videos under `artifacts/normal-load.png`, `artifacts/invalid-test-game-state-fallback.png`, `artifacts/priority-reset-demo-initial.png`, `artifacts/priority-reset-demo-board-initial.png`, `artifacts/priority-reset-demo-after-reset.png`, and `artifacts/videos/c72b9db8855eed9b9ff7cb1ac9f67123.webm`. The QA requirements for this flow are that the publishable evidence live under `.ironsha/pr-media/`; please remove the repo-local `artifacts/` media from the PR so there is a single authoritative staged media set for reviewers and the CLI publish step.",
+          "author": "ironsha-bot",
+          "reactions": [
+            {
+              "content": "rocket",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T07:20:49.670Z"
+            },
+            {
+              "content": "+1",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T07:20:49.670Z"
+            }
+          ],
+          "replies": [
+            {
+              "id": "b0cbec0d-df4a-44ae-9abc-fc2cf3e201c5",
+              "body": "Removed the duplicate tracked screenshots and video under `artifacts/` so the PR now has a single authoritative review-media set under `.ironsha/pr-media/`, which is the only location referenced by `Visual evidence`.",
+              "author": "openai",
+              "createdAt": "2026-03-26T07:24:30.000Z"
+            },
+            {
+              "id": "150920fb-7b0d-454f-aebc-e6ffbf1a9a16",
+              "body": "Removed the duplicate tracked review media under `artifacts/` so the PR now has a single authoritative staged evidence set under `.ironsha/pr-media/`, and updated the stored PR thread metadata with the resolution reply.",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T07:20:49.603Z"
+            }
+          ],
+          "createdAt": "2026-03-26T07:19:47.524Z"
+        }
+      ],
+      "createdAt": "2026-03-26T07:19:47.524Z"
     }
   ],
   "createdAt": "2026-03-26T06:55:38.505Z",
-  "updatedAt": "2026-03-26T07:18:04.369Z",
+  "updatedAt": "2026-03-26T07:20:49.670Z",
   "description": "**Summary**\n- Add a dev-only `test-game-state` query param that can boot the app from a checked-in preset, fall back to the normal game for unknown ids, and preserve the selected preset when `New Game` is used.\n- Introduce a reusable `TestGameStateBuilder` plus a durable `priority-reset-demo` preset to create deterministic board states for Playwright and manual UI verification.\n- Update engine initialization to accept a supplied initial state and clean up hook subscriptions/reset behavior so preset reloads are stable; include Playwright guidance and captured artifacts for the new flow.\n\n**Test plan**\n1. Start the app from the repo root with `npm run dev -- --host 127.0.0.1 --port 0` and note the printed `127.0.0.1:<PORT>` URL.\n2. Open `http://127.0.0.1:<PORT>/` and verify the baseline normal game loads at `Turn 1` / `Main 1` with `Pass Priority` visible, all four players at `40` life, each library showing `67`, and only the default commander row (`Ayara, First of Locthwain`, `Krenko, Mob Boss`, `Talrand, Sky Summoner`, `Heliod, Sun-Crowned`) instead of the preset-only altered totals, poison counter, and support permanents from `priority-reset-demo`.\n3. Open `http://127.0.0.1:<PORT>/?test-game-state=priority-reset-demo` and verify `Pass Priority` is visible, the current phase step is `Main 1`, player totals are `18` / `24` / `27` / `32`, the black seat shows `Poison 1/10`, and the board shows `Talrand, Sky Summoner`, `Rhystic Study`, `Blood Artist`, `Swiftfoot Boots`, `Command Tower`, and `Sol Ring`.\n4. Click `Pass Priority` and verify the current phase step advances to `Main 2`.\n5. Open settings, click `New Game`, and verify the board reloads the same preset deterministically: `Pass Priority` is visible again, the current phase step returns to `Main 1`, and the same distinctive cards and altered totals are restored.\n6. Open `http://127.0.0.1:<PORT>/?test-game-state=does-not-exist` and verify the app falls back to the same baseline normal-game state from step 2 while the browser console emits `Unknown test-game-state \"does-not-exist\". Available ids: priority-reset-demo.`.\n\n**Visual evidence**\n- `.ironsha/pr-media/priority-reset-demo-flow.webm` — video — Playwright capture of the interactive `priority-reset-demo` flow, including initial `Main 1`, advancing priority, and using `New Game` to reload the preset deterministically.\n- `.ironsha/pr-media/priority-reset-demo-initial.png` — screenshot — Playwright full-page capture of the initial `priority-reset-demo` screen in dev with the preset board loaded at `Main 1`, the altered `18` / `24` / `27` / `32` life totals, and `Pass Priority` visible.\n- `.ironsha/pr-media/priority-reset-demo-board-initial.png` — screenshot — Playwright `.arena-board` locator capture of the initial `priority-reset-demo` battlefield showing the authored visible markers.\n- `.ironsha/pr-media/priority-reset-demo-after-reset.png` — screenshot — Playwright full-page capture after using `New Game` while `test-game-state=priority-reset-demo` is present, showing the preset restored to its initial state.\n- `.ironsha/pr-media/normal-load.png` — screenshot — Playwright full-page capture of the baseline dev load without a `test-game-state` query param, showing `Turn 1` / `Main 1`, all four players at `40` life, and the default commander row instead of the preset-only altered totals/support cards.\n- `.ironsha/pr-media/invalid-test-game-state-fallback.png` — screenshot — Playwright full-page capture of the unknown-id fallback showing the same baseline normal-game state, with an added overlay of the browser console warning captured during the Playwright run.\n- `.ironsha/pr-media/invalid-test-game-state-console-warning.txt` — log — Playwright-captured browser warning text from the invalid-id fallback flow, saved alongside the screenshots for reviewer inspection."
 }
