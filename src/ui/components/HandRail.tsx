@@ -1,9 +1,9 @@
 import React, { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import type { CardInstance, PlayerAction, PlayerId } from '../../engine/types';
 import { ActionType, Zone } from '../../engine/types';
+import { useCardArt } from '../hooks/useCardArt';
 import type { DragCardPayload } from '../types';
-import { getPrimaryCardAction } from '../utils/gameView';
-import { CardView } from './CardView';
+import { getPrimaryCardAction, isTokenCard } from '../utils/gameView';
 
 interface HandRailProps {
   playerId: PlayerId;
@@ -267,6 +267,134 @@ function buildSideOverlapDeltas(
   return expandDeltas.map((expandDelta, index) => expandDelta - compressDeltas[index]);
 }
 
+interface HandRailCardProps {
+  card: CardInstance;
+  legalActions: PlayerAction[];
+  onAction: (action: PlayerAction) => void;
+  onPreview: (card: CardInstance) => void;
+  onPreviewClear: (cardId?: string) => void;
+  isPreviewed: boolean;
+  previewMode: 'hover' | 'tap';
+  draggingCardId: string | null;
+  onDragStart: (payload: DragCardPayload) => void;
+  onDragEnd: () => void;
+  mountRef?: (node: HTMLDivElement | null) => void;
+  sourceZone?: Zone;
+}
+
+function handRailCardPropsEqual(
+  prev: HandRailCardProps,
+  next: HandRailCardProps,
+): boolean {
+  return (
+    prev.card === next.card &&
+    prev.legalActions === next.legalActions &&
+    prev.onAction === next.onAction &&
+    prev.onPreview === next.onPreview &&
+    prev.onPreviewClear === next.onPreviewClear &&
+    prev.isPreviewed === next.isPreviewed &&
+    prev.previewMode === next.previewMode &&
+    prev.draggingCardId === next.draggingCardId &&
+    prev.onDragStart === next.onDragStart &&
+    prev.onDragEnd === next.onDragEnd &&
+    prev.sourceZone === next.sourceZone
+  );
+}
+
+const HandRailCard = React.memo<HandRailCardProps>(
+  ({
+    card,
+    legalActions,
+    onAction,
+    onPreview,
+    onPreviewClear,
+    isPreviewed,
+    previewMode,
+    draggingCardId,
+    onDragStart,
+    onDragEnd,
+    mountRef,
+    sourceZone,
+  }) => {
+    const art = useCardArt(card.definition.name, {
+      enabled: !isTokenCard(card),
+    });
+    const imageUrl = art.normal ?? art.png ?? art.artCrop;
+    const interactionAction = getPrimaryCardAction(card, legalActions);
+    const isDragging = draggingCardId === card.objectId;
+    const resolvedSourceZone = sourceZone ?? card.zone;
+
+    const handlePreview = () => {
+      onPreview(card);
+    };
+
+    const handlePreviewClear = () => {
+      onPreviewClear(card.objectId);
+    };
+
+    const handleActivate = () => {
+      if (previewMode === 'tap' && !isPreviewed) {
+        handlePreview();
+        return;
+      }
+
+      if (interactionAction) {
+        onAction(interactionAction);
+        return;
+      }
+
+      handlePreview();
+    };
+
+    const handleDragStart = (event: React.DragEvent<HTMLDivElement>) => {
+      if (!interactionAction) {
+        return;
+      }
+
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', card.objectId);
+
+      onDragStart({
+        card,
+        action: interactionAction,
+        playerId: interactionAction.playerId,
+        sourceZone: resolvedSourceZone,
+        hiddenSource: false,
+      });
+    };
+
+    return (
+      <div
+        ref={mountRef}
+        className="arena-card"
+        data-variant="hand"
+        data-content-mode="bare"
+        data-previewed={isPreviewed}
+        data-selected={previewMode === 'tap' && isPreviewed}
+        data-has-action={interactionAction != null}
+        data-dragging={isDragging}
+        data-source-zone={resolvedSourceZone}
+        draggable={interactionAction != null}
+        title={card.definition.name}
+        style={
+          {
+            ['--card-cursor' as string]: 'pointer',
+            ['--bare-card-image' as string]: imageUrl ? `url("${imageUrl}")` : 'none',
+          } as React.CSSProperties
+        }
+        onDragStart={handleDragStart}
+        onDragEnd={onDragEnd}
+        onMouseEnter={previewMode === 'hover' ? handlePreview : undefined}
+        onMouseLeave={previewMode === 'hover' ? handlePreviewClear : undefined}
+        onFocus={handlePreview}
+        onBlur={previewMode === 'hover' ? handlePreviewClear : undefined}
+        onClick={handleActivate}
+      />
+    );
+  },
+  handRailCardPropsEqual,
+);
+
 const HandRailInner: React.FC<HandRailProps> = ({
   playerId,
   playerName,
@@ -452,8 +580,9 @@ const HandRailInner: React.FC<HandRailProps> = ({
           onMouseEnter={previewMode === 'hover' ? () => applyHoverSpacing(item.railIndex) : undefined}
         >
           <div
-            className="arena-card arena-card-back"
+            className="arena-card"
             data-variant="hand"
+            data-content-mode="bare"
             data-hidden-placeholder="true"
             aria-hidden="true"
           />
@@ -476,19 +605,17 @@ const HandRailInner: React.FC<HandRailProps> = ({
         style={railCardStyle}
         onMouseEnter={previewMode === 'hover' ? () => applyHoverSpacing(item.railIndex) : undefined}
       >
-        <CardView
+        <HandRailCard
           card={item.card}
-          variant="hand"
           legalActions={legalActions}
           onAction={onAction}
           onPreview={onPreview}
           onPreviewClear={onPreviewClear}
           isPreviewed={previewCardId === item.card.objectId}
           previewMode={previewMode}
-          draggableAction={getPrimaryCardAction(item.card, legalActions)}
+          draggingCardId={draggingCardId}
           onDragStart={onDragStart}
           onDragEnd={onDragEnd}
-          isDragging={draggingCardId === item.card.objectId}
           sourceZone={item.card.zone}
           mountRef={(node) => registerCardElement(item.card.objectId, node)}
         />
