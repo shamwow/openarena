@@ -6,7 +6,11 @@ import { findCard, getNextTimestamp, createCardInstance } from './GameState';
 import type { EventBus } from './EventBus';
 
 export class ZoneManager {
-  constructor(private eventBus: EventBus) {}
+  private eventBus: EventBus;
+
+  constructor(eventBus: EventBus) {
+    this.eventBus = eventBus;
+  }
 
   moveCard(
     state: GameState,

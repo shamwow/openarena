@@ -12,10 +12,13 @@ interface SBAAction {
 }
 
 export class StateBasedActions {
-  constructor(
-    private zoneManager: ZoneManager,
-    private eventBus: EventBus,
-  ) {}
+  private zoneManager: ZoneManager;
+  private eventBus: EventBus;
+
+  constructor(zoneManager: ZoneManager, eventBus: EventBus) {
+    this.zoneManager = zoneManager;
+    this.eventBus = eventBus;
+  }
 
   /**
    * Check and apply state-based actions.

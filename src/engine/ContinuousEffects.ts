@@ -101,7 +101,7 @@ export class ContinuousEffectsEngine {
         // Expires when source leaves the battlefield
         let found = false;
         for (const pid of state.turnOrder) {
-          if (state.zones[pid].BATTLEFIELD.some(c => c.objectId === effect.duration.sourceId)) {
+          if (state.zones[pid].BATTLEFIELD.some(c => c.objectId === effect.sourceId)) {
             found = true;
             break;
           }

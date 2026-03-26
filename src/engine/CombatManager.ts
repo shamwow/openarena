@@ -8,10 +8,13 @@ import type { EventBus } from './EventBus';
 import type { ZoneManager } from './ZoneManager';
 
 export class CombatManager {
-  constructor(
-    private eventBus: EventBus,
-    private zoneManager: ZoneManager,
-  ) {}
+  private eventBus: EventBus;
+  private zoneManager: ZoneManager;
+
+  constructor(eventBus: EventBus, zoneManager: ZoneManager) {
+    this.eventBus = eventBus;
+    this.zoneManager = zoneManager;
+  }
 
   /** Start combat phase — initialize combat state */
   beginCombat(state: GameState): void {

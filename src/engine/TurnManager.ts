@@ -26,11 +26,15 @@ export const TURN_STRUCTURE: PhaseStep[] = [
 ];
 
 export class TurnManager {
-  constructor(
-    private eventBus: EventBus,
-    private zoneManager: ZoneManager,
-    private manaManager: ManaManager,
-  ) {}
+  private eventBus: EventBus;
+  private zoneManager: ZoneManager;
+  private manaManager: ManaManager;
+
+  constructor(eventBus: EventBus, zoneManager: ZoneManager, manaManager: ManaManager) {
+    this.eventBus = eventBus;
+    this.zoneManager = zoneManager;
+    this.manaManager = manaManager;
+  }
 
   getCurrentIndex(state: GameState): number {
     return TURN_STRUCTURE.findIndex(

@@ -53,7 +53,7 @@ function applyQaScenario(state: GameState, legalActions: PlayerAction[], scenari
   const syntheticActions: PlayerAction[] = [localZones.EXILE[0], localZones.GRAVEYARD[0]]
     .filter((card): card is NonNullable<typeof card> => card != null)
     .map((card) => ({
-      type: ActionType.CAST_SPELL as const,
+      type: ActionType.CAST_SPELL,
       playerId: 'player1' as const,
       cardId: card.objectId,
     }));

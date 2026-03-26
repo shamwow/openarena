@@ -1,8 +1,8 @@
 import type {
-  CardDefinition, CardType, ManaCost, ManaColor, Keyword,
+  CardDefinition, CardType, ManaColor, Keyword,
   AbilityDefinition, ActivatedAbilityDef, TriggeredAbilityDef,
   StaticAbilityDef, SpellAbilityDef, Cost, TriggerCondition,
-  EffectFn, TargetSpec, StaticEffectDef,
+  EffectFn, TargetSpec, StaticEffectDef, ManaPool,
 } from '../engine/types';
 import { parseManaCost, emptyManaCost } from '../engine/types';
 
@@ -127,14 +127,23 @@ export class CardBuilder {
 
   /** Add a tap-for-any-color ability */
   tapForAnyColor(): this {
+    type ColoredMana = Exclude<keyof ManaPool, 'C'>;
+    const options: ColoredMana[] = ['W', 'U', 'B', 'R', 'G'];
+    const labels: Record<ColoredMana, string> = {
+      W: 'White',
+      U: 'Blue',
+      B: 'Black',
+      R: 'Red',
+      G: 'Green',
+    };
     const ability: ActivatedAbilityDef = {
       kind: 'activated',
       cost: { tap: true },
       effect: async (ctx) => {
         const color = await ctx.choices.chooseOne(
           'Choose a color of mana to add',
-          ['W', 'U', 'B', 'R', 'G'] as (keyof import('../engine/types').ManaPool)[],
-          (c) => ({ W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green' }[c] ?? c)
+          options,
+          (c) => labels[c]
         );
         ctx.game.addMana(ctx.controller, color, 1);
       },

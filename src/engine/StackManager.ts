@@ -11,11 +11,15 @@ import type { ZoneManager } from './ZoneManager';
 import type { ManaManager } from './ManaManager';
 
 export class StackManager {
-  constructor(
-    private eventBus: EventBus,
-    private zoneManager: ZoneManager,
-    private manaManager: ManaManager,
-  ) {}
+  private eventBus: EventBus;
+  private zoneManager: ZoneManager;
+  private manaManager: ManaManager;
+
+  constructor(eventBus: EventBus, zoneManager: ZoneManager, manaManager: ManaManager) {
+    this.eventBus = eventBus;
+    this.zoneManager = zoneManager;
+    this.manaManager = manaManager;
+  }
 
   /** Push a spell onto the stack */
   castSpell(

@@ -35,9 +35,9 @@ interface PlayerPanelProps {
   registerZoneAnchor: (key: string, node: HTMLElement | null) => void;
 }
 
-type OpenZoneDialog = Zone.GRAVEYARD | Zone.EXILE | null;
+type OpenZoneDialog = typeof Zone.GRAVEYARD | typeof Zone.EXILE | null;
 
-type RailAnchorZone = Zone.COMMAND | Zone.EXILE | Zone.GRAVEYARD;
+type RailAnchorZone = typeof Zone.COMMAND | typeof Zone.EXILE | typeof Zone.GRAVEYARD;
 
 type HandRailItem =
   | {
@@ -160,7 +160,7 @@ function ZonePile({
   onClick,
   registerZoneAnchor,
 }: {
-  zone: Zone.LIBRARY | Zone.GRAVEYARD | Zone.EXILE;
+  zone: typeof Zone.LIBRARY | typeof Zone.GRAVEYARD | typeof Zone.EXILE;
   count: number;
   side: 'left' | 'right';
   onClick?: () => void;
@@ -243,7 +243,11 @@ function buildHandRailItems(
   legalActions: PlayerAction[],
 ): HandRailItem[] {
   const playableCardIds = collectPlayableCardIds(legalActions);
-  const orderedItems: Omit<HandRailItem, 'railIndex'>[] = [
+  type HandRailItemSeed =
+    | { kind: 'card'; card: CardInstance }
+    | { kind: 'hidden-hand'; key: string };
+
+  const orderedItems: HandRailItemSeed[] = [
     ...command.map((card) => ({ kind: 'card' as const, card })),
     ...(handHidden
       ? hand.map((_, handIndex) => ({
@@ -259,11 +263,12 @@ function buildHandRailItems(
       .map((card) => ({ kind: 'card' as const, card })),
   ];
 
-  return orderedItems.map((item, railIndex) =>
-    item.kind === 'card'
-      ? { kind: 'card', card: item.card, railIndex }
-      : { kind: 'hidden-hand', key: item.key, railIndex },
-  );
+  return orderedItems.map((item, railIndex) => {
+    if (item.kind === 'card') {
+      return { kind: 'card', card: item.card, railIndex };
+    }
+    return { kind: 'hidden-hand', key: item.key, railIndex };
+  });
 }
 
 export const PlayerPanel: React.FC<PlayerPanelProps> = ({
