@@ -2,7 +2,7 @@ import { v4 as uuid } from 'uuid';
 import type {
   GameState, StackEntry, ObjectId, PlayerId, CardInstance,
   EffectContext, ActivatedAbilityDef, TriggeredAbilityDef,
-  GameEvent, ManaCost, StackEntryType as StackEntryTypeEnum,
+  GameEvent,
 } from './types';
 import { GameEventType, StackEntryType, CardType } from './types';
 import { findCard, getNextTimestamp } from './GameState';
@@ -28,7 +28,6 @@ export class StackManager {
     controller: PlayerId,
     targets: (ObjectId | PlayerId)[],
     xValue?: number,
-    additionalCost?: ManaCost
   ): StackEntry {
     // Remove card from hand
     this.removeFromCurrentZone(state, card);
@@ -216,7 +215,7 @@ export class StackManager {
   }
 
   /** Check if a split second spell is on the stack */
-  hasSplitSecond(_state: GameState): boolean {
+  hasSplitSecond(): boolean {
     // We'll implement split second tracking later when cards need it
     return false;
   }

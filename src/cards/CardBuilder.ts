@@ -240,7 +240,7 @@ export class CardBuilder {
     const ability: ActivatedAbilityDef = {
       kind: 'activated',
       cost: {
-        custom: (_game, source, _player) => {
+        custom: (_game, source) => {
           const currentLoyalty = source.counters['loyalty'] ?? 0;
           if (loyaltyCost < 0 && currentLoyalty < Math.abs(loyaltyCost)) return false;
           return true;

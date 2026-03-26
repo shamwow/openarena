@@ -11,11 +11,19 @@ export interface DeckConfig {
   playerName: string;
 }
 
-export function createInitialGameState(decks: DeckConfig[]): GameState {
+export interface BaseGameStateOptions {
+  shuffleLibraries?: boolean;
+}
+
+export function createBaseGameState(
+  decks: DeckConfig[],
+  options: BaseGameStateOptions = {},
+): GameState {
   if (decks.length !== 4) {
     throw new Error('Commander requires exactly 4 players');
   }
 
+  const { shuffleLibraries = false } = options;
   const playerIds: PlayerId[] = ['player1', 'player2', 'player3', 'player4'];
   let timestampCounter = 0;
 
@@ -27,17 +35,16 @@ export function createInitialGameState(decks: DeckConfig[]): GameState {
     const deck = decks[i];
 
     // Create commander instance
-    const commanderInstance = createCardInstance(
-      deck.commander, pid, 'COMMAND' as Zone, timestampCounter++
-    );
+    const commanderInstance = createCardInstance(deck.commander, pid, 'COMMAND', timestampCounter++);
 
     // Create card instances for the library
     const libraryCards = deck.cards.map(def =>
-      createCardInstance(def, pid, 'LIBRARY' as Zone, timestampCounter++)
+      createCardInstance(def, pid, 'LIBRARY', timestampCounter++)
     );
 
-    // Shuffle library
-    shuffleArray(libraryCards);
+    if (shuffleLibraries) {
+      shuffleArray(libraryCards);
+    }
 
     // Derive color identity from commander
     const colorIdentity = deck.commander.colorIdentity.length > 0
@@ -97,6 +104,10 @@ export function createInitialGameState(decks: DeckConfig[]): GameState {
   };
 }
 
+export function createInitialGameState(decks: DeckConfig[]): GameState {
+  return createBaseGameState(decks, { shuffleLibraries: true });
+}
+
 export function createCardInstance(
   definition: CardDefinition,
   owner: PlayerId,
@@ -136,7 +147,7 @@ export function drawOneCard(state: GameState, player: PlayerId): CardInstance | 
     return null;
   }
   const card = library.pop()!;
-  card.zone = 'HAND' as Zone;
+  card.zone = 'HAND';
   state.zones[player].HAND.push(card);
   return card;
 }
