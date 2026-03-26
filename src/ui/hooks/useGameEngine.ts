@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { GameEngineImpl, type ChoiceRequest } from '../../engine/GameEngine';
 import type { GameState, GameEvent, PlayerAction } from '../../engine/types';
 import { prebuiltDecks } from '../../cards/decks';
-import { getTestGameState, listTestGameStateIds } from '../../testing/testGameStates';
 
 export interface UseGameEngineReturn {
   state: GameState | null;
@@ -23,7 +22,7 @@ function getRequestedTestGameStateId(): string | null {
   return value ? value : null;
 }
 
-function resolveEngine(): GameEngineImpl {
+async function resolveEngine(): Promise<GameEngineImpl> {
   if (!import.meta.env.DEV) {
     return new GameEngineImpl({ decks: prebuiltDecks });
   }
@@ -33,6 +32,7 @@ function resolveEngine(): GameEngineImpl {
     return new GameEngineImpl({ decks: prebuiltDecks });
   }
 
+  const { getTestGameState, listTestGameStateIds } = await import('../../testing/testGameStates');
   const definition = getTestGameState(testGameStateId);
   if (!definition) {
     console.warn(
@@ -47,6 +47,7 @@ function resolveEngine(): GameEngineImpl {
 export function useGameEngine(): UseGameEngineReturn {
   const engineRef = useRef<GameEngineImpl | null>(null);
   const engineCleanupRef = useRef<(() => void) | null>(null);
+  const initSequenceRef = useRef(0);
   const [state, setState] = useState<GameState | null>(null);
   const [gameLog, setGameLog] = useState<GameEvent[]>([]);
   const [pendingChoice, setPendingChoice] = useState<ChoiceRequest | null>(null);
@@ -66,15 +67,21 @@ export function useGameEngine(): UseGameEngineReturn {
   }, []);
 
   const teardownEngine = useCallback(() => {
+    initSequenceRef.current += 1;
     engineCleanupRef.current?.();
     engineCleanupRef.current = null;
     engineRef.current = null;
   }, []);
 
-  const initEngine = useCallback(() => {
+  const initEngine = useCallback(async () => {
     teardownEngine();
+    const initSequence = initSequenceRef.current;
 
-    const engine = resolveEngine();
+    const engine = await resolveEngine();
+    if (initSequence !== initSequenceRef.current) {
+      return;
+    }
+
     engineRef.current = engine;
     const cleanups: Array<() => void> = [];
 
@@ -116,7 +123,7 @@ export function useGameEngine(): UseGameEngineReturn {
 
     queueMicrotask(() => {
       if (!cancelled) {
-        initEngine();
+        void initEngine();
       }
     });
 
@@ -144,7 +151,7 @@ export function useGameEngine(): UseGameEngineReturn {
     setGameLog([]);
     setPendingChoice(null);
     setLegalActions([]);
-    initEngine();
+    void initEngine();
   }, [initEngine]);
 
   return {
