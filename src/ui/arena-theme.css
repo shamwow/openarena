@@ -1555,7 +1555,7 @@ select {
   }
 
   .arena-seat__hand-area {
-    --arena-hand-hover-clearance-top: 80px;
+    --arena-hand-hover-clearance-top: 70px;
     --arena-hand-hover-clearance-side: 12px;
     justify-content: flex-start;
     min-height: 96px;
