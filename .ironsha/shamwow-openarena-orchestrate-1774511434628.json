@@ -177,9 +177,52 @@
         }
       ],
       "createdAt": "2026-03-26T08:20:08.738Z"
+    },
+    {
+      "id": "4c16efb8-5e90-4102-8b0f-8f6fcbb2f184",
+      "phase": "code",
+      "event": "REQUEST_CHANGES",
+      "author": "ironsha-bot",
+      "comments": [
+        {
+          "id": "27b0dc10-9744-4cde-942b-639eff7d557c",
+          "path": null,
+          "line": null,
+          "body": "This PR changes user-visible card rendering, but the diff deletes the previously staged `.ironsha/pr-media/*` screenshots/video and the stored PR metadata now explicitly says no staged visual evidence is present. Per the React webapp review guide and `AGENTS.md`, UI changes need reviewable screenshots plus a recording of the interactive flow before merge. Please add fresh staged media under `.ironsha/pr-media/` and update the PR description/review metadata to point at those artifacts.",
+          "author": "ironsha-bot",
+          "reactions": [
+            {
+              "content": "rocket",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:25:14.554Z"
+            },
+            {
+              "content": "+1",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:25:14.554Z"
+            }
+          ],
+          "replies": [
+            {
+              "id": "c425707e-d63e-4a99-bd3e-5d5331ca2c5e",
+              "body": "Added fresh staged UI evidence under `.ironsha/pr-media/` with full-page and board screenshots for `priority-reset-demo`, plus a recorded priority-pass/reset flow video. Updated the stored PR description and visual-evidence metadata to reference those staged artifacts directly.",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:24:08.000Z"
+            },
+            {
+              "id": "71a88d59-21a3-489e-88cf-962491f216f5",
+              "body": "Added fresh staged UI evidence under `.ironsha/pr-media/` (`priority-reset-demo-initial-full.png`, `priority-reset-demo-initial-board.png`, `priority-reset-demo-after-reset-full.png`, and `priority-reset-demo-flow.webm`) by running the `priority-reset-demo` flow in Playwright. Updated `.ironsha/shamwow-openarena-orchestrate-1774511434628.json` to include a reply on the thread and replaced the stale PR description/visual-evidence metadata so it now points at the staged artifacts and reflects the branch’s current behavior.",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:25:14.486Z"
+            }
+          ],
+          "createdAt": "2026-03-26T08:22:30.291Z"
+        }
+      ],
+      "createdAt": "2026-03-26T08:22:30.291Z"
     }
   ],
   "createdAt": "2026-03-26T08:09:38.302Z",
-  "updatedAt": "2026-03-26T08:21:36.397Z",
-  "description": "**Summary**\n- Remove the rendered card-face chrome from `CardView` so battlefield cards no longer draw an overlaid name plate, mana cost, type line, rules-text snippet, status badges, or stats chip on top of the art.\n- Keep the preview panel readable by moving its stats styling to a dedicated `.arena-preview__stats` class instead of reusing the removed in-card stats style.\n- Simplify the related theme CSS by deleting the no-longer-used card overlay styles and keeping only the remaining card frame treatment.\n\n**Test plan**\n1. Start the app in dev mode and open `/?test-game-state=priority-reset-demo`.\n2. Wait for the board and `Pass Priority` button to appear, then verify `Talrand, Sky Summoner`, `Rhystic Study`, `Blood Artist`, `Swiftfoot Boots`, `Command Tower`, and `Sol Ring` are visible and the current phase marker is `Main 1`.\n3. Inspect any visible battlefield card such as `Talrand, Sky Summoner` and verify the card face shows only the art/frame treatment: there is no overlaid card-name label, no mana-cost pills, no type-line chip, no oracle-text chip, no `2/2` stats pill, and no status badges drawn on the card itself.\n4. Trigger card preview for `Talrand, Sky Summoner` and verify the preview still shows the card name `Talrand, Sky Summoner`, the type line `Legendary Creature - Merfolk Wizard`, and a visible `2/2` stats chip in the preview panel.\n5. Click `Pass Priority` once and verify the current phase marker changes from `Main 1` to `Main 2`, proving the UI change did not break the interactive preset flow.\n\n**Visual evidence**\nNo staged `.ironsha/pr-media/...` screenshot or video files are present in this branch."
+  "updatedAt": "2026-03-26T08:25:14.554Z",
+  "description": "**Summary**\n- Restore compact always-visible battlefield state in `CardView`, including damage, summoning-sickness, and counter badges plus a persistent stats or loyalty pill.\n- Keep no-art cards and tokens readable with a visible placeholder label, and preserve readable metadata chrome for `hand`, `mini`, and `flight` card variants.\n- Keep review artifacts out of `artifacts/` while allowing tracked review state and staged media under `.ironsha/pr-media/`.\n\n**Test plan**\n1. Run `npm run lint` and `npm run build` from the repo root.\n2. Start the app in dev mode with `npm run dev -- --host 127.0.0.1 --port 0`, open `/?test-game-state=priority-reset-demo`, and wait for the board plus `Pass Priority`.\n3. Verify the preset shows `Talrand, Sky Summoner`, `Rhystic Study`, `Blood Artist`, `Swiftfoot Boots`, `Command Tower`, and `Sol Ring`, with the current phase marker on `Main 1`.\n4. Confirm battlefield cards show compact always-visible state, including badges and power/toughness or loyalty, and that no-art cards render a readable fallback label.\n5. Click `Pass Priority` once, verify the phase advances to `Main 2`, then use `Open settings` -> `New Game` to confirm the preset resets back to `Main 1` deterministically.\n\n**Visual evidence**\n- `.ironsha/pr-media/priority-reset-demo-initial-full.png`\n- `.ironsha/pr-media/priority-reset-demo-initial-board.png`\n- `.ironsha/pr-media/priority-reset-demo-after-reset-full.png`\n- `.ironsha/pr-media/priority-reset-demo-flow.webm`"
 }
