@@ -66,6 +66,47 @@ await page.locator('.arena-board').waitFor();
 
 Use a desktop-sized viewport. The board is dense and easier to inspect around `1440x1100` or larger.
 
+## Test game states
+
+Use the dev-only query param `test-game-state` to boot the app from a checked-in preset:
+
+```text
+http://127.0.0.1:<PORT>/?test-game-state=<id>
+```
+
+Registry and builder locations:
+
+- `src/testing/testGameStates.ts`
+- `src/testing/testGameStateBuilder.ts`
+
+Authoring workflow:
+
+1. Add a unique registry entry in `src/testing/testGameStates.ts`.
+2. Build the state with `TestGameStateBuilder` helpers from `src/testing/testGameStateBuilder.ts`.
+3. Start the dev server with `npm run dev -- --host 127.0.0.1 --port 0`.
+4. Open `http://127.0.0.1:<PORT>/?test-game-state=<id>` in the browser or Playwright.
+
+Behavior notes:
+
+- `test-game-state` is ignored outside dev mode.
+- If the id is missing or empty, the app boots the normal game.
+- If the id is unknown, the app falls back to the normal game and emits a browser-console warning with the available ids.
+- While the query param is present, clicking `New Game` rebuilds and reloads the same preset deterministically.
+
+Current durable preset for integration checks:
+
+- `priority-reset-demo`
+  - Starts on turn 7 in precombat main with `Pass Priority` visible.
+  - Distinctive visible markers include `Talrand, Sky Summoner`, `Rhystic Study`, `Blood Artist`, `Swiftfoot Boots`, `Command Tower`, and `Sol Ring`.
+  - Passing priority should advance the board to a later step instead of doing nothing.
+
+How to verify a preset loaded:
+
+- Assert the expected unique cards are visible in the authored zones.
+- Assert the current phase/step marker is correct.
+- Assert the action state is correct, for example `Pass Priority` is present when the preset is meant to be interactive.
+- For UI verification work, record a Playwright video in addition to screenshots.
+
 ## Recommended waits
 
 Do not use blind sleeps unless the UI is animating and there is no stable state to wait on. Prefer:
@@ -133,6 +174,54 @@ await browser.close();
 ```
 
 If you forget to close the context, the video may not be written completely.
+
+## Playwright verification script
+
+Concrete verification target: `priority-reset-demo`
+
+```ts
+import { chromium, expect } from '@playwright/test';
+
+const browser = await chromium.launch({ headless: true });
+const context = await browser.newContext({
+  viewport: { width: 1440, height: 1100 },
+  recordVideo: {
+    dir: 'artifacts/videos',
+    size: { width: 1440, height: 1100 },
+  },
+});
+const page = await context.newPage();
+
+await page.goto('http://127.0.0.1:<PORT>/?test-game-state=priority-reset-demo', {
+  waitUntil: 'networkidle',
+});
+await page.locator('.arena-board').waitFor();
+await page.getByRole('button', { name: 'Pass Priority' }).waitFor();
+
+await expect(page.locator('.arena-card[title="Talrand, Sky Summoner"]')).toBeVisible();
+await expect(page.locator('.arena-card[title="Rhystic Study"]')).toBeVisible();
+await expect(page.locator('.arena-card[title="Blood Artist"]')).toBeVisible();
+await expect(page.locator('.arena-card[title="Swiftfoot Boots"]')).toBeVisible();
+await expect(page.locator('.arena-phase-step[data-current="true"]')).toHaveAttribute('title', 'Main 1');
+
+await page.screenshot({ path: 'artifacts/priority-reset-demo-initial.png', fullPage: true });
+await page.locator('.arena-board').screenshot({ path: 'artifacts/priority-reset-demo-board-initial.png' });
+
+await page.getByRole('button', { name: 'Pass Priority' }).click();
+await expect(page.locator('.arena-phase-step[data-current="true"]')).toHaveAttribute('title', 'Main 2');
+
+await page.getByRole('button', { name: 'Open settings' }).click();
+await page.getByRole('button', { name: 'New Game' }).click();
+await page.locator('.arena-board').waitFor();
+await page.getByRole('button', { name: 'Pass Priority' }).waitFor();
+await expect(page.locator('.arena-phase-step[data-current="true"]')).toHaveAttribute('title', 'Main 1');
+await expect(page.locator('.arena-card[title="Talrand, Sky Summoner"]')).toBeVisible();
+
+await page.screenshot({ path: 'artifacts/priority-reset-demo-after-reset.png', fullPage: true });
+
+await context.close();
+await browser.close();
+```
 
 ## Useful interaction targets in this app
 
@@ -295,4 +384,5 @@ await browser.close();
 - Keep the Vite server running in a separate terminal while Playwright runs.
 - Prefer deterministic selectors based on role, button text, `title`, `alt`, or `data-zone`.
 - Capture a screenshot before and after any substantial interaction sequence.
+- For interactive UI verification, record video and close the Playwright context so the file is written.
 - Close the Playwright context at the end so recorded video is saved.

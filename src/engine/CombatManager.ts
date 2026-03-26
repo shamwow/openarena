@@ -1,6 +1,5 @@
 import type {
-  GameState, PlayerId, ObjectId, CardInstance, CombatState,
-  AttackTarget, DamageAssignment, GameEvent,
+  GameState, PlayerId, ObjectId, CardInstance, DamageAssignment, GameEvent,
 } from './types';
 import { CardType, Keyword, GameEventType } from './types';
 import { findCard, getNextTimestamp } from './GameState';
@@ -86,7 +85,7 @@ export class CombatManager {
       const blocker = findCard(state, decl.blockerId);
       const attacker = findCard(state, decl.attackerId);
       if (!blocker || !attacker) continue;
-      if (!this.canBlock(blocker, attacker, state)) continue;
+      if (!this.canBlock(blocker, attacker)) continue;
 
       state.combat.blockers.set(blocker.objectId, attacker.objectId);
 
@@ -259,7 +258,7 @@ export class CombatManager {
   }
 
   /** Check if a creature can block an attacker */
-  canBlock(blocker: CardInstance, attacker: CardInstance, _state: GameState): boolean {
+  canBlock(blocker: CardInstance, attacker: CardInstance): boolean {
     if (blocker.zone !== 'BATTLEFIELD') return false;
     if (!blocker.definition.types.includes(CardType.CREATURE)) return false;
     if (blocker.tapped) return false;

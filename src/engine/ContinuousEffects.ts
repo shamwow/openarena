@@ -1,5 +1,5 @@
-import type { GameState, ContinuousEffect, CardInstance, PlayerId } from './types';
-import { Layer, CardType } from './types';
+import type { GameState, ContinuousEffect, CardInstance } from './types';
+import { CardType } from './types';
 
 /**
  * Implements the MTG Layer System (rule 613) for applying continuous effects.

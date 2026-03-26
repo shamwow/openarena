@@ -44,7 +44,7 @@ export class TurnManager {
 
   advanceStep(state: GameState): void {
     const currentIndex = this.getCurrentIndex(state);
-    let nextIndex = currentIndex + 1;
+    const nextIndex = currentIndex + 1;
 
     if (nextIndex >= TURN_STRUCTURE.length) {
       this.advanceToNextTurn(state);

@@ -299,9 +299,7 @@ export interface CardFilter {
   custom?: (card: CardInstance, game: GameState) => boolean;
 }
 
-export interface SpellFilter extends CardFilter {
-  // Additional filters specific to spells on the stack
-}
+export type SpellFilter = CardFilter;
 
 // --- Targeting ---
 

@@ -6,7 +6,7 @@ import type {
 } from './types';
 import {
   GameEventType, ActionType, CardType, Step,
-  emptyManaCost, parseManaCost, StackEntryType,
+  StackEntryType,
 } from './types';
 import { createInitialGameState, drawInitialHands, findCard, getNextTimestamp, type DeckConfig } from './GameState';
 import { EventBus } from './EventBus';
@@ -31,6 +31,13 @@ export type ChoiceRequest = {
   resolve: (result: unknown) => void;
 };
 
+export interface GameEngineInit {
+  decks?: DeckConfig[];
+  initialState?: GameState;
+  drawOpeningHands?: boolean;
+  runGameLoopOnInit?: boolean;
+}
+
 export class GameEngineImpl implements IGameEngine {
   private state: GameState;
   private eventBus: EventBus;
@@ -48,7 +55,12 @@ export class GameEngineImpl implements IGameEngine {
   private pendingChoice: ChoiceRequest | null = null;
   private gameLogListeners: GameEventCallback[] = [];
 
-  constructor(decks: DeckConfig[]) {
+  constructor({
+    decks,
+    initialState,
+    drawOpeningHands = initialState == null,
+    runGameLoopOnInit = true,
+  }: GameEngineInit = {}) {
     this.eventBus = new EventBus();
     this.zoneManager = new ZoneManager(this.eventBus);
     this.manaManager = new ManaManager(this.eventBus);
@@ -59,11 +71,17 @@ export class GameEngineImpl implements IGameEngine {
     this.combatManager = new CombatManager(this.eventBus, this.zoneManager);
     this.continuousEffects = new ContinuousEffectsEngine();
 
-    // Create initial game state
-    this.state = createInitialGameState(decks);
+    const resolvedDecks = decks ?? [];
+    this.state = initialState ?? createInitialGameState(resolvedDecks);
 
-    // Draw opening hands
-    drawInitialHands(this.state);
+    if (initialState == null) {
+      this.state.currentStep = Step.UPKEEP;
+      this.state.priorityPlayer = this.state.activePlayer;
+    }
+
+    if (drawOpeningHands) {
+      drawInitialHands(this.state);
+    }
 
     // Listen to all events for the game log
     this.eventBus.onAny((event) => {
@@ -72,11 +90,9 @@ export class GameEngineImpl implements IGameEngine {
       }
     });
 
-    // Start the game - begin at upkeep and run the game loop
-    // (auto-progression will advance through phases until someone has actions)
-    this.state.currentStep = Step.UPKEEP;
-    this.state.priorityPlayer = this.state.activePlayer;
-    this.runGameLoop();
+    if (runGameLoopOnInit) {
+      this.runGameLoop();
+    }
     this.notifyStateChange();
   }
 
@@ -102,12 +118,18 @@ export class GameEngineImpl implements IGameEngine {
     };
   }
 
-  onChoiceRequest(handler: (req: ChoiceRequest) => void): void {
+  onChoiceRequest(handler: (req: ChoiceRequest) => void): () => void {
     this.choiceRequestHandler = handler;
     // If there's a pending choice, send it immediately
     if (this.pendingChoice) {
       handler(this.pendingChoice);
     }
+
+    return () => {
+      if (this.choiceRequestHandler === handler) {
+        this.choiceRequestHandler = null;
+      }
+    };
   }
 
   /** Submit a player action */

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { GameEngineImpl, type ChoiceRequest } from '../../engine/GameEngine';
 import type { GameState, GameEvent, PlayerAction } from '../../engine/types';
-import { ActionType, CardType, Zone } from '../../engine/types';
 import { prebuiltDecks } from '../../cards/decks';
 
 export interface UseGameEngineReturn {
@@ -14,102 +13,125 @@ export interface UseGameEngineReturn {
   newGame: () => void;
 }
 
-type QaScenario = 'local-offhand-rail' | null;
-
-function getQaScenario(): QaScenario {
+function getRequestedTestGameStateId(): string | null {
   if (typeof window === 'undefined') {
     return null;
   }
 
-  const scenario = new URLSearchParams(window.location.search).get('qaScenario');
-  return scenario === 'local-offhand-rail' ? scenario : null;
+  const value = new URLSearchParams(window.location.search).get('test-game-state')?.trim();
+  return value ? value : null;
 }
 
-function applyQaScenario(state: GameState, legalActions: PlayerAction[], scenario: QaScenario): PlayerAction[] {
-  if (scenario !== 'local-offhand-rail' || state.priorityPlayer !== 'player1') {
-    return legalActions;
+async function resolveEngine(): Promise<GameEngineImpl> {
+  if (!import.meta.env.DEV) {
+    return new GameEngineImpl({ decks: prebuiltDecks });
   }
 
-  const localZones = state.zones.player1;
-
-  if (localZones.EXILE.length === 0 && localZones.GRAVEYARD.length === 0) {
-    const movableCards = localZones.HAND.filter(
-      (card) => !card.definition.types.includes(CardType.LAND),
-    ).slice(0, 2);
-
-    const [exileCard, graveyardCard] = movableCards;
-    if (exileCard) {
-      localZones.HAND = localZones.HAND.filter((card) => card.objectId !== exileCard.objectId);
-      exileCard.zone = Zone.EXILE;
-      localZones.EXILE.push(exileCard);
-    }
-    if (graveyardCard) {
-      localZones.HAND = localZones.HAND.filter((card) => card.objectId !== graveyardCard.objectId);
-      graveyardCard.zone = Zone.GRAVEYARD;
-      localZones.GRAVEYARD.push(graveyardCard);
-    }
+  const testGameStateId = getRequestedTestGameStateId();
+  if (!testGameStateId) {
+    return new GameEngineImpl({ decks: prebuiltDecks });
   }
 
-  const syntheticActions: PlayerAction[] = [localZones.EXILE[0], localZones.GRAVEYARD[0]]
-    .filter((card): card is NonNullable<typeof card> => card != null)
-    .map((card) => ({
-      type: ActionType.CAST_SPELL,
-      playerId: 'player1' as const,
-      cardId: card.objectId,
-    }));
+  const { getTestGameState, listTestGameStateIds } = await import('../../testing/testGameStates');
+  const definition = getTestGameState(testGameStateId);
+  if (!definition) {
+    console.warn(
+      `Unknown test-game-state "${testGameStateId}". Available ids: ${listTestGameStateIds().join(', ') || '(none)'}.`,
+    );
+    return new GameEngineImpl({ decks: prebuiltDecks });
+  }
 
-  return [...legalActions, ...syntheticActions];
+  return new GameEngineImpl({ initialState: definition.build() });
 }
 
 export function useGameEngine(): UseGameEngineReturn {
   const engineRef = useRef<GameEngineImpl | null>(null);
-  const qaScenarioRef = useRef<QaScenario>(getQaScenario());
+  const engineCleanupRef = useRef<(() => void) | null>(null);
+  const initSequenceRef = useRef(0);
   const [state, setState] = useState<GameState | null>(null);
   const [gameLog, setGameLog] = useState<GameEvent[]>([]);
   const [pendingChoice, setPendingChoice] = useState<ChoiceRequest | null>(null);
   const [legalActions, setLegalActions] = useState<PlayerAction[]>([]);
 
-  const initEngine = useCallback(() => {
-    const engine = new GameEngineImpl(prebuiltDecks);
-    engineRef.current = engine;
+  const syncFromEngine = useCallback((engine: GameEngineImpl, nextState: GameState) => {
+    if (engineRef.current !== engine) {
+      return;
+    }
 
-    // Subscribe to state changes
-    engine.onStateChange((newState: GameState) => {
-      const nextLegalActions = newState.priorityPlayer
-        ? engine.getLegalActions(newState.priorityPlayer)
-        : [];
-      const scenarioActions = applyQaScenario(newState, nextLegalActions, qaScenarioRef.current);
-      setState({ ...newState });
-      setLegalActions(scenarioActions);
-    });
-
-    // Subscribe to game log events
-    engine.onGameLog((event: GameEvent) => {
-      setGameLog((prev) => [...prev, event]);
-    });
-
-    // Subscribe to choice requests
-    engine.onChoiceRequest((req: ChoiceRequest) => {
-      setPendingChoice(req);
-    });
-
-    // Set initial state
-    const initialState = engine.getState();
-    const initialLegalActions = initialState.priorityPlayer
-      ? engine.getLegalActions(initialState.priorityPlayer)
+    const nextLegalActions = nextState.priorityPlayer
+      ? engine.getLegalActions(nextState.priorityPlayer)
       : [];
-    const scenarioActions = applyQaScenario(
-      initialState,
-      initialLegalActions,
-      qaScenarioRef.current,
-    );
-    setState({ ...initialState });
-    setLegalActions(scenarioActions);
+
+    setState({ ...nextState });
+    setLegalActions(nextLegalActions);
   }, []);
 
+  const teardownEngine = useCallback(() => {
+    initSequenceRef.current += 1;
+    engineCleanupRef.current?.();
+    engineCleanupRef.current = null;
+    engineRef.current = null;
+  }, []);
+
+  const initEngine = useCallback(async () => {
+    teardownEngine();
+    const initSequence = initSequenceRef.current;
+
+    const engine = await resolveEngine();
+    if (initSequence !== initSequenceRef.current) {
+      return;
+    }
+
+    engineRef.current = engine;
+    const cleanups: Array<() => void> = [];
+
+    cleanups.push(
+      engine.onStateChange((newState: GameState) => {
+        syncFromEngine(engine, newState);
+      }),
+    );
+
+    cleanups.push(
+      engine.onGameLog((event: GameEvent) => {
+        if (engineRef.current !== engine) {
+          return;
+        }
+        setGameLog((prev) => [...prev, event]);
+      }),
+    );
+
+    cleanups.push(
+      engine.onChoiceRequest((req: ChoiceRequest) => {
+        if (engineRef.current !== engine) {
+          return;
+        }
+        setPendingChoice(req);
+      }),
+    );
+
+    engineCleanupRef.current = () => {
+      for (const cleanup of cleanups) {
+        cleanup();
+      }
+    };
+
+    syncFromEngine(engine, engine.getState());
+  }, [syncFromEngine, teardownEngine]);
+
   useEffect(() => {
-    initEngine();
-  }, [initEngine]);
+    let cancelled = false;
+
+    queueMicrotask(() => {
+      if (!cancelled) {
+        void initEngine();
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      teardownEngine();
+    };
+  }, [initEngine, teardownEngine]);
 
   const submitAction = useCallback((action: PlayerAction) => {
     if (engineRef.current) {
@@ -125,10 +147,11 @@ export function useGameEngine(): UseGameEngineReturn {
   }, [pendingChoice]);
 
   const newGame = useCallback(() => {
+    setState(null);
     setGameLog([]);
     setPendingChoice(null);
     setLegalActions([]);
-    initEngine();
+    void initEngine();
   }, [initEngine]);
 
   return {
