@@ -26,6 +26,12 @@ dist-ssr
 
 # Local state for PR generation
 .ironsha/*
+!.ironsha/*.json
+!.ironsha/pr-media/
+!.ironsha/pr-media/**
+
+# Local Playwright and review artifacts
+artifacts/
 
 # PR plan files
 .plan.md

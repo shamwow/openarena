@@ -1,0 +1,185 @@
+{
+  "version": 1,
+  "pr": {
+    "owner": "shamwow",
+    "repo": "openarena",
+    "number": 0,
+    "branch": "orchestrate-1774511434628",
+    "baseBranch": "main",
+    "title": "Remove in-card text overlays from battlefield cards"
+  },
+  "passLabels": [],
+  "checkoutPath": "/Users/ironsha/Desktop/projects/openarena/.worktrees/orchestrate-1774511434628",
+  "reviews": [
+    {
+      "id": "0f684910-b41e-4301-ace0-9e44238873c4",
+      "phase": "code",
+      "event": "REQUEST_CHANGES",
+      "author": "ironsha-bot",
+      "comments": [
+        {
+          "id": "52dad7b7-a9b6-4d5a-9c9d-0a44f48ebf8d",
+          "path": "src/ui/components/CardView.tsx",
+          "line": 119,
+          "body": "This change reduces battlefield cards to artwork-only rendering and drops the always-visible gameplay metadata that used to live on the card itself: damage, counters, summoning sickness, and power/toughness or loyalty. Those values are not ornamental in this app; the engine tracks them explicitly and players need to read them across the board to make legal/combat decisions without hovering every permanent one by one. Please restore compact on-card state indicators or add an equivalent always-visible battlefield treatment before merging.",
+          "author": "ironsha-bot",
+          "reactions": [
+            {
+              "content": "rocket",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:13:39.928Z"
+            },
+            {
+              "content": "+1",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:13:39.928Z"
+            }
+          ],
+          "replies": [
+            {
+              "id": "b832f788-a713-4293-852d-c67b585ffe9a",
+              "body": "Restored always-visible battlefield state in `CardView` by rendering compact on-card badges for marked damage, summoning sickness, and counters, plus a persistent bottom-right stats pill for creature power/toughness or planeswalker loyalty.",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:13:39.861Z"
+            }
+          ],
+          "createdAt": "2026-03-26T08:10:58.970Z"
+        },
+        {
+          "id": "d9912da7-8e65-4691-b3b4-7863aba6fc29",
+          "path": "src/ui/components/CardView.tsx",
+          "line": 44,
+          "body": "Token cards intentionally skip art fetching here, and after this patch the component no longer renders the card name anywhere in the card body. That means token permanents, and any other card that falls back to `.arena-card__placeholder`, become visually indistinguishable on the battlefield except via hover/title text. In practice this makes token-heavy states unreadable, especially on touch devices where hover is unavailable. Please add a visible fallback label for no-art cards/tokens.",
+          "author": "ironsha-bot",
+          "reactions": [
+            {
+              "content": "rocket",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:13:40.062Z"
+            },
+            {
+              "content": "+1",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:13:40.062Z"
+            }
+          ],
+          "replies": [
+            {
+              "id": "e1abe217-0b82-4504-be6a-e44f6272f822",
+              "body": "Added a visible fallback label inside `.arena-card__placeholder` so tokens and other no-art cards still show their card name directly on the card body instead of relying on hover/title text.",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:13:39.995Z"
+            }
+          ],
+          "createdAt": "2026-03-26T08:10:58.970Z"
+        }
+      ],
+      "createdAt": "2026-03-26T08:10:58.970Z"
+    },
+    {
+      "id": "a053e072-588c-489c-ae4b-c45faa4cc286",
+      "phase": "code",
+      "event": "REQUEST_CHANGES",
+      "author": "ironsha-bot",
+      "comments": [
+        {
+          "id": "e30c069f-fd9f-4e09-a61c-000b1e917bb3",
+          "path": "src/ui/components/CardView.tsx",
+          "line": 164,
+          "body": "`CardView` is the shared renderer for the battlefield, hand rail, zone dialog, and flight animation, but this PR only keeps overlays for `variant === 'battlefield'` and removes the old chrome/footer entirely. As a result, `hand`, `mini`, and `flight` cards become artwork-only tiles, so players lose the always-visible name/mana/type/oracle context those surfaces previously provided and have to hover/open preview to identify cards. Please scope the minimalist treatment to battlefield cards only, or restore the non-battlefield overlays so the other variants keep their existing readable metadata.",
+          "author": "ironsha-bot",
+          "reactions": [
+            {
+              "content": "rocket",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:17:52.479Z"
+            },
+            {
+              "content": "+1",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:17:52.479Z"
+            }
+          ],
+          "replies": [
+            {
+              "id": "bd9dec5c-faac-4c5a-b345-dbd1f7b1ba75",
+              "body": "Scoped the minimalist artwork-only treatment to battlefield cards and restored non-battlefield card chrome in `CardView` for `hand`, `mini`, and `flight` variants. Reintroduced visible name, mana cost, type line, oracle snippet, and stats overlays, with matching CSS for the restored header/footer metadata.",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:17:52.410Z"
+            }
+          ],
+          "createdAt": "2026-03-26T08:14:58.132Z"
+        }
+      ],
+      "createdAt": "2026-03-26T08:14:58.132Z"
+    },
+    {
+      "id": "69a3e8c8-d0b7-48f2-95c6-6c7e2d014080",
+      "phase": "code",
+      "event": "REQUEST_CHANGES",
+      "author": "ironsha-bot",
+      "comments": [
+        {
+          "id": "ae37cfcb-65fb-4690-a64c-f277c98d0754",
+          "path": ".gitignore",
+          "line": 28,
+          "body": "Removing the negated `.ironsha` entries regresses the repository's PR-review workflow: future updates to `.ironsha/*.json` and `.ironsha/pr-media/**` will become untrackable, even though this repo is already using those paths for stored review state and staged media. Please restore the allowlist entries here, or migrate the review/publish workflow off `.ironsha` in the same PR so the dependency is removed intentionally rather than silently broken.",
+          "author": "ironsha-bot",
+          "reactions": [
+            {
+              "content": "rocket",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:21:36.222Z"
+            },
+            {
+              "content": "+1",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:21:36.222Z"
+            }
+          ],
+          "replies": [
+            {
+              "id": "13f7d87d-177b-40a3-b354-d3908ac6b03a",
+              "body": "Restored the `.ironsha` allowlist entries in `.gitignore` for `!.ironsha/*.json`, `!.ironsha/pr-media/`, and `!.ironsha/pr-media/**` so the PR-review workflow can continue tracking stored review state and media under `.ironsha`.",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:21:36.128Z"
+            }
+          ],
+          "createdAt": "2026-03-26T08:20:08.738Z"
+        },
+        {
+          "id": "91063f7a-b4f3-4165-9dee-db8222b1f916",
+          "path": null,
+          "line": null,
+          "body": "This PR is still checking in a large set of generated review artifacts under `artifacts/` (about 23 MB, including duplicate screenshots like `review-cardview-battlefield.png` and `review-cardview-battlefield-board.png`, plus an empty `artifacts/videos/fa1cd9438c109069e036ca0848c1e647.webm`). These binaries are not part of the app architecture, create permanent repo bloat, and split review evidence across multiple locations. Please remove the generated `artifacts/` media from the diff and keep a single authoritative review-media path.",
+          "author": "ironsha-bot",
+          "reactions": [
+            {
+              "content": "rocket",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:21:36.397Z"
+            },
+            {
+              "content": "+1",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:21:36.397Z"
+            }
+          ],
+          "replies": [
+            {
+              "id": "407193a4-911f-486b-b2d4-a91c6d3c4042",
+              "body": "Removed the tracked generated review binaries under `artifacts/` from the repo and added `artifacts/` to `.gitignore` so screenshots/videos stay out of the diff and `.ironsha/pr-media` remains the single authoritative review-media path.",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:21:36.313Z"
+            }
+          ],
+          "createdAt": "2026-03-26T08:20:08.738Z"
+        }
+      ],
+      "createdAt": "2026-03-26T08:20:08.738Z"
+    }
+  ],
+  "createdAt": "2026-03-26T08:09:38.302Z",
+  "updatedAt": "2026-03-26T08:21:36.397Z",
+  "description": "**Summary**\n- Remove the rendered card-face chrome from `CardView` so battlefield cards no longer draw an overlaid name plate, mana cost, type line, rules-text snippet, status badges, or stats chip on top of the art.\n- Keep the preview panel readable by moving its stats styling to a dedicated `.arena-preview__stats` class instead of reusing the removed in-card stats style.\n- Simplify the related theme CSS by deleting the no-longer-used card overlay styles and keeping only the remaining card frame treatment.\n\n**Test plan**\n1. Start the app in dev mode and open `/?test-game-state=priority-reset-demo`.\n2. Wait for the board and `Pass Priority` button to appear, then verify `Talrand, Sky Summoner`, `Rhystic Study`, `Blood Artist`, `Swiftfoot Boots`, `Command Tower`, and `Sol Ring` are visible and the current phase marker is `Main 1`.\n3. Inspect any visible battlefield card such as `Talrand, Sky Summoner` and verify the card face shows only the art/frame treatment: there is no overlaid card-name label, no mana-cost pills, no type-line chip, no oracle-text chip, no `2/2` stats pill, and no status badges drawn on the card itself.\n4. Trigger card preview for `Talrand, Sky Summoner` and verify the preview still shows the card name `Talrand, Sky Summoner`, the type line `Legendary Creature - Merfolk Wizard`, and a visible `2/2` stats chip in the preview panel.\n5. Click `Pass Priority` once and verify the current phase marker changes from `Main 1` to `Main 2`, proving the UI change did not break the interactive preset flow.\n\n**Visual evidence**\nNo staged `.ironsha/pr-media/...` screenshot or video files are present in this branch."
+}
