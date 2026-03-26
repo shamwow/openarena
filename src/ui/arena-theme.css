@@ -1343,11 +1343,6 @@ select {
   .arena-stack {
     width: min(280px, calc(100vw - 340px));
   }
-
-  .arena-board[data-preview-side="right"] .arena-preview {
-    left: auto;
-    right: 18px;
-  }
 }
 
 @media (max-width: 980px) {
