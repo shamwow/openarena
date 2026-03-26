@@ -7,18 +7,23 @@ This repo is a Vite + React app. Use this file as the default playbook when an a
 From the repo root:
 
 ```bash
-npm run dev -- --host 127.0.0.1 --port 4173
+npm run dev -- --host 127.0.0.1 --port 0
 ```
+
+Port `0` tells the OS to assign a random unused port, avoiding collisions when
+multiple agents or dev servers run concurrently.
 
 Use `127.0.0.1`, not `localhost`, to avoid host resolution differences in automation.
 
-Wait for Vite to print a local URL, then use:
+Wait for Vite to print its local URL, then **parse the actual port from the output**.
+Vite logs a line like:
 
 ```text
-http://127.0.0.1:4173
+  ➜  Local:   http://127.0.0.1:56789/
 ```
 
-If port `4173` is busy, pick another fixed port and keep Playwright pointed at the same one.
+Extract the port from that line (e.g. with a regex like `Local:\s+http://[\d.]+:(\d+)`)
+and use it for all subsequent requests and Playwright navigation.
 
 ## Unit tests
 
@@ -55,7 +60,7 @@ const context = await browser.newContext({
 });
 const page = await context.newPage();
 
-await page.goto('http://127.0.0.1:4173', { waitUntil: 'networkidle' });
+await page.goto('http://127.0.0.1:<PORT>', { waitUntil: 'networkidle' });
 await page.locator('.arena-board').waitFor();
 ```
 
@@ -268,7 +273,7 @@ const context = await browser.newContext({
 
 const page = await context.newPage();
 
-await page.goto('http://127.0.0.1:4173', { waitUntil: 'networkidle' });
+await page.goto('http://127.0.0.1:<PORT>', { waitUntil: 'networkidle' });
 await page.locator('.arena-board').waitFor();
 
 await page.screenshot({ path: 'artifacts/initial-board.png', fullPage: true });
