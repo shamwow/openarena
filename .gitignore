@@ -31,3 +31,7 @@ dist-ssr
 .plan.md
 
 .worktrees/
+
+# Generated verification artifacts
+artifacts/hand-zoom/
+artifacts/priority-reset-check/
