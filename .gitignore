@@ -24,9 +24,6 @@ dist-ssr
 *.sln
 *.sw?
 
-# Playwright transient output
-artifacts/
-
 # Local state for PR generation
 # Do not remove, .ironsha should not be included in git
 # Visual evidence should still be placed here and PR descrptions should still link to it. The publish script will handle uploading the evidence to github properly.
