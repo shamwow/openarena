@@ -585,19 +585,17 @@ select {
   margin-right: 0;
 }
 
-.arena-seat__hand-card[data-hidden-placeholder="true"] {
-  pointer-events: none;
-}
-
 .arena-seat__hand-card .arena-card-back[data-variant="hand"][data-hidden-placeholder="true"] {
   width: var(--card-width, 126px);
   height: var(--card-height, 176px);
-  margin-right: -43px;
+  margin-right: var(--hand-card-overlap, -43px);
   border-radius: var(--arena-card-radius);
   box-shadow: var(--arena-card-shadow);
-  pointer-events: none;
-  transform: none;
-  transition: none;
+  transform:
+    translateY(calc(var(--card-lift, 0px) * -1))
+    scale(var(--card-scale, 1));
+  transform-origin: center bottom;
+  transition: transform var(--arena-motion);
 }
 
 .arena-seat__hand-card .arena-card-back[data-variant="hand"][data-hidden-placeholder="true"]::before,
@@ -699,7 +697,7 @@ select {
   --card-zone-glow: transparent;
   --card-zone-tint-top: transparent;
   --card-zone-tint-bottom: transparent;
-  margin-right: -43px;
+  margin-right: var(--hand-card-overlap, -43px);
   transform-origin: center bottom;
 }
 
@@ -1434,11 +1432,11 @@ select {
   .arena-card[data-variant="hand"] {
     --card-width: 98px;
     --card-height: 136px;
-    margin-right: -28px;
+    margin-right: var(--hand-card-overlap, -28px);
   }
 
   .arena-seat__hand-card .arena-card-back[data-variant="hand"][data-hidden-placeholder="true"] {
-    margin-right: -28px;
+    margin-right: var(--hand-card-overlap, -28px);
   }
 
   .arena-card[data-variant="battlefield"] {
@@ -1571,10 +1569,10 @@ select {
   }
 
   .arena-card[data-variant="hand"] {
-    margin-right: -10px;
+    margin-right: var(--hand-card-overlap, -10px);
   }
 
   .arena-seat__hand-card .arena-card-back[data-variant="hand"][data-hidden-placeholder="true"] {
-    margin-right: -10px;
+    margin-right: var(--hand-card-overlap, -10px);
   }
 }

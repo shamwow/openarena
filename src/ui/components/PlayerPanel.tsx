@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useLayoutEffect } from 'react';
 import type {
   CardInstance,
   ManaPool,
@@ -295,6 +295,8 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
 }) => {
   const [hoveredHandIndex, setHoveredHandIndex] = useState<number | null>(null);
   const [openZoneDialog, setOpenZoneDialog] = useState<OpenZoneDialog>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const handCardsRef = useRef<HTMLDivElement>(null);
 
   const hand = zones.HAND ?? [];
   const battlefield = zones.BATTLEFIELD ?? [];
@@ -322,6 +324,44 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
     graveyard,
     legalActions,
   );
+
+  useLayoutEffect(() => {
+    const scrollEl = scrollRef.current;
+    const handCardsEl = handCardsRef.current;
+    if (!scrollEl || !handCardsEl) return;
+
+    const update = () => {
+      const count = handCardsEl.children.length;
+      if (count <= 1) {
+        handCardsEl.style.removeProperty('--hand-card-overlap');
+        return;
+      }
+
+      // Reset to CSS defaults to measure natural width
+      handCardsEl.style.removeProperty('--hand-card-overlap');
+
+      const available = scrollEl.clientWidth;
+      const naturalWidth = handCardsEl.scrollWidth;
+
+      if (naturalWidth <= available) return;
+
+      // Cards overflow at default overlap — compute tighter overlap
+      const firstCardEl = handCardsEl.querySelector('[data-variant="hand"]') as HTMLElement | null;
+      if (!firstCardEl) return;
+      const cardWidth = firstCardEl.offsetWidth;
+
+      const neededOverlap = (cardWidth * count - available) / (count - 1);
+      const maxOverlap = cardWidth - 5;
+      const overlap = Math.min(Math.max(0, neededOverlap), maxOverlap);
+      handCardsEl.style.setProperty('--hand-card-overlap', `-${overlap}px`);
+    };
+
+    const observer = new ResizeObserver(update);
+    observer.observe(scrollEl);
+    update();
+
+    return () => observer.disconnect();
+  }, [railItems.length]);
 
   const anchorCardIds = new Map<RailAnchorZone, string>();
   for (const item of railItems) {
@@ -366,11 +406,13 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
     const zIndex = hoveredHandIndex === item.railIndex ? railItems.length + 1 : baseZIndex;
 
     if (item.kind === 'hidden-hand') {
+      const presentation = getHandPresentation(item.railIndex);
       return (
         <div
           key={item.key}
           className="arena-seat__hand-card"
           data-hidden-placeholder="true"
+          onMouseEnter={() => setHoveredHandIndex(item.railIndex)}
           style={{ zIndex }}
         >
           <div
@@ -378,6 +420,10 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
             data-variant="hand"
             data-hidden-placeholder="true"
             aria-hidden="true"
+            style={{
+              '--card-scale': `${presentation.scale}`,
+              '--card-lift': `${presentation.lift}px`,
+            } as React.CSSProperties}
           />
         </div>
       );
@@ -548,9 +594,9 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
           onMouseLeave={() => setHoveredHandIndex(null)}
         >
           {railItems.length > 0 ? (
-            <div className="arena-seat__hand-scroll">
+            <div className="arena-seat__hand-scroll" ref={scrollRef}>
               <div className="arena-seat__hand-rail">
-                <div className="arena-seat__hand-cards">
+                <div className="arena-seat__hand-cards" ref={handCardsRef}>
                   {railItems.map((item) => renderRailItem(item))}
                 </div>
               </div>

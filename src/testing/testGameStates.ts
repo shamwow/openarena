@@ -41,11 +41,38 @@ function createPriorityResetDemoState(): GameState {
     .build();
 }
 
+function createBigHandState(): GameState {
+  return createTestGameStateBuilder()
+    .mutateState((state) => {
+      // Move all library cards to hand for player1
+      const library = state.zones.player1.LIBRARY;
+      const cards = library.splice(0);
+      for (const card of cards) {
+        card.zone = Zone.HAND;
+        state.zones.player1.HAND.push(card);
+      }
+    })
+    .setTurn({
+      turnNumber: 10,
+      activePlayer: 'player1',
+      currentPhase: Phase.PRECOMBAT_MAIN,
+      currentStep: Step.MAIN,
+      priorityPlayer: 'player1',
+      passedPriority: [],
+    })
+    .build();
+}
+
 export const testGameStateDefinitions: TestGameStateDefinition[] = [
   {
     id: 'priority-reset-demo',
     description: 'Precombat main state with distinctive permanents and a live pass/reset flow.',
     build: createPriorityResetDemoState,
+  },
+  {
+    id: 'big-hand',
+    description: 'Player 1 has ~100 cards in hand for testing hand rail overflow.',
+    build: createBigHandState,
   },
 ];
 
