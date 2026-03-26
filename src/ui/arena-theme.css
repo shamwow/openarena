@@ -737,6 +737,11 @@ select {
     var(--arena-card-shadow);
 }
 
+.arena-card:focus-visible {
+  outline: 2px solid rgba(245, 208, 126, 0.9);
+  outline-offset: 3px;
+}
+
 .arena-card[data-dragging="true"] {
   opacity: 0.34;
 }

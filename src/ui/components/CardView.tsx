@@ -97,6 +97,17 @@ export const CardView: React.FC<CardViewProps> = ({
     handlePreview();
   };
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (variant === 'flight') {
+      return;
+    }
+
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleActivate();
+    }
+  };
+
   const handleDragStart = (event: React.DragEvent<HTMLDivElement>) => {
     if (concealed || !draggableAction || !onDragStart) {
       return;
@@ -121,6 +132,7 @@ export const CardView: React.FC<CardViewProps> = ({
         .map((line) => line.trim())
         .filter(Boolean)[0];
   const accessibleLabel = concealed ? 'Hidden card' : card.definition.name;
+  const isInteractive = variant !== 'flight' && (hasAction || onPreview != null);
 
   return (
     <div
@@ -142,8 +154,12 @@ export const CardView: React.FC<CardViewProps> = ({
       onFocus={handlePreview}
       onBlur={previewMode === 'hover' ? handlePreviewClear : undefined}
       onClick={variant === 'flight' ? undefined : handleActivate}
+      onKeyDown={isInteractive ? handleKeyDown : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      role={isInteractive ? 'button' : undefined}
       title={accessibleLabel}
       aria-label={accessibleLabel}
+      aria-pressed={isInteractive && previewMode === 'tap' ? isPreviewed : undefined}
       style={
         {
           ['--card-scale' as string]: `${scale}`,
