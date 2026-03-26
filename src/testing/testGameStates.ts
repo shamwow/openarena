@@ -41,11 +41,42 @@ function createPriorityResetDemoState(): GameState {
     .build();
 }
 
+function createHandOverflowTestState(): GameState {
+  return createTestGameStateBuilder()
+    .moveCard({ playerId: 'player1', name: 'Arcane Signet' }, Zone.HAND)
+    .moveCard({ playerId: 'player1', name: 'Swords to Plowshares' }, Zone.HAND)
+    .moveCard({ playerId: 'player1', name: 'Path to Exile' }, Zone.HAND)
+    .moveCard({ playerId: 'player1', name: 'Wrath of God' }, Zone.HAND)
+    .moveCard({ playerId: 'player1', name: 'Serra Angel' }, Zone.HAND)
+    .moveCard({ playerId: 'player1', name: 'Command Tower' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player1', name: 'Command Tower' }, { summoningSick: false })
+    .moveCard({ playerId: 'player2', name: 'Talrand, Sky Summoner' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard(
+      { playerId: 'player2', name: 'Talrand, Sky Summoner' },
+      { summoningSick: false },
+    )
+    .setTurn({
+      turnNumber: 3,
+      activePlayer: 'player1',
+      currentPhase: Phase.PRECOMBAT_MAIN,
+      currentStep: Step.MAIN,
+      priorityPlayer: 'player1',
+      passedPriority: [],
+    })
+    .build();
+}
+
 export const testGameStateDefinitions: TestGameStateDefinition[] = [
   {
     id: 'priority-reset-demo',
     description: 'Precombat main state with distinctive permanents and a live pass/reset flow.',
     build: createPriorityResetDemoState,
+  },
+  {
+    id: 'hand-overflow-test',
+    description:
+      'Five cards in player1 hand for hover overflow testing at all breakpoints.',
+    build: createHandOverflowTestState,
   },
 ];
 
