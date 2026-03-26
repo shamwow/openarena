@@ -71,7 +71,7 @@ export const CardPreview: React.FC<CardPreviewProps> = ({ preview }) => {
             {preview.card.tapped ? 'Tapped' : 'Untapped'}
             {preview.card.summoningSick ? ' · Summoning sick' : ''}
           </div>
-          {stats ? <div className="arena-card__stats">{stats}</div> : <span />}
+          {stats ? <div className="arena-preview__stats">{stats}</div> : <span />}
         </div>
       </div>
     </aside>

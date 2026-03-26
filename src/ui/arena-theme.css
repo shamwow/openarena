@@ -225,6 +225,17 @@ select {
   gap: 10px;
 }
 
+.arena-preview__stats {
+  padding: 5px 8px;
+  border-radius: 10px;
+  background: rgba(7, 13, 21, 0.76);
+  backdrop-filter: blur(6px);
+  color: #f0e2bc;
+  font-size: 0.74rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
 .arena-grid-seat {
   min-width: 0;
   min-height: 0;
@@ -811,18 +822,8 @@ select {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
-    inset 0 -46px 60px rgba(5, 9, 15, 0.36);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   pointer-events: none;
-}
-
-.arena-card__surface {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at top center, rgba(255, 255, 255, 0.1), transparent 30%),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(1, 4, 9, 0.2));
 }
 
 .arena-card__image-wrap {
@@ -839,94 +840,6 @@ select {
     radial-gradient(circle at 30% 24%, rgba(222, 192, 139, 0.15), transparent 20%),
     linear-gradient(145deg, #162635, #0a131e 50%, #04090f 100%);
   position: relative;
-}
-
-.arena-card__chrome {
-  position: absolute;
-  inset-inline: 8px;
-  top: 8px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  z-index: 2;
-}
-
-.arena-card__name {
-  min-width: 0;
-  padding: 6px 8px;
-  border-radius: 10px;
-  background: rgba(7, 13, 21, 0.72);
-  color: #f7f1df;
-  font-size: 0.72rem;
-  line-height: 1.2;
-  font-weight: 600;
-  backdrop-filter: blur(6px);
-}
-
-.arena-card[data-variant="mini"] .arena-card__name {
-  font-size: 0.62rem;
-  padding: 4px 6px;
-}
-
-.arena-card__footer {
-  position: absolute;
-  inset-inline: 8px;
-  bottom: 8px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 8px;
-  z-index: 2;
-}
-
-.arena-card__type,
-.arena-card__text-chip,
-.arena-card__badge,
-.arena-card__stats {
-  padding: 5px 8px;
-  border-radius: 10px;
-  background: rgba(7, 13, 21, 0.76);
-  backdrop-filter: blur(6px);
-  color: #f0e2bc;
-  font-size: 0.68rem;
-  line-height: 1.2;
-}
-
-.arena-card__type {
-  color: var(--arena-text-soft);
-}
-
-.arena-card__stats {
-  font-size: 0.74rem;
-  font-weight: 700;
-}
-
-.arena-card__status-stack {
-  position: absolute;
-  left: 8px;
-  bottom: 44px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  z-index: 2;
-}
-
-.arena-card__badge[data-kind="damage"] {
-  background: rgba(184, 47, 30, 0.82);
-  color: #fff3ee;
-}
-
-.arena-card__badge[data-kind="counter"] {
-  background: rgba(45, 93, 61, 0.82);
-}
-
-.arena-card__badge[data-kind="sick"] {
-  background: rgba(191, 131, 54, 0.86);
-}
-
-.arena-card__badge[data-kind="tap"] {
-  background: rgba(39, 87, 119, 0.82);
 }
 
 .arena-mana-cost {
