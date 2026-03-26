@@ -81,6 +81,7 @@ export const GameBoard: React.FC = () => {
   const [animations, setAnimations] = useState<BattlefieldEntryAnimation[]>([]);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
+  const lastMouseXRef = useRef<number | undefined>(undefined);
   const zoneAnchorsRef = useRef<Record<string, HTMLElement | null>>({});
   const cardNodesRef = useRef<Record<string, HTMLDivElement | null>>({});
   const previousSnapshotRef = useRef<ReturnType<typeof snapshotCardLocations> | null>(null);
@@ -215,12 +216,16 @@ export const GameBoard: React.FC = () => {
     zoneAnchorsRef.current[key] = node;
   }, []);
 
+  const handleMouseMove = useCallback((event: React.MouseEvent) => {
+    lastMouseXRef.current = event.clientX;
+  }, []);
+
   const handlePreview = useCallback(
     (card: CardInstance) => {
       if (!state) {
         return;
       }
-      setPreview(createPreviewState(card, state));
+      setPreview({ ...createPreviewState(card, state), cursorX: lastMouseXRef.current });
     },
     [state],
   );
@@ -252,7 +257,7 @@ export const GameBoard: React.FC = () => {
     (payload: DragCardPayload) => {
       setDragPayload(payload);
       if (state) {
-        setPreview(createPreviewState(payload.card, state));
+        setPreview({ ...createPreviewState(payload.card, state), cursorX: lastMouseXRef.current });
       }
     },
     [state],
@@ -327,8 +332,19 @@ export const GameBoard: React.FC = () => {
   const hasStackContent = state.stack.length > 0;
   const hasTopPane = hasPreview || hasStackContent;
 
+  const PREVIEW_FLIP_THRESHOLD = 350;
+  const previewSide =
+    hasPreview && preview.cursorX != null && preview.cursorX < PREVIEW_FLIP_THRESHOLD
+      ? 'right'
+      : 'left';
+
   return (
-    <div className="arena-board" data-has-top-pane={hasTopPane}>
+    <div
+      className="arena-board"
+      data-has-top-pane={hasTopPane}
+      data-preview-side={hasPreview ? previewSide : undefined}
+      onMouseMove={handleMouseMove}
+    >
       {hasPreview ? <CardPreview preview={preview} /> : null}
 
       <div className="arena-board__grid">
