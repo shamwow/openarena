@@ -8,7 +8,9 @@
     "baseBranch": "main",
     "title": "Remove in-card text overlays from battlefield cards"
   },
-  "passLabels": [],
+  "passLabels": [
+    "code-review-passed"
+  ],
   "checkoutPath": "/Users/ironsha/Desktop/projects/openarena/.worktrees/orchestrate-1774511434628",
   "reviews": [
     {
@@ -220,9 +222,17 @@
         }
       ],
       "createdAt": "2026-03-26T08:22:30.291Z"
+    },
+    {
+      "id": "5155f026-adc7-4312-86ce-97267d885ba0",
+      "phase": "code",
+      "event": "APPROVE",
+      "author": "ironsha-bot",
+      "comments": [],
+      "createdAt": "2026-03-26T08:26:00.221Z"
     }
   ],
   "createdAt": "2026-03-26T08:09:38.302Z",
-  "updatedAt": "2026-03-26T08:25:14.554Z",
+  "updatedAt": "2026-03-26T08:26:00.221Z",
   "description": "**Summary**\n- Restore compact always-visible battlefield state in `CardView`, including damage, summoning-sickness, and counter badges plus a persistent stats or loyalty pill.\n- Keep no-art cards and tokens readable with a visible placeholder label, and preserve readable metadata chrome for `hand`, `mini`, and `flight` card variants.\n- Keep review artifacts out of `artifacts/` while allowing tracked review state and staged media under `.ironsha/pr-media/`.\n\n**Test plan**\n1. Run `npm run lint` and `npm run build` from the repo root.\n2. Start the app in dev mode with `npm run dev -- --host 127.0.0.1 --port 0`, open `/?test-game-state=priority-reset-demo`, and wait for the board plus `Pass Priority`.\n3. Verify the preset shows `Talrand, Sky Summoner`, `Rhystic Study`, `Blood Artist`, `Swiftfoot Boots`, `Command Tower`, and `Sol Ring`, with the current phase marker on `Main 1`.\n4. Confirm battlefield cards show compact always-visible state, including badges and power/toughness or loyalty, and that no-art cards render a readable fallback label.\n5. Click `Pass Priority` once, verify the phase advances to `Main 2`, then use `Open settings` -> `New Game` to confirm the preset resets back to `Main 1` deterministically.\n\n**Visual evidence**\n- `.ironsha/pr-media/priority-reset-demo-initial-full.png`\n- `.ironsha/pr-media/priority-reset-demo-initial-board.png`\n- `.ironsha/pr-media/priority-reset-demo-after-reset-full.png`\n- `.ironsha/pr-media/priority-reset-demo-flow.webm`"
 }
