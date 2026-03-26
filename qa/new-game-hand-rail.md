@@ -22,9 +22,10 @@ Verify that a fresh game renders one unified hand rail for every seat, with visi
    mkdir -p qa/artifacts/playwright-videos
    ```
 
-## Deterministic Product State
+## Deterministic Product States
 The app auto-loads a fresh game on first render. For repeatable QA, always reset through the in-product controls instead of relying on the initial mount state.
 
+### Fresh game baseline
 1. Open `http://127.0.0.1:5173/`.
 2. Wait for the board to render.
 3. Click the settings icon button with accessible name `Open settings`.
@@ -37,6 +38,21 @@ This reset state is the required baseline for the checks below:
 - 3 opponent seats show hidden hands.
 - Opponent commanders are visible in the same rail as their hidden hand slots.
 
+### Local off-hand rail scenario
+Use this URL when you need deterministic playable `EXILE` + `GRAVEYARD` coverage in the visible local rail:
+
+1. Open `http://127.0.0.1:5173/?qaScenario=local-offhand-rail`.
+2. Wait for the board to render.
+3. Click the settings icon button with accessible name `Open settings`.
+4. Click `New Game`.
+5. Wait for the board to finish re-rendering.
+
+This QA-only scenario preserves the fresh-game board layout and additionally guarantees:
+- 1 visible local rail card sourced from `EXILE`.
+- 1 visible local rail card sourced from `GRAVEYARD`.
+- both off-hand cards report as actionable in the rail.
+- the local rail order remains `COMMAND`, visible `HAND`, playable `EXILE`, playable `GRAVEYARD`.
+
 ## Playwright Validation
 Run the checked-in Playwright helper:
 
@@ -44,16 +60,18 @@ Run the checked-in Playwright helper:
 node qa/hand-rail-playwright-check.mjs
 ```
 
-The script performs the deterministic reset above, then records:
+The script performs the deterministic resets above, then records:
 - Desktop viewport: `1440x900`
 - Narrow viewport: `700x1180`
+- Off-hand desktop viewport: `1440x900` with `?qaScenario=local-offhand-rail`
 
 The script writes artifacts to `qa/artifacts/playwright-videos/`:
 - `desktop.png`
+- `desktop.webm`
 - `narrow.png`
-- one `.webm` video per viewport run
-
-Retain both `.webm` files as review evidence.
+- `narrow.webm`
+- `offhand-desktop.png`
+- `offhand-desktop.webm`
 
 ## Expected On-Screen Results
 After `New Game` completes:
@@ -76,6 +94,12 @@ Overflow behavior:
 - Horizontal scrolling moves the rail instead of shrinking cards to unusable widths.
 - Concealed card backs and visible cards stay aligned in the same slot geometry while scrolled.
 
+Off-hand rail behavior in `?qaScenario=local-offhand-rail`:
+- The local visible rail includes at least one `EXILE` card and one `GRAVEYARD` card after the visible hand cards.
+- The local visible rail order is `COMMAND`, visible `HAND`, playable `EXILE`, playable `GRAVEYARD`.
+- Hovering the off-hand `EXILE` card still opens the preview panel.
+- The off-hand `EXILE` and `GRAVEYARD` cards remain actionable in the rail instead of rendering as inert reference cards.
+
 ## Manual Review Notes
 While reviewing the captured video, explicitly confirm:
 - Opponent hand areas read as straight rails, not fans.
@@ -83,8 +107,14 @@ While reviewing the captured video, explicitly confirm:
 - Commanders are inline before the concealed hand slots rather than featured beside them.
 - Hidden placeholders remain inert.
 
-## Coverage Limit
-The current app exposes a deterministic fresh-game state, but it does not expose a deterministic fixture, URL parameter, or debug control for a hidden opponent with playable `EXILE` or `GRAVEYARD` cards already in the rail. This QA flow therefore fully covers the guaranteed fresh-game cases and the unified-rail interaction model, but it does not claim deterministic coverage for off-hand rail integration beyond the code-path review.
+## Coverage Notes
+This QA flow now provides deterministic product-level coverage for:
+- fresh-game hidden-hand rails
+- local visible hand hover behavior
+- narrow-view overflow
+- visible off-hand `EXILE` + `GRAVEYARD` ordering in the unified rail
+
+The current product still does not expose a deterministic hidden-opponent off-hand scenario through normal controls, so this doc does not claim product-level coverage for hidden-opponent `EXILE`/`GRAVEYARD` rail ordering.
 
 ## Failure Evidence To Capture
 - The failing viewport: desktop or narrow.

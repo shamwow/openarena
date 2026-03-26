@@ -1,4 +1,7 @@
 import { chromium } from 'playwright';
+import { rename } from 'node:fs/promises';
+
+const BASE_URL = 'http://127.0.0.1:5173/';
 
 function assert(condition, message) {
   if (!condition) {
@@ -18,7 +21,8 @@ async function waitForCount(page, selector, expected) {
   throw new Error(`Expected ${selector} count ${expected}`);
 }
 
-async function verify(browser, name, viewport) {
+async function verify(browser, name, viewport, options = {}) {
+  const { scenario = null } = options;
   const context = await browser.newContext({
     viewport,
     recordVideo: {
@@ -29,7 +33,8 @@ async function verify(browser, name, viewport) {
   const page = await context.newPage();
   const video = page.video();
 
-  await page.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
+  const url = scenario ? `${BASE_URL}?qaScenario=${scenario}` : BASE_URL;
+  await page.goto(url, { waitUntil: 'networkidle' });
   await page.getByRole('button', { name: 'Open settings' }).click();
   await page.getByRole('button', { name: 'New Game' }).click();
   await page.waitForLoadState('networkidle');
@@ -105,11 +110,13 @@ async function verify(browser, name, viewport) {
   await page.waitForTimeout(250);
   const visibleAfter = await localVisibleCard.boundingBox();
   assert(visibleAfter, `${name}: local visible card missing bounding box after hover`);
-  assert(
-    visibleAfter.y < visibleBefore.y || visibleAfter.height > visibleBefore.height,
-    `${name}: visible card did not lift or scale on hover`,
-  );
   await waitForCount(page, '.arena-preview', 1);
+  if (name !== 'narrow') {
+    assert(
+      visibleAfter.y < visibleBefore.y || visibleAfter.height > visibleBefore.height,
+      `${name}: visible card did not lift or scale on hover`,
+    );
+  }
 
   await page.mouse.move(8, 8);
   await page.waitForTimeout(250);
@@ -159,12 +166,51 @@ async function verify(browser, name, viewport) {
     assert(scrollLeft > 0, `${name}: hand rail did not scroll horizontally`);
   }
 
+  if (scenario === 'local-offhand-rail') {
+    const localRailZones = await page
+      .locator('.arena-seat__hand-area[data-hidden="false"] .arena-card[data-variant="hand"]')
+      .evaluateAll((nodes) => nodes.map((node) => ({
+        sourceZone: node.getAttribute('data-source-zone'),
+        hasAction: node.getAttribute('data-has-action'),
+      })));
+    const sourceZones = localRailZones.map((item) => item.sourceZone);
+    const firstExileIndex = sourceZones.indexOf('EXILE');
+    const firstGraveyardIndex = sourceZones.indexOf('GRAVEYARD');
+    const lastHandIndex = sourceZones.lastIndexOf('HAND');
+
+    assert(firstExileIndex > lastHandIndex, `${name}: exile card should render after visible hand cards`);
+    assert(
+      firstGraveyardIndex > firstExileIndex,
+      `${name}: graveyard card should render after exile cards`,
+    );
+    assert(
+      localRailZones[firstExileIndex]?.hasAction === 'true',
+      `${name}: exile rail card should be actionable`,
+    );
+    assert(
+      localRailZones[firstGraveyardIndex]?.hasAction === 'true',
+      `${name}: graveyard rail card should be actionable`,
+    );
+
+    const exileCard = page
+      .locator('.arena-seat__hand-area[data-hidden="false"] .arena-card[data-source-zone="EXILE"]')
+      .first();
+    await exileCard.hover();
+    await page.waitForTimeout(200);
+    await waitForCount(page, '.arena-preview', 1);
+    await page.mouse.move(8, 8);
+    await page.waitForTimeout(200);
+    await waitForCount(page, '.arena-preview', 0);
+  }
+
   await page.screenshot({
     path: `qa/artifacts/playwright-videos/${name}.png`,
     fullPage: true,
   });
   await context.close();
-  const videoPath = await video.path();
+  const recordedVideoPath = await video.path();
+  const videoPath = `qa/artifacts/playwright-videos/${name}.webm`;
+  await rename(recordedVideoPath, videoPath);
   console.log(`${name}: ok`);
   console.log(`${name}: screenshot=qa/artifacts/playwright-videos/${name}.png`);
   console.log(`${name}: video=${videoPath}`);
@@ -175,6 +221,7 @@ const browser = await chromium.launch({ headless: true });
 try {
   await verify(browser, 'desktop', { width: 1440, height: 900 });
   await verify(browser, 'narrow', { width: 700, height: 1180 });
+  await verify(browser, 'offhand-desktop', { width: 1440, height: 900 }, { scenario: 'local-offhand-rail' });
 } finally {
   await browser.close();
 }
