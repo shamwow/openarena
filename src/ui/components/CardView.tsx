@@ -15,14 +15,30 @@ interface CardViewProps {
   variant?: 'battlefield' | 'hand' | 'mini' | 'flight';
   isPreviewed?: boolean;
   previewMode?: 'hover' | 'tap';
-  scale?: number;
-  lift?: number;
   mountRef?: (node: HTMLDivElement | null) => void;
   draggableAction?: PlayerAction | null;
   onDragStart?: (payload: DragCardPayload) => void;
   onDragEnd?: () => void;
   isDragging?: boolean;
   sourceZone?: Zone;
+}
+
+function cardViewPropsEqual(prev: CardViewProps, next: CardViewProps): boolean {
+  return (
+    prev.card === next.card &&
+    prev.legalActions === next.legalActions &&
+    prev.onAction === next.onAction &&
+    prev.onPreview === next.onPreview &&
+    prev.onPreviewClear === next.onPreviewClear &&
+    prev.variant === next.variant &&
+    prev.isPreviewed === next.isPreviewed &&
+    prev.previewMode === next.previewMode &&
+    prev.draggableAction === next.draggableAction &&
+    prev.onDragStart === next.onDragStart &&
+    prev.onDragEnd === next.onDragEnd &&
+    prev.isDragging === next.isDragging &&
+    prev.sourceZone === next.sourceZone
+  );
 }
 
 function getTypeLine(card: CardInstance): string {
@@ -43,7 +59,7 @@ function getStats(card: CardInstance): string | null {
   return null;
 }
 
-export const CardView: React.FC<CardViewProps> = ({
+const CardViewInner: React.FC<CardViewProps> = ({
   card,
   legalActions = [],
   onAction,
@@ -52,8 +68,6 @@ export const CardView: React.FC<CardViewProps> = ({
   variant = 'battlefield',
   isPreviewed = false,
   previewMode = 'hover',
-  scale = 1,
-  lift = 0,
   mountRef,
   draggableAction = null,
   onDragStart,
@@ -137,8 +151,6 @@ export const CardView: React.FC<CardViewProps> = ({
       title={card.definition.name}
       style={
         {
-          ['--card-scale' as string]: `${scale}`,
-          ['--card-lift' as string]: `${lift}px`,
           ['--card-cursor' as string]:
             hasAction || onPreview ? 'pointer' : 'default',
         } as React.CSSProperties
@@ -200,3 +212,6 @@ export const CardView: React.FC<CardViewProps> = ({
     </div>
   );
 };
+
+// `mountRef` is an inline closure at most call sites, but it only matters on mount/unmount.
+export const CardView = React.memo(CardViewInner, cardViewPropsEqual);

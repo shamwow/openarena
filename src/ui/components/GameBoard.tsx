@@ -62,6 +62,8 @@ function createPreviewState(
   };
 }
 
+const EMPTY_ACTIONS: PlayerAction[] = [];
+
 export const GameBoard: React.FC = () => {
   const {
     state,
@@ -350,7 +352,7 @@ export const GameBoard: React.FC = () => {
       <div className="arena-board__grid">
         {BOARD_SEATS.map((seat) => {
           const seatLegalActions =
-            state.priorityPlayer === seat.playerId ? legalActions : [];
+            state.priorityPlayer === seat.playerId ? legalActions : EMPTY_ACTIONS;
 
           return (
             <div key={seat.playerId} className="arena-grid-seat">

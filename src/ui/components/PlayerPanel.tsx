@@ -1,4 +1,4 @@
-import React, { useState, useRef, useLayoutEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import type {
   CardInstance,
   ManaPool,
@@ -6,10 +6,10 @@ import type {
   PlayerId,
   PlayerState,
 } from '../../engine/types';
-import { ActionType, CardType, Zone } from '../../engine/types';
+import { CardType, Zone } from '../../engine/types';
 import type { DragCardPayload, SeatMeta } from '../types';
-import { getPrimaryCardAction } from '../utils/gameView';
 import { CardView } from './CardView';
+import { HandRail } from './HandRail';
 import { ZoneDialog } from './ZoneDialog';
 
 interface PlayerPanelProps {
@@ -36,24 +36,6 @@ interface PlayerPanelProps {
 }
 
 type OpenZoneDialog = typeof Zone.GRAVEYARD | typeof Zone.EXILE | null;
-
-type RailAnchorZone = typeof Zone.COMMAND | typeof Zone.EXILE | typeof Zone.GRAVEYARD;
-
-type HandRailItem =
-  | {
-      kind: 'card';
-      card: CardInstance;
-      railIndex: number;
-    }
-  | {
-      kind: 'hidden-hand';
-      key: string;
-      railIndex: number;
-    };
-
-function isRailAnchorZone(zone: Zone): zone is RailAnchorZone {
-  return zone === Zone.COMMAND || zone === Zone.EXILE || zone === Zone.GRAVEYARD;
-}
 
 const MANA_COLORS: Record<keyof ManaPool, string> = {
   W: '#f9f5e3',
@@ -93,20 +75,18 @@ function getLifeDanger(player: PlayerState): { danger: boolean; critical: boolea
   };
 }
 
-function BattlefieldGroup({
-  title,
-  cards,
-  legalActions,
-  previewCardId,
-  touchFriendly,
-  draggingCardId,
-  onAction,
-  onPreview,
-  onPreviewClear,
-  onDragStart,
-  onDragEnd,
-  registerCardElement,
-}: {
+function cardsContainCardId(cards: CardInstance[], cardId: string | null): boolean {
+  return cardId != null && cards.some((card) => card.objectId === cardId);
+}
+
+function zonesContainCardId(
+  zones: Record<Zone, CardInstance[]>,
+  cardId: string | null,
+): boolean {
+  return cardId != null && Object.values(zones).some((cards) => cardsContainCardId(cards, cardId));
+}
+
+interface BattlefieldGroupProps {
   title: string;
   cards: CardInstance[];
   legalActions: PlayerAction[];
@@ -119,7 +99,58 @@ function BattlefieldGroup({
   onDragStart: (payload: DragCardPayload) => void;
   onDragEnd: () => void;
   registerCardElement: (cardId: string, node: HTMLDivElement | null) => void;
-}) {
+}
+
+function battlefieldGroupPropsEqual(
+  prev: BattlefieldGroupProps,
+  next: BattlefieldGroupProps,
+): boolean {
+  if (
+    prev.title !== next.title ||
+    prev.cards !== next.cards ||
+    prev.legalActions !== next.legalActions ||
+    prev.touchFriendly !== next.touchFriendly ||
+    prev.onAction !== next.onAction ||
+    prev.onPreview !== next.onPreview ||
+    prev.onPreviewClear !== next.onPreviewClear ||
+    prev.onDragStart !== next.onDragStart ||
+    prev.onDragEnd !== next.onDragEnd ||
+    prev.registerCardElement !== next.registerCardElement
+  ) {
+    return false;
+  }
+
+  const previewRelevant =
+    cardsContainCardId(prev.cards, prev.previewCardId) ||
+    cardsContainCardId(next.cards, next.previewCardId);
+  if (previewRelevant && prev.previewCardId !== next.previewCardId) {
+    return false;
+  }
+
+  const draggingRelevant =
+    cardsContainCardId(prev.cards, prev.draggingCardId) ||
+    cardsContainCardId(next.cards, next.draggingCardId);
+  if (draggingRelevant && prev.draggingCardId !== next.draggingCardId) {
+    return false;
+  }
+
+  return true;
+}
+
+const BattlefieldGroupInner: React.FC<BattlefieldGroupProps> = ({
+  title,
+  cards,
+  legalActions,
+  previewCardId,
+  touchFriendly,
+  draggingCardId,
+  onAction,
+  onPreview,
+  onPreviewClear,
+  onDragStart,
+  onDragEnd,
+  registerCardElement,
+}) => {
   if (cards.length === 0) {
     return null;
   }
@@ -151,7 +182,9 @@ function BattlefieldGroup({
       </div>
     </div>
   );
-}
+};
+
+const BattlefieldGroup = React.memo(BattlefieldGroupInner, battlefieldGroupPropsEqual);
 
 function ZonePile({
   zone,
@@ -218,60 +251,48 @@ function ZonePile({
   );
 }
 
-function collectPlayableCardIds(legalActions: PlayerAction[]): Set<string> {
-  const playableCardIds = new Set<string>();
-
-  for (const action of legalActions) {
-    if (
-      (action.type === ActionType.CAST_SPELL || action.type === ActionType.PLAY_LAND) &&
-      'cardId' in action
-    ) {
-      playableCardIds.add(action.cardId);
-    }
+function playerPanelPropsEqual(prev: PlayerPanelProps, next: PlayerPanelProps): boolean {
+  if (
+    prev.seat !== next.seat ||
+    prev.player !== next.player ||
+    prev.zones !== next.zones ||
+    prev.isActivePlayer !== next.isActivePlayer ||
+    prev.hasPriority !== next.hasPriority ||
+    prev.legalActions !== next.legalActions ||
+    prev.onAction !== next.onAction ||
+    prev.onPreview !== next.onPreview ||
+    prev.onPreviewClear !== next.onPreviewClear ||
+    prev.touchFriendly !== next.touchFriendly ||
+    prev.onDragStart !== next.onDragStart ||
+    prev.onDragEnd !== next.onDragEnd ||
+    prev.isDropActive !== next.isDropActive ||
+    prev.onBattlefieldDragOver !== next.onBattlefieldDragOver ||
+    prev.onBattlefieldDragLeave !== next.onBattlefieldDragLeave ||
+    prev.onBattlefieldDrop !== next.onBattlefieldDrop ||
+    prev.registerCardElement !== next.registerCardElement ||
+    prev.registerZoneAnchor !== next.registerZoneAnchor
+  ) {
+    return false;
   }
 
-  return playableCardIds;
+  const previewRelevant =
+    zonesContainCardId(prev.zones, prev.previewCardId) ||
+    zonesContainCardId(next.zones, next.previewCardId);
+  if (previewRelevant && prev.previewCardId !== next.previewCardId) {
+    return false;
+  }
+
+  const draggingRelevant =
+    zonesContainCardId(prev.zones, prev.draggingCardId) ||
+    zonesContainCardId(next.zones, next.draggingCardId);
+  if (draggingRelevant && prev.draggingCardId !== next.draggingCardId) {
+    return false;
+  }
+
+  return true;
 }
 
-function buildHandRailItems(
-  playerId: PlayerId,
-  handHidden: boolean,
-  command: CardInstance[],
-  hand: CardInstance[],
-  exile: CardInstance[],
-  graveyard: CardInstance[],
-  legalActions: PlayerAction[],
-): HandRailItem[] {
-  const playableCardIds = collectPlayableCardIds(legalActions);
-  type HandRailItemSeed =
-    | { kind: 'card'; card: CardInstance }
-    | { kind: 'hidden-hand'; key: string };
-
-  const orderedItems: HandRailItemSeed[] = [
-    ...command.map((card) => ({ kind: 'card' as const, card })),
-    ...(handHidden
-      ? hand.map((_, handIndex) => ({
-          kind: 'hidden-hand' as const,
-          key: `hidden-hand-${playerId}-${handIndex}`,
-        }))
-      : hand.map((card) => ({ kind: 'card' as const, card }))),
-    ...exile
-      .filter((card) => playableCardIds.has(card.objectId))
-      .map((card) => ({ kind: 'card' as const, card })),
-    ...graveyard
-      .filter((card) => playableCardIds.has(card.objectId))
-      .map((card) => ({ kind: 'card' as const, card })),
-  ];
-
-  return orderedItems.map((item, railIndex) => {
-    if (item.kind === 'card') {
-      return { kind: 'card', card: item.card, railIndex };
-    }
-    return { kind: 'hidden-hand', key: item.key, railIndex };
-  });
-}
-
-export const PlayerPanel: React.FC<PlayerPanelProps> = ({
+const PlayerPanelInner: React.FC<PlayerPanelProps> = ({
   seat,
   player,
   zones,
@@ -293,100 +314,39 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
   registerCardElement,
   registerZoneAnchor,
 }) => {
-  const [hoveredHandIndex, setHoveredHandIndex] = useState<number | null>(null);
   const [openZoneDialog, setOpenZoneDialog] = useState<OpenZoneDialog>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const handCardsRef = useRef<HTMLDivElement>(null);
 
-  const hand = zones.HAND ?? [];
-  const battlefield = zones.BATTLEFIELD ?? [];
-  const graveyard = zones.GRAVEYARD ?? [];
-  const exile = zones.EXILE ?? [];
-  const library = zones.LIBRARY ?? [];
-  const command = zones.COMMAND ?? [];
+  const hand = zones.HAND;
+  const battlefield = zones.BATTLEFIELD;
+  const graveyard = zones.GRAVEYARD;
+  const exile = zones.EXILE;
+  const library = zones.LIBRARY;
+  const command = zones.COMMAND;
 
-  const lands = battlefield.filter((card) => card.definition.types.includes(CardType.LAND));
-  const creatures = battlefield.filter((card) => card.definition.types.includes(CardType.CREATURE));
-  const support = battlefield.filter(
-    (card) =>
-      !card.definition.types.includes(CardType.LAND) &&
-      !card.definition.types.includes(CardType.CREATURE),
-  );
+  const { lands, creatures, support } = useMemo(() => {
+    const nextLands: CardInstance[] = [];
+    const nextCreatures: CardInstance[] = [];
+    const nextSupport: CardInstance[] = [];
+
+    for (const card of battlefield) {
+      if (card.definition.types.includes(CardType.LAND)) {
+        nextLands.push(card);
+      } else if (card.definition.types.includes(CardType.CREATURE)) {
+        nextCreatures.push(card);
+      } else {
+        nextSupport.push(card);
+      }
+    }
+
+    return {
+      lands: nextLands,
+      creatures: nextCreatures,
+      support: nextSupport,
+    };
+  }, [battlefield]);
 
   const lifeState = getLifeDanger(player);
   const infoSide = seat.position.endsWith('right') ? 'left' : 'right';
-  const railItems = buildHandRailItems(
-    player.id,
-    seat.handHidden,
-    command,
-    hand,
-    exile,
-    graveyard,
-    legalActions,
-  );
-
-  useLayoutEffect(() => {
-    const scrollEl = scrollRef.current;
-    const handCardsEl = handCardsRef.current;
-    if (!scrollEl || !handCardsEl) return;
-
-    const update = () => {
-      const count = handCardsEl.children.length;
-      if (count <= 1) {
-        handCardsEl.style.removeProperty('--hand-card-overlap');
-        return;
-      }
-
-      // Reset to CSS defaults to measure natural width
-      handCardsEl.style.removeProperty('--hand-card-overlap');
-
-      const available = scrollEl.clientWidth;
-      const naturalWidth = handCardsEl.scrollWidth;
-
-      if (naturalWidth <= available) return;
-
-      // Cards overflow at default overlap — compute tighter overlap
-      const firstCardEl = handCardsEl.querySelector('[data-variant="hand"]') as HTMLElement | null;
-      if (!firstCardEl) return;
-      const cardWidth = firstCardEl.offsetWidth;
-
-      const neededOverlap = (cardWidth * count - available) / (count - 1);
-      const maxOverlap = cardWidth - 5;
-      const overlap = Math.min(Math.max(0, neededOverlap), maxOverlap);
-      handCardsEl.style.setProperty('--hand-card-overlap', `-${overlap}px`);
-    };
-
-    const observer = new ResizeObserver(update);
-    observer.observe(scrollEl);
-    update();
-
-    return () => observer.disconnect();
-  }, [railItems.length]);
-
-  const anchorCardIds = new Map<RailAnchorZone, string>();
-  for (const item of railItems) {
-    if (item.kind === 'card' && isRailAnchorZone(item.card.zone) && !anchorCardIds.has(item.card.zone)) {
-      anchorCardIds.set(item.card.zone, item.card.objectId);
-    }
-  }
-
-  const getHandPresentation = (index: number): { scale: number; lift: number } => {
-    if (touchFriendly || hoveredHandIndex == null) {
-      return { scale: 1, lift: 0 };
-    }
-
-    const distance = Math.abs(hoveredHandIndex - index);
-    if (distance === 0) {
-      return { scale: 1.24, lift: 24 };
-    }
-    if (distance === 1) {
-      return { scale: 1.12, lift: 14 };
-    }
-    if (distance === 2) {
-      return { scale: 1.05, lift: 6 };
-    }
-    return { scale: 1, lift: 0 };
-  };
 
   const handleBattlefieldDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -400,70 +360,6 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
 
   const dialogCards =
     openZoneDialog === Zone.GRAVEYARD ? graveyard : openZoneDialog === Zone.EXILE ? exile : [];
-
-  const renderRailItem = (item: HandRailItem) => {
-    const baseZIndex = Math.max(1, item.railIndex + 1);
-    const zIndex = hoveredHandIndex === item.railIndex ? railItems.length + 1 : baseZIndex;
-
-    if (item.kind === 'hidden-hand') {
-      const presentation = getHandPresentation(item.railIndex);
-      return (
-        <div
-          key={item.key}
-          className="arena-seat__hand-card"
-          data-hidden-placeholder="true"
-          onMouseEnter={() => setHoveredHandIndex(item.railIndex)}
-          style={{ zIndex }}
-        >
-          <div
-            className="arena-card arena-card-back"
-            data-variant="hand"
-            data-hidden-placeholder="true"
-            aria-hidden="true"
-            style={{
-              '--card-scale': `${presentation.scale}`,
-              '--card-lift': `${presentation.lift}px`,
-            } as React.CSSProperties}
-          />
-        </div>
-      );
-    }
-
-    const presentation = getHandPresentation(item.railIndex);
-    const anchorZone =
-      isRailAnchorZone(item.card.zone) && anchorCardIds.get(item.card.zone) === item.card.objectId
-        ? item.card.zone
-        : null;
-
-    return (
-      <div
-        key={item.card.objectId}
-        className="arena-seat__hand-card"
-        ref={anchorZone ? (node) => registerZoneAnchor(`${player.id}:${anchorZone}`, node) : undefined}
-        onMouseEnter={() => setHoveredHandIndex(item.railIndex)}
-        style={{ zIndex }}
-      >
-        <CardView
-          card={item.card}
-          variant="hand"
-          legalActions={legalActions}
-          onAction={onAction}
-          onPreview={onPreview}
-          onPreviewClear={onPreviewClear}
-          isPreviewed={previewCardId === item.card.objectId}
-          previewMode={touchFriendly ? 'tap' : 'hover'}
-          scale={presentation.scale}
-          lift={presentation.lift}
-          draggableAction={getPrimaryCardAction(item.card, legalActions)}
-          onDragStart={onDragStart}
-          onDragEnd={onDragEnd}
-          isDragging={draggingCardId === item.card.objectId}
-          sourceZone={item.card.zone}
-          mountRef={(node) => registerCardElement(item.card.objectId, node)}
-        />
-      </div>
-    );
-  };
 
   return (
     <section
@@ -585,26 +481,26 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
           />
         </div>
 
-        <div
-          className="arena-seat__hand-area"
-          ref={(node) => registerZoneAnchor(`${player.id}:HAND`, node)}
-          data-hidden={seat.handHidden}
-          title={seat.handHidden ? `${hand.length} cards in hand` : undefined}
-          aria-label={seat.handHidden ? `${player.name} has ${hand.length} cards in hand` : undefined}
-          onMouseLeave={() => setHoveredHandIndex(null)}
-        >
-          {railItems.length > 0 ? (
-            <div className="arena-seat__hand-scroll" ref={scrollRef}>
-              <div className="arena-seat__hand-rail">
-                <div className="arena-seat__hand-cards" ref={handCardsRef}>
-                  {railItems.map((item) => renderRailItem(item))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="arena-seat__rail-empty">No cards ready</div>
-          )}
-        </div>
+        <HandRail
+          playerId={player.id}
+          playerName={player.name}
+          handHidden={seat.handHidden}
+          command={command}
+          hand={hand}
+          exile={exile}
+          graveyard={graveyard}
+          legalActions={legalActions}
+          previewCardId={previewCardId}
+          previewMode={touchFriendly ? 'tap' : 'hover'}
+          draggingCardId={draggingCardId}
+          onAction={onAction}
+          onPreview={onPreview}
+          onPreviewClear={onPreviewClear}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          registerCardElement={registerCardElement}
+          registerZoneAnchor={registerZoneAnchor}
+        />
 
         <div className="arena-seat__zone-piles" data-side="right">
           <ZonePile
@@ -631,3 +527,5 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
     </section>
   );
 };
+
+export const PlayerPanel = React.memo(PlayerPanelInner, playerPanelPropsEqual);
