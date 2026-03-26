@@ -23,4 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 
+# Local state for PR generation
+.ironsha/
+
+# PR plan files
+.plan.md
+
 .worktrees/
