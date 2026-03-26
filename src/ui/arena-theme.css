@@ -146,6 +146,11 @@ select {
   backdrop-filter: blur(18px);
 }
 
+.arena-board[data-preview-side="right"] .arena-preview {
+  left: auto;
+  right: 18px;
+}
+
 .arena-preview__empty {
   min-height: 220px;
   display: grid;
@@ -1338,6 +1343,11 @@ select {
   .arena-stack {
     width: min(280px, calc(100vw - 340px));
   }
+
+  .arena-board[data-preview-side="right"] .arena-preview {
+    left: auto;
+    right: 18px;
+  }
 }
 
 @media (max-width: 980px) {
@@ -1368,6 +1378,16 @@ select {
     transform: none;
     width: min(240px, calc(100vw - 282px));
     min-width: 220px;
+  }
+
+  .arena-board[data-preview-side="right"] .arena-preview {
+    left: auto;
+    right: 14px;
+  }
+
+  .arena-board[data-preview-side="right"] .arena-stack {
+    left: 14px;
+    right: auto;
   }
 
   .arena-seat__crest {
@@ -1465,6 +1485,11 @@ select {
     right: auto;
     transform: none;
     margin-top: 256px;
+  }
+
+  .arena-board[data-preview-side="right"] .arena-preview {
+    left: 10px;
+    right: auto;
   }
 
   .arena-log {
