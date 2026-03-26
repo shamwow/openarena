@@ -8,9 +8,10 @@
     "baseBranch": "main",
     "title": "Unify hidden opponent hands with the rail layout"
   },
-  "label": "bot-changes-needed",
+  "label": "bot-review-needed",
   "passLabels": [
-    "agent-code-review-passed"
+    "agent-code-review-passed",
+    "agent-qa-review-passed"
   ],
   "checkoutPath": "/Users/ironsha/Desktop/projects/openarena/.worktrees/orchestrate-1774492624253",
   "reviews": [
@@ -60,9 +61,18 @@
         }
       ],
       "createdAt": "2026-03-26T02:53:39.975Z"
+    },
+    {
+      "id": "30a4a414-ff8d-420d-b466-6e5809dc09e9",
+      "phase": "qa",
+      "body": "The PR description now includes a concrete fresh-game test plan and a Playwright-based Visual evidence section that matches the hidden-hand rail behavior. The GitHub-hosted screenshot and video links resolve successfully on the expected `pr-media` branch and the screenshots show the implemented board state.",
+      "event": "COMMENT",
+      "author": "ironsha-bot",
+      "comments": [],
+      "createdAt": "2026-03-26T02:58:51.550Z"
     }
   ],
   "createdAt": "2026-03-26T02:50:50.161Z",
-  "updatedAt": "2026-03-26T02:58:11.665Z",
+  "updatedAt": "2026-03-26T02:58:51.551Z",
   "description": "**Summary**\n- Replaced the hidden-opponent hand fan with a single horizontal hand-rail flow so hidden seats now render face-down placeholders inline with the rest of the hand UI.\n- Updated `PlayerPanel` and the arena theme CSS to remove fan-specific geometry, keep hidden cards non-interactive, and preserve hover/scroll behavior across desktop and mobile breakpoints.\n- Refreshed the QA docs to match the new rail-based behavior and to verify that no card content leaks or interaction gaps remain.\n\n**Test plan**\n- Launch the app and start a fresh game.\n- Confirm the local seat renders a horizontal hand rail and that cards remain fully visible while hovering and horizontally scrolling.\n- Inspect each hidden opponent seat and verify it renders a horizontal rail of face-down placeholders inline with the commander, with no detached fan shape.\n- Hover the hidden commander cards and scroll the hidden rails horizontally to confirm the commander stays attached to the row and does not clip.\n- Verify the hidden placeholders do not expose face-up card information and do not intercept interactions intended for visible cards.\n- Review the linked Playwright captures below to confirm the fresh-game board state, the hidden rail at rest, the hovered commander state, and the horizontally scrolled state in the actual browser.\n- Run `npm run lint` and `npm run build` to catch regressions in the UI code and styles.\n\n**Visual evidence**\n- Desktop screenshot, Playwright, fresh game at rest with the hidden hand rail loaded: ![Desktop rest](https://github.com/shamwow/openarena/blob/pr-media/media/desktop-rest.png?raw=1)\n- Desktop screenshot, Playwright, hidden commander hovered in the fresh-game board: ![Desktop hover](https://github.com/shamwow/openarena/blob/pr-media/media/desktop-hover.png?raw=1)\n- Desktop screenshot, Playwright, hidden rail horizontally scrolled in the fresh-game board: ![Desktop scrolled](https://github.com/shamwow/openarena/blob/pr-media/media/desktop-scrolled.png?raw=1)\n- Desktop video, Playwright, fresh-game board showing rest, hover, and horizontal scroll states: [Desktop video](https://github.com/shamwow/openarena/blob/pr-media/media/desktop.webm)\n- Mobile screenshot, Playwright, fresh-game board at the narrow viewport: ![Mobile rest](https://github.com/shamwow/openarena/blob/pr-media/media/mobile-rest.png?raw=1)\n- Mobile video, Playwright, fresh-game board at the narrow viewport showing the same rail layout: [Mobile video](https://github.com/shamwow/openarena/blob/pr-media/media/mobile.webm)"
 }
