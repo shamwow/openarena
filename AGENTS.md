@@ -20,6 +20,28 @@ http://127.0.0.1:4173
 
 If port `4173` is busy, pick another fixed port and keep Playwright pointed at the same one.
 
+## Unit tests
+
+This repo does not currently have a unit test runner configured. There is no `test`
+or `test:unit` script in `package.json`, and no Vitest or Jest setup checked in.
+
+If unit tests are added later, prefer exposing them through a dedicated script in
+`package.json`, for example:
+
+```json
+{
+  "scripts": {
+    "test:unit": "vitest run"
+  }
+}
+```
+
+Then run unit tests from the repo root with:
+
+```bash
+npm run test:unit
+```
+
 ## Open the app with Playwright
 
 Minimal example:
