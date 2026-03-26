@@ -230,9 +230,120 @@
       "author": "ironsha-bot",
       "comments": [],
       "createdAt": "2026-03-26T08:26:00.221Z"
+    },
+    {
+      "id": "19833d42-18c9-4a46-b8b6-073f5e04ae04",
+      "phase": "qa",
+      "event": "REQUEST_CHANGES",
+      "author": "ironsha-bot",
+      "comments": [
+        {
+          "id": "173b4a5e-fb11-4ce1-8551-4548308f7411",
+          "path": ".ironsha/shamwow-openarena-orchestrate-1774511434628.json",
+          "line": 237,
+          "body": "The product-level test plan is still claiming coverage it does not actually load. `priority-reset-demo` in `src/testing/testGameStates.ts` only authors normal-art permanents plus creature P/T states; it does not include any no-art/token permanent for the placeholder-label change, and it does not include any planeswalker/loyalty state. The staged screenshots/video also do not show those cases. Please update the QA flow to load deterministic cards that exercise each claimed UI behavior and assert specific observable text/badges on those exact cards, or narrow the summary/test plan so it only claims the cases that are truly covered.",
+          "author": "ironsha-bot",
+          "reactions": [
+            {
+              "content": "rocket",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:37:53.892Z"
+            },
+            {
+              "content": "+1",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:37:53.892Z"
+            }
+          ],
+          "replies": [
+            {
+              "id": "0abac2f1-9354-482a-a16a-643af0f314cf",
+              "author": "ironsha",
+              "body": "Narrowed the PR summary and test plan to the deterministic `priority-reset-demo` behavior this branch actually loads. I also updated `src/testing/testGameStates.ts` so the preset now visibly authors `Talrand, Sky Summoner` with `Damage 1`, `Summoning sick`, and `+1/+1 x2` badges, plus a `4/4` stats pill, while `Blood Artist` remains a deterministic `0/1` stats-pill check. The PR no longer claims placeholder-label or loyalty coverage in the product-level verification flow.",
+              "createdAt": "2026-03-26T08:36:00.000Z"
+            },
+            {
+              "id": "7b2067bd-a302-4f25-afbb-7e3c97ac297a",
+              "body": "Narrowed the PR summary and product-level test plan to the deterministic behavior actually covered by `priority-reset-demo`, and updated `src/testing/testGameStates.ts` so the preset now visibly exercises specific on-card battlefield badges and stats (`Talrand, Sky Summoner` shows `Damage 1`, `Summoning sick`, `+1/+1 x2`, and `4/4`; `Blood Artist` shows `0/1`).",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:37:53.821Z"
+            }
+          ],
+          "createdAt": "2026-03-26T08:27:33.298Z"
+        },
+        {
+          "id": "949aebde-6d17-49c4-9254-4c48c6a79e19",
+          "path": ".ironsha/shamwow-openarena-orchestrate-1774511434628.json",
+          "line": 237,
+          "body": "For this React/web UI change, the `Visual evidence` section needs to say that the screenshots/video were captured with Playwright and how Playwright loaded the app into the reviewed state. Right now it only lists `.ironsha/pr-media/...` filenames, so a reviewer cannot tell from the PR description which artifact came from `/?test-game-state=priority-reset-demo`, what interaction sequence was recorded, or how the app was driven into that state before capture. Please annotate each artifact with the Playwright-driven setup and the specific behavior it proves.",
+          "author": "ironsha-bot",
+          "reactions": [
+            {
+              "content": "rocket",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:37:54.035Z"
+            },
+            {
+              "content": "+1",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:37:54.035Z"
+            }
+          ],
+          "replies": [
+            {
+              "id": "0260da27-c4b7-4fb3-9275-d54eb47d8f3f",
+              "author": "ironsha",
+              "body": "Updated the `Visual evidence` section so each referenced file now states that it was captured with Playwright, the exact `/?test-game-state=priority-reset-demo` setup used to load the app, and the specific behavior the artifact proves. The video entry now explicitly describes the recorded interaction sequence (`Pass Priority`, then `Open settings` -> `New Game`) instead of only listing a filename.",
+              "createdAt": "2026-03-26T08:36:00.000Z"
+            },
+            {
+              "id": "0e229ab5-1af9-4fc5-a1d8-81179c072cd6",
+              "body": "Rewrote the PR `Visual evidence` section so every referenced artifact explicitly says it was captured with Playwright, describes the `/?test-game-state=priority-reset-demo` setup, and states the exact behavior the screenshot or video proves.",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:37:53.963Z"
+            }
+          ],
+          "createdAt": "2026-03-26T08:27:33.298Z"
+        },
+        {
+          "id": "ba75a149-effc-43e6-9acb-26948720c552",
+          "path": ".ironsha/shamwow-openarena-orchestrate-1774511434628.json",
+          "line": 237,
+          "body": "`.ironsha/pr-media/priority-reset-demo-initial-board.png` is not valid evidence as labeled: it is byte-for-byte identical to `.ironsha/pr-media/priority-reset-demo-initial-full.png`, so the PR is still presenting a duplicate full-page screenshot as the board-specific capture. Please replace it with an actual Playwright board-only screenshot (for example from `.arena-board`) or remove/relabel it so the evidence accurately matches what reviewers are asked to validate.",
+          "author": "ironsha-bot",
+          "reactions": [
+            {
+              "content": "rocket",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:37:54.177Z"
+            },
+            {
+              "content": "+1",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:37:54.177Z"
+            }
+          ],
+          "replies": [
+            {
+              "id": "fbcedda9-12c0-4689-a8f7-b0dd68d89497",
+              "author": "ironsha",
+              "body": "Removed the duplicate `priority-reset-demo-initial-board.png` from `.ironsha/pr-media/` and replaced the PR-facing close-up with a real locator capture at `.ironsha/pr-media/priority-reset-demo-talrand-badges.png`. The PR description now references that tighter Talrand screenshot and labels it for the badge/state evidence it actually shows.",
+              "createdAt": "2026-03-26T08:36:00.000Z"
+            },
+            {
+              "id": "59c96cbc-ed19-4df7-b025-d814bb75fca6",
+              "body": "Removed the duplicate `.ironsha/pr-media/priority-reset-demo-initial-board.png`, replaced the PR-facing close-up evidence with a real Playwright locator screenshot at `.ironsha/pr-media/priority-reset-demo-talrand-badges.png`, and updated the PR description to reference only the corrected media set.",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T08:37:54.106Z"
+            }
+          ],
+          "createdAt": "2026-03-26T08:27:33.298Z"
+        }
+      ],
+      "createdAt": "2026-03-26T08:27:33.298Z"
     }
   ],
   "createdAt": "2026-03-26T08:09:38.302Z",
-  "updatedAt": "2026-03-26T08:26:00.221Z",
-  "description": "**Summary**\n- Restore compact always-visible battlefield state in `CardView`, including damage, summoning-sickness, and counter badges plus a persistent stats or loyalty pill.\n- Keep no-art cards and tokens readable with a visible placeholder label, and preserve readable metadata chrome for `hand`, `mini`, and `flight` card variants.\n- Keep review artifacts out of `artifacts/` while allowing tracked review state and staged media under `.ironsha/pr-media/`.\n\n**Test plan**\n1. Run `npm run lint` and `npm run build` from the repo root.\n2. Start the app in dev mode with `npm run dev -- --host 127.0.0.1 --port 0`, open `/?test-game-state=priority-reset-demo`, and wait for the board plus `Pass Priority`.\n3. Verify the preset shows `Talrand, Sky Summoner`, `Rhystic Study`, `Blood Artist`, `Swiftfoot Boots`, `Command Tower`, and `Sol Ring`, with the current phase marker on `Main 1`.\n4. Confirm battlefield cards show compact always-visible state, including badges and power/toughness or loyalty, and that no-art cards render a readable fallback label.\n5. Click `Pass Priority` once, verify the phase advances to `Main 2`, then use `Open settings` -> `New Game` to confirm the preset resets back to `Main 1` deterministically.\n\n**Visual evidence**\n- `.ironsha/pr-media/priority-reset-demo-initial-full.png`\n- `.ironsha/pr-media/priority-reset-demo-initial-board.png`\n- `.ironsha/pr-media/priority-reset-demo-after-reset-full.png`\n- `.ironsha/pr-media/priority-reset-demo-flow.webm`"
+  "updatedAt": "2026-03-26T08:37:54.177Z",
+  "description": "**Summary**\n- Restore compact always-visible battlefield state in `CardView`, with deterministic on-card badge coverage for damage, summoning sickness, and counters plus persistent creature stats pills.\n- Keep PR-facing review media staged under `.ironsha/pr-media/` instead of repo-local `artifacts/` paths.\n\n**Test plan**\n1. Run `npm run lint` and `npm run build` from the repo root.\n2. Start the app in dev mode with `npm run dev -- --host 127.0.0.1 --port 0`, open `/?test-game-state=priority-reset-demo`, and wait for `.arena-board` plus `Pass Priority`.\n3. Verify the preset shows `Talrand, Sky Summoner`, `Rhystic Study`, `Blood Artist`, `Swiftfoot Boots`, `Command Tower`, and `Sol Ring`, with the current phase marker on `Main 1`.\n4. Confirm `Talrand, Sky Summoner` shows the on-card badges `Damage 1`, `Summoning sick`, and `+1/+1 x2`, plus a visible `4/4` stats pill. Confirm `Blood Artist` still shows a visible `0/1` stats pill on the battlefield.\n5. Click `Pass Priority` once and verify the phase marker advances to `Main 2`.\n6. Use `Open settings` -> `New Game`, wait for `.arena-board` plus `Pass Priority` again, and verify the preset resets back to `Main 1` with the same Talrand badge/state treatment still visible.\n\n**Visual evidence**\n- `.ironsha/pr-media/priority-reset-demo-initial-full.png` — Captured with Playwright after loading `http://127.0.0.1:<PORT>/?test-game-state=priority-reset-demo` and waiting for `.arena-board` plus `Pass Priority`. Proves the reviewed preset loads into `Main 1` with the expected named permanents and an interactive pass-priority state.\n- `.ironsha/pr-media/priority-reset-demo-talrand-badges.png` — Captured with Playwright from that same initial `priority-reset-demo` load using a locator screenshot of `.arena-card[title=\"Talrand, Sky Summoner\"]`. Proves the compact battlefield chrome renders `Damage 1`, `Summoning sick`, `+1/+1 x2`, and a `4/4` stats pill on the card itself.\n- `.ironsha/pr-media/priority-reset-demo-after-reset-full.png` — Captured with Playwright from the same browser session after clicking `Pass Priority`, then `Open settings` -> `New Game`, and waiting for `.arena-board` plus `Pass Priority` again. Proves the deterministic preset returns to the reviewed `Main 1` board state after reset.\n- `.ironsha/pr-media/priority-reset-demo-flow.webm` — Playwright browser-context recording of that same interaction sequence: load `/?test-game-state=priority-reset-demo`, click `Pass Priority`, then click `Open settings` -> `New Game`. Proves the end-to-end `Main 1` -> `Main 2` -> reset flow used for the screenshots."
 }

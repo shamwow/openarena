@@ -19,7 +19,14 @@ function createPriorityResetDemoState(): GameState {
     .moveCard({ playerId: 'player1', name: 'Arcane Signet' }, Zone.HAND)
     .moveCard({ playerId: 'player1', name: 'Wrath of God' }, Zone.EXILE)
     .moveCard({ playerId: 'player2', name: 'Talrand, Sky Summoner' }, Zone.BATTLEFIELD)
-    .setBattlefieldCard({ playerId: 'player2', name: 'Talrand, Sky Summoner' }, { summoningSick: false })
+    .setBattlefieldCard(
+      { playerId: 'player2', name: 'Talrand, Sky Summoner' },
+      {
+        summoningSick: true,
+        counters: { '+1/+1': 2 },
+        markedDamage: 1,
+      },
+    )
     .moveCard({ playerId: 'player2', name: 'Rhystic Study' }, Zone.BATTLEFIELD)
     .moveCard({ playerId: 'player3', name: 'Blood Artist' }, Zone.BATTLEFIELD)
     .setBattlefieldCard({ playerId: 'player3', name: 'Blood Artist' }, { summoningSick: false })
