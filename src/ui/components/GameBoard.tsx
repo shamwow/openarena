@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Zone } from '../../engine/types';
 import type { CardInstance, PlayerAction, PlayerId } from '../../engine/types';
+
+const EMPTY_ACTIONS: PlayerAction[] = [];
 import { useGameEngine } from '../hooks/useGameEngine';
 import { prefetchCardArt } from '../hooks/useCardArt';
 import type {
@@ -350,7 +352,7 @@ export const GameBoard: React.FC = () => {
       <div className="arena-board__grid">
         {BOARD_SEATS.map((seat) => {
           const seatLegalActions =
-            state.priorityPlayer === seat.playerId ? legalActions : [];
+            state.priorityPlayer === seat.playerId ? legalActions : EMPTY_ACTIONS;
 
           return (
             <div key={seat.playerId} className="arena-grid-seat">
@@ -364,7 +366,6 @@ export const GameBoard: React.FC = () => {
                 onAction={handleAction}
                 onPreview={handlePreview}
                 onPreviewClear={handlePreviewClear}
-                previewCardId={preview?.card.objectId ?? null}
                 touchFriendly={touchFriendly}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}

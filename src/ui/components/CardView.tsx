@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import type { CardInstance, PlayerAction, Zone } from '../../engine/types';
 import { CardType } from '../../engine/types';
 import { useCardArt } from '../hooks/useCardArt';
@@ -43,7 +43,7 @@ function getStats(card: CardInstance): string | null {
   return null;
 }
 
-export const CardView: React.FC<CardViewProps> = ({
+const CardViewInner: React.FC<CardViewProps> = ({
   card,
   legalActions = [],
   onAction,
@@ -61,6 +61,7 @@ export const CardView: React.FC<CardViewProps> = ({
   isDragging = false,
   sourceZone,
 }) => {
+  const rootRef = useRef<HTMLDivElement>(null);
   const art = useCardArt(card.definition.name, {
     enabled: !isTokenCard(card),
   });
@@ -72,15 +73,24 @@ export const CardView: React.FC<CardViewProps> = ({
   const resolvedSourceZone = sourceZone ?? card.zone;
 
   const handlePreview = () => {
+    document.querySelector('[data-previewed="true"]')?.setAttribute('data-previewed', 'false');
+    document.querySelector('[data-selected="true"]')?.removeAttribute('data-selected');
+    rootRef.current?.setAttribute('data-previewed', 'true');
+    if (previewMode === 'tap') {
+      rootRef.current?.setAttribute('data-selected', 'true');
+    }
     onPreview?.(card);
   };
 
   const handlePreviewClear = () => {
+    rootRef.current?.setAttribute('data-previewed', 'false');
+    rootRef.current?.removeAttribute('data-selected');
     onPreviewClear?.(card.objectId);
   };
 
   const handleActivate = () => {
-    if (previewMode === 'tap' && !isPreviewed) {
+    const isCurrentlyPreviewed = rootRef.current?.getAttribute('data-previewed') === 'true';
+    if (previewMode === 'tap' && !isCurrentlyPreviewed) {
       handlePreview();
       return;
     }
@@ -117,12 +127,10 @@ export const CardView: React.FC<CardViewProps> = ({
 
   return (
     <div
-      ref={mountRef}
+      ref={(node) => { rootRef.current = node; mountRef?.(node); }}
       className="arena-card"
       data-variant={variant}
       data-has-action={hasAction}
-      data-previewed={isPreviewed}
-      data-selected={previewMode === 'tap' && isPreviewed}
       data-tapped={card.tapped}
       data-dragging={isDragging}
       data-source-zone={resolvedSourceZone}
@@ -137,8 +145,8 @@ export const CardView: React.FC<CardViewProps> = ({
       title={card.definition.name}
       style={
         {
-          ['--card-scale' as string]: `${scale}`,
-          ['--card-lift' as string]: `${lift}px`,
+          ...(scale !== 1 ? { ['--card-scale' as string]: `${scale}` } : {}),
+          ...(lift !== 0 ? { ['--card-lift' as string]: `${lift}px` } : {}),
           ['--card-cursor' as string]:
             hasAction || onPreview ? 'pointer' : 'default',
         } as React.CSSProperties
@@ -200,3 +208,15 @@ export const CardView: React.FC<CardViewProps> = ({
     </div>
   );
 };
+
+export const CardView = React.memo(CardViewInner, (prev, next) =>
+  prev.card === next.card &&
+  prev.isDragging === next.isDragging &&
+  prev.legalActions === next.legalActions &&
+  prev.variant === next.variant &&
+  prev.previewMode === next.previewMode &&
+  prev.scale === next.scale &&
+  prev.lift === next.lift &&
+  prev.sourceZone === next.sourceZone &&
+  prev.draggableAction === next.draggableAction,
+);

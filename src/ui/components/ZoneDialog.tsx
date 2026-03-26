@@ -7,7 +7,6 @@ interface ZoneDialogProps {
   playerName: string;
   zone: typeof Zone.GRAVEYARD | typeof Zone.EXILE;
   cards: CardInstance[];
-  previewCardId: string | null;
   touchFriendly: boolean;
   onPreview: (card: CardInstance) => void;
   onPreviewClear: (cardId?: string) => void;
@@ -22,7 +21,6 @@ export const ZoneDialog: React.FC<ZoneDialogProps> = ({
   playerName,
   zone,
   cards,
-  previewCardId,
   touchFriendly,
   onPreview,
   onPreviewClear,
@@ -65,7 +63,6 @@ export const ZoneDialog: React.FC<ZoneDialogProps> = ({
                 variant="mini"
                 onPreview={onPreview}
                 onPreviewClear={onPreviewClear}
-                isPreviewed={previewCardId === card.objectId}
                 previewMode={touchFriendly ? 'tap' : 'hover'}
               />
             ))}

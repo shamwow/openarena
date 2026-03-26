@@ -578,6 +578,36 @@ select {
 
 .arena-seat__hand-card {
   position: relative;
+  z-index: calc(var(--card-index, 0) + 1);
+}
+
+/*
+ * CSS-driven hover zoom for hand cards.
+ *
+ * Each wrapper sets --card-index (inline) and the container sets
+ * data-hovered-index (via JS on mouseenter — one DOM write).
+ * All scale/lift/z-index maths happen here so the browser handles
+ * transitions natively.
+ */
+.arena-seat__hand-cards[data-hovered-index] > .arena-seat__hand-card {
+  --hand-distance: abs(
+    var(--card-index) - var(--hand-hovered-index)
+  );
+
+  --_d: round(nearest, var(--hand-distance), 1);
+  --_tier0: clamp(0, 1 - var(--_d), 1);
+  --_tier1: clamp(0, 1 - abs(var(--_d) - 1), 1);
+  --_tier2: clamp(0, 1 - abs(var(--_d) - 2), 1);
+
+  z-index: calc(
+    var(--card-index, 0) + 1 +
+    var(--_tier0) * var(--card-count, 1)
+  );
+}
+
+.arena-seat__hand-cards[data-hovered-index] > .arena-seat__hand-card [data-variant="hand"] {
+  --card-scale: calc(1 + 0.24 * var(--_tier0) + 0.12 * var(--_tier1) + 0.05 * var(--_tier2));
+  --card-lift: calc(24px * var(--_tier0) + 14px * var(--_tier1) + 6px * var(--_tier2));
 }
 
 .arena-seat__hand-cards > .arena-seat__hand-card:last-child .arena-card,

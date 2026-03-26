@@ -1,4 +1,4 @@
-import React, { useState, useRef, useLayoutEffect } from 'react';
+import React, { useState, useRef, useLayoutEffect, useMemo, useEffect, useCallback } from 'react';
 import type {
   CardInstance,
   ManaPool,
@@ -22,7 +22,6 @@ interface PlayerPanelProps {
   onAction: (action: PlayerAction) => void;
   onPreview: (card: CardInstance) => void;
   onPreviewClear: (cardId?: string) => void;
-  previewCardId: string | null;
   touchFriendly: boolean;
   onDragStart: (payload: DragCardPayload) => void;
   onDragEnd: () => void;
@@ -97,7 +96,6 @@ function BattlefieldGroup({
   title,
   cards,
   legalActions,
-  previewCardId,
   touchFriendly,
   draggingCardId,
   onAction,
@@ -110,7 +108,6 @@ function BattlefieldGroup({
   title: string;
   cards: CardInstance[];
   legalActions: PlayerAction[];
-  previewCardId: string | null;
   touchFriendly: boolean;
   draggingCardId: string | null;
   onAction: (action: PlayerAction) => void;
@@ -139,7 +136,6 @@ function BattlefieldGroup({
             onAction={onAction}
             onPreview={onPreview}
             onPreviewClear={onPreviewClear}
-            isPreviewed={previewCardId === card.objectId}
             previewMode={touchFriendly ? 'tap' : 'hover'}
             draggableAction={null}
             onDragStart={onDragStart}
@@ -271,7 +267,187 @@ function buildHandRailItems(
   });
 }
 
-export const PlayerPanel: React.FC<PlayerPanelProps> = ({
+interface HandRailProps {
+  railItems: HandRailItem[];
+  legalActions: PlayerAction[];
+  touchFriendly: boolean;
+  onAction: (action: PlayerAction) => void;
+  onDragStart: (payload: DragCardPayload) => void;
+  onDragEnd: () => void;
+  draggingCardId: string | null;
+  registerCardElement: (cardId: string, node: HTMLDivElement | null) => void;
+  registerZoneAnchor: (key: string, node: HTMLElement | null) => void;
+  playerId: PlayerId;
+  handCardsRef: React.RefObject<HTMLDivElement | null>;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+}
+
+const HandRail = React.memo(function HandRail({
+  railItems,
+  legalActions,
+  touchFriendly,
+  onAction,
+  onDragStart,
+  onDragEnd,
+  draggingCardId,
+  registerCardElement,
+  registerZoneAnchor,
+  playerId,
+  handCardsRef,
+  scrollRef,
+}: HandRailProps) {
+  const hoveredHandIndexRef = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    const scrollEl = scrollRef.current;
+    const handCardsEl = handCardsRef.current;
+    if (!scrollEl || !handCardsEl) return;
+
+    const update = () => {
+      const count = handCardsEl.children.length;
+      if (count <= 1) {
+        handCardsEl.style.removeProperty('--hand-card-overlap');
+        return;
+      }
+
+      handCardsEl.style.removeProperty('--hand-card-overlap');
+
+      const available = scrollEl.clientWidth;
+      const naturalWidth = handCardsEl.scrollWidth;
+      if (naturalWidth <= available) return;
+
+      const firstCardEl = handCardsEl.querySelector('[data-variant="hand"]') as HTMLElement | null;
+      if (!firstCardEl) return;
+      const cardWidth = firstCardEl.offsetWidth;
+
+      const neededOverlap = (cardWidth * count - available) / (count - 1);
+      const maxOverlap = cardWidth - 5;
+      const overlap = Math.min(Math.max(0, neededOverlap), maxOverlap);
+      handCardsEl.style.setProperty('--hand-card-overlap', `-${overlap}px`);
+    };
+
+    const observer = new ResizeObserver(update);
+    observer.observe(scrollEl);
+    update();
+
+    return () => observer.disconnect();
+  }, [railItems.length, scrollRef, handCardsRef]);
+
+  const anchorCardIds = new Map<RailAnchorZone, string>();
+  const primaryActions = new Map<string, PlayerAction | null>();
+  for (const item of railItems) {
+    if (item.kind === 'card') {
+      if (isRailAnchorZone(item.card.zone) && !anchorCardIds.has(item.card.zone)) {
+        anchorCardIds.set(item.card.zone, item.card.objectId);
+      }
+      primaryActions.set(item.card.objectId, getPrimaryCardAction(item.card, legalActions));
+    }
+  }
+
+  const handleMouseLeave = useCallback(() => {
+    hoveredHandIndexRef.current = null;
+    const el = handCardsRef.current;
+    if (el) {
+      el.removeAttribute('data-hovered-index');
+      el.style.removeProperty('--hand-hovered-index');
+    }
+  }, [handCardsRef]);
+
+  const setHoveredIndex = (index: number | null) => {
+    hoveredHandIndexRef.current = index;
+    const el = handCardsRef.current;
+    if (!el) return;
+    if (touchFriendly || index == null) {
+      el.removeAttribute('data-hovered-index');
+      el.style.removeProperty('--hand-hovered-index');
+    } else {
+      el.setAttribute('data-hovered-index', `${index}`);
+      el.style.setProperty('--hand-hovered-index', `${index}`);
+    }
+  };
+
+  // Re-sync after React re-renders
+  useLayoutEffect(() => {
+    const el = handCardsRef.current;
+    if (!el) return;
+    const idx = hoveredHandIndexRef.current;
+    if (touchFriendly || idx == null) {
+      el.removeAttribute('data-hovered-index');
+      el.style.removeProperty('--hand-hovered-index');
+    } else {
+      el.setAttribute('data-hovered-index', `${idx}`);
+      el.style.setProperty('--hand-hovered-index', `${idx}`);
+    }
+  });
+
+  const renderRailItem = (item: HandRailItem) => {
+    const wrapperStyle = {
+      '--card-index': item.railIndex,
+      '--card-count': railItems.length,
+    } as React.CSSProperties;
+
+    if (item.kind === 'hidden-hand') {
+      return (
+        <div
+          key={item.key}
+          className="arena-seat__hand-card"
+          data-hidden-placeholder="true"
+          onMouseEnter={() => setHoveredIndex(item.railIndex)}
+          style={wrapperStyle}
+        >
+          <div
+            className="arena-card arena-card-back"
+            data-variant="hand"
+            data-hidden-placeholder="true"
+            aria-hidden="true"
+          />
+        </div>
+      );
+    }
+
+    const anchorZone =
+      isRailAnchorZone(item.card.zone) && anchorCardIds.get(item.card.zone) === item.card.objectId
+        ? item.card.zone
+        : null;
+
+    return (
+      <div
+        key={item.card.objectId}
+        className="arena-seat__hand-card"
+        data-object-id={item.card.objectId}
+        ref={anchorZone ? (node) => registerZoneAnchor(`${playerId}:${anchorZone}`, node) : undefined}
+        onMouseEnter={() => setHoveredIndex(item.railIndex)}
+        style={wrapperStyle}
+      >
+        <CardView
+          card={item.card}
+          variant="hand"
+          legalActions={legalActions}
+          onAction={onAction}
+          previewMode={touchFriendly ? 'tap' : 'hover'}
+          draggableAction={primaryActions.get(item.card.objectId) ?? null}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          isDragging={draggingCardId === item.card.objectId}
+          sourceZone={item.card.zone}
+          mountRef={(node) => registerCardElement(item.card.objectId, node)}
+        />
+      </div>
+    );
+  };
+
+  return (
+    <div className="arena-seat__hand-scroll" ref={scrollRef} onMouseLeave={handleMouseLeave}>
+      <div className="arena-seat__hand-rail">
+        <div className="arena-seat__hand-cards" ref={handCardsRef}>
+          {railItems.map((item) => renderRailItem(item))}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+export const PlayerPanel: React.FC<PlayerPanelProps> = React.memo(({
   seat,
   player,
   zones,
@@ -281,7 +457,6 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
   onAction,
   onPreview,
   onPreviewClear,
-  previewCardId,
   touchFriendly,
   onDragStart,
   onDragEnd,
@@ -293,7 +468,6 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
   registerCardElement,
   registerZoneAnchor,
 }) => {
-  const [hoveredHandIndex, setHoveredHandIndex] = useState<number | null>(null);
   const [openZoneDialog, setOpenZoneDialog] = useState<OpenZoneDialog>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const handCardsRef = useRef<HTMLDivElement>(null);
@@ -315,78 +489,70 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
 
   const lifeState = getLifeDanger(player);
   const infoSide = seat.position.endsWith('right') ? 'left' : 'right';
-  const railItems = buildHandRailItems(
-    player.id,
-    seat.handHidden,
-    command,
-    hand,
-    exile,
-    graveyard,
-    legalActions,
+  const railItems = useMemo(
+    () => buildHandRailItems(player.id, seat.handHidden, command, hand, exile, graveyard, legalActions),
+    [player.id, seat.handHidden, command, hand, exile, graveyard, legalActions],
   );
 
-  useLayoutEffect(() => {
-    const scrollEl = scrollRef.current;
-    const handCardsEl = handCardsRef.current;
-    if (!scrollEl || !handCardsEl) return;
-
-    const update = () => {
-      const count = handCardsEl.children.length;
-      if (count <= 1) {
-        handCardsEl.style.removeProperty('--hand-card-overlap');
-        return;
-      }
-
-      // Reset to CSS defaults to measure natural width
-      handCardsEl.style.removeProperty('--hand-card-overlap');
-
-      const available = scrollEl.clientWidth;
-      const naturalWidth = handCardsEl.scrollWidth;
-
-      if (naturalWidth <= available) return;
-
-      // Cards overflow at default overlap — compute tighter overlap
-      const firstCardEl = handCardsEl.querySelector('[data-variant="hand"]') as HTMLElement | null;
-      if (!firstCardEl) return;
-      const cardWidth = firstCardEl.offsetWidth;
-
-      const neededOverlap = (cardWidth * count - available) / (count - 1);
-      const maxOverlap = cardWidth - 5;
-      const overlap = Math.min(Math.max(0, neededOverlap), maxOverlap);
-      handCardsEl.style.setProperty('--hand-card-overlap', `-${overlap}px`);
-    };
-
-    const observer = new ResizeObserver(update);
-    observer.observe(scrollEl);
-    update();
-
-    return () => observer.disconnect();
-  }, [railItems.length]);
-
-  const anchorCardIds = new Map<RailAnchorZone, string>();
+  // Card lookup map for native DOM preview handlers
+  const cardMapRef = useRef(new Map<string, CardInstance>());
+  cardMapRef.current.clear();
   for (const item of railItems) {
-    if (item.kind === 'card' && isRailAnchorZone(item.card.zone) && !anchorCardIds.has(item.card.zone)) {
-      anchorCardIds.set(item.card.zone, item.card.objectId);
+    if (item.kind === 'card') {
+      cardMapRef.current.set(item.card.objectId, item.card);
     }
   }
 
-  const getHandPresentation = (index: number): { scale: number; lift: number } => {
-    if (touchFriendly || hoveredHandIndex == null) {
-      return { scale: 1, lift: 0 };
-    }
+  // Stable refs for callbacks so native handlers always call the latest version
+  const onPreviewRef = useRef(onPreview);
+  const onPreviewClearRef = useRef(onPreviewClear);
+  onPreviewRef.current = onPreview;
+  onPreviewClearRef.current = onPreviewClear;
 
-    const distance = Math.abs(hoveredHandIndex - index);
-    if (distance === 0) {
-      return { scale: 1.24, lift: 24 };
-    }
-    if (distance === 1) {
-      return { scale: 1.12, lift: 14 };
-    }
-    if (distance === 2) {
-      return { scale: 1.05, lift: 6 };
-    }
-    return { scale: 1, lift: 0 };
-  };
+  // Native DOM event handlers for card preview — completely outside React
+  useEffect(() => {
+    const container = handCardsRef.current;
+    if (!container) return;
+
+    let currentPreviewId: string | null = null;
+
+    const handleOver = (e: Event) => {
+      const wrapper = (e.target as HTMLElement).closest('.arena-seat__hand-card[data-object-id]');
+      if (!wrapper) return;
+      const objectId = wrapper.getAttribute('data-object-id')!;
+      if (objectId === currentPreviewId) return;
+
+      // Clear any previously previewed card (hand rail or battlefield)
+      document.querySelector('[data-previewed="true"]')?.setAttribute('data-previewed', 'false');
+      document.querySelector('[data-selected="true"]')?.removeAttribute('data-selected');
+
+      currentPreviewId = objectId;
+      wrapper.querySelector('.arena-card')?.setAttribute('data-previewed', 'true');
+
+      const card = cardMapRef.current.get(objectId);
+      if (card) onPreviewRef.current(card);
+    };
+
+    const handleOut = (e: Event) => {
+      const related = (e as MouseEvent).relatedTarget as HTMLElement | null;
+      if (related && container.contains(related)) return;
+
+      if (currentPreviewId) {
+        container.querySelector(`[data-object-id="${currentPreviewId}"] .arena-card`)
+          ?.setAttribute('data-previewed', 'false');
+        onPreviewClearRef.current(currentPreviewId);
+        currentPreviewId = null;
+      }
+    };
+
+    container.addEventListener('mouseover', handleOver);
+    container.addEventListener('mouseout', handleOut);
+
+    return () => {
+      container.removeEventListener('mouseover', handleOver);
+      container.removeEventListener('mouseout', handleOut);
+    };
+  }, []);
 
   const handleBattlefieldDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -400,70 +566,6 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
 
   const dialogCards =
     openZoneDialog === Zone.GRAVEYARD ? graveyard : openZoneDialog === Zone.EXILE ? exile : [];
-
-  const renderRailItem = (item: HandRailItem) => {
-    const baseZIndex = Math.max(1, item.railIndex + 1);
-    const zIndex = hoveredHandIndex === item.railIndex ? railItems.length + 1 : baseZIndex;
-
-    if (item.kind === 'hidden-hand') {
-      const presentation = getHandPresentation(item.railIndex);
-      return (
-        <div
-          key={item.key}
-          className="arena-seat__hand-card"
-          data-hidden-placeholder="true"
-          onMouseEnter={() => setHoveredHandIndex(item.railIndex)}
-          style={{ zIndex }}
-        >
-          <div
-            className="arena-card arena-card-back"
-            data-variant="hand"
-            data-hidden-placeholder="true"
-            aria-hidden="true"
-            style={{
-              '--card-scale': `${presentation.scale}`,
-              '--card-lift': `${presentation.lift}px`,
-            } as React.CSSProperties}
-          />
-        </div>
-      );
-    }
-
-    const presentation = getHandPresentation(item.railIndex);
-    const anchorZone =
-      isRailAnchorZone(item.card.zone) && anchorCardIds.get(item.card.zone) === item.card.objectId
-        ? item.card.zone
-        : null;
-
-    return (
-      <div
-        key={item.card.objectId}
-        className="arena-seat__hand-card"
-        ref={anchorZone ? (node) => registerZoneAnchor(`${player.id}:${anchorZone}`, node) : undefined}
-        onMouseEnter={() => setHoveredHandIndex(item.railIndex)}
-        style={{ zIndex }}
-      >
-        <CardView
-          card={item.card}
-          variant="hand"
-          legalActions={legalActions}
-          onAction={onAction}
-          onPreview={onPreview}
-          onPreviewClear={onPreviewClear}
-          isPreviewed={previewCardId === item.card.objectId}
-          previewMode={touchFriendly ? 'tap' : 'hover'}
-          scale={presentation.scale}
-          lift={presentation.lift}
-          draggableAction={getPrimaryCardAction(item.card, legalActions)}
-          onDragStart={onDragStart}
-          onDragEnd={onDragEnd}
-          isDragging={draggingCardId === item.card.objectId}
-          sourceZone={item.card.zone}
-          mountRef={(node) => registerCardElement(item.card.objectId, node)}
-        />
-      </div>
-    );
-  };
 
   return (
     <section
@@ -527,7 +629,6 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
           title="Creatures"
           cards={creatures}
           legalActions={legalActions}
-          previewCardId={previewCardId}
           touchFriendly={touchFriendly}
           draggingCardId={draggingCardId}
           onAction={onAction}
@@ -541,7 +642,6 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
           title="Support"
           cards={support}
           legalActions={legalActions}
-          previewCardId={previewCardId}
           touchFriendly={touchFriendly}
           draggingCardId={draggingCardId}
           onAction={onAction}
@@ -555,7 +655,6 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
           title="Lands"
           cards={lands}
           legalActions={legalActions}
-          previewCardId={previewCardId}
           touchFriendly={touchFriendly}
           draggingCardId={draggingCardId}
           onAction={onAction}
@@ -591,16 +690,22 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
           data-hidden={seat.handHidden}
           title={seat.handHidden ? `${hand.length} cards in hand` : undefined}
           aria-label={seat.handHidden ? `${player.name} has ${hand.length} cards in hand` : undefined}
-          onMouseLeave={() => setHoveredHandIndex(null)}
         >
           {railItems.length > 0 ? (
-            <div className="arena-seat__hand-scroll" ref={scrollRef}>
-              <div className="arena-seat__hand-rail">
-                <div className="arena-seat__hand-cards" ref={handCardsRef}>
-                  {railItems.map((item) => renderRailItem(item))}
-                </div>
-              </div>
-            </div>
+            <HandRail
+              railItems={railItems}
+              legalActions={legalActions}
+              touchFriendly={touchFriendly}
+              onAction={onAction}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              draggingCardId={draggingCardId}
+              registerCardElement={registerCardElement}
+              registerZoneAnchor={registerZoneAnchor}
+              playerId={player.id}
+              handCardsRef={handCardsRef}
+              scrollRef={scrollRef}
+            />
           ) : (
             <div className="arena-seat__rail-empty">No cards ready</div>
           )}
@@ -621,7 +726,6 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
           playerName={player.name}
           zone={openZoneDialog}
           cards={dialogCards}
-          previewCardId={previewCardId}
           touchFriendly={touchFriendly}
           onPreview={onPreview}
           onPreviewClear={onPreviewClear}
@@ -630,4 +734,4 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
       )}
     </section>
   );
-};
+});
