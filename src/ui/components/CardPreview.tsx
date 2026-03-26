@@ -30,11 +30,39 @@ function getCardStats(preview: PreviewCardState): string | null {
 
 export const CardPreview: React.FC<CardPreviewProps> = ({ preview }) => {
   const art = useCardArt(preview.card.definition.name, {
-    enabled: !preview.card.definition.id.startsWith('token-'),
+    enabled: !preview.hidden && !preview.card.definition.id.startsWith('token-'),
   });
 
   const stats = getCardStats(preview);
   const imageUrl = art.large ?? art.normal ?? art.png;
+
+  if (preview.hidden) {
+    return (
+      <aside className="arena-preview" data-hidden="true">
+        <div className="arena-preview__header">
+          <div>
+            <h2 className="arena-preview__title">Hidden Card</h2>
+            <div className="arena-preview__meta">
+              Controlled by {preview.controllerName} · Owned by {preview.ownerName}
+            </div>
+          </div>
+        </div>
+
+        <div className="arena-preview__art arena-preview__art--concealed">
+          <div className="arena-card-back" aria-hidden="true" />
+        </div>
+
+        <div className="arena-preview__body">
+          <div className="arena-preview__type">In hidden hand</div>
+          <div className="arena-preview__oracle">Card details are hidden until revealed.</div>
+          <div className="arena-preview__footer">
+            <div className="arena-preview__meta">Seat {preview.seat}</div>
+            <span />
+          </div>
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside className="arena-preview">

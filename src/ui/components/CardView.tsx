@@ -23,6 +23,7 @@ interface CardViewProps {
   onDragEnd?: () => void;
   isDragging?: boolean;
   sourceZone?: Zone;
+  concealed?: boolean;
 }
 
 function getTypeLine(card: CardInstance): string {
@@ -60,15 +61,18 @@ export const CardView: React.FC<CardViewProps> = ({
   onDragEnd,
   isDragging = false,
   sourceZone,
+  concealed = false,
 }) => {
   const art = useCardArt(card.definition.name, {
-    enabled: !isTokenCard(card),
+    enabled: !concealed && !isTokenCard(card),
   });
   const interactionAction = getPrimaryCardAction(card, legalActions);
   const imageUrl = art.normal ?? art.png ?? art.artCrop;
-  const hasAction = interactionAction != null;
-  const stats = getStats(card);
-  const counterEntries = Object.entries(card.counters).filter(([, count]) => count > 0);
+  const hasAction = !concealed && interactionAction != null;
+  const stats = concealed ? null : getStats(card);
+  const counterEntries = concealed
+    ? []
+    : Object.entries(card.counters).filter(([, count]) => count > 0);
   const resolvedSourceZone = sourceZone ?? card.zone;
 
   const handlePreview = () => {
@@ -85,7 +89,7 @@ export const CardView: React.FC<CardViewProps> = ({
       return;
     }
 
-    if (interactionAction && onAction) {
+    if (!concealed && interactionAction && onAction) {
       onAction(interactionAction);
       return;
     }
@@ -94,7 +98,7 @@ export const CardView: React.FC<CardViewProps> = ({
   };
 
   const handleDragStart = (event: React.DragEvent<HTMLDivElement>) => {
-    if (!draggableAction || !onDragStart) {
+    if (concealed || !draggableAction || !onDragStart) {
       return;
     }
 
@@ -110,10 +114,13 @@ export const CardView: React.FC<CardViewProps> = ({
     });
   };
 
-  const oracleSnippet = card.definition.oracleText
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)[0];
+  const oracleSnippet = concealed
+    ? null
+    : card.definition.oracleText
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)[0];
+  const accessibleLabel = concealed ? 'Hidden card' : card.definition.name;
 
   return (
     <div
@@ -125,8 +132,9 @@ export const CardView: React.FC<CardViewProps> = ({
       data-selected={previewMode === 'tap' && isPreviewed}
       data-tapped={card.tapped}
       data-dragging={isDragging}
+      data-concealed={concealed}
       data-source-zone={resolvedSourceZone}
-      draggable={draggableAction != null && onDragStart != null && variant !== 'flight'}
+      draggable={!concealed && draggableAction != null && onDragStart != null && variant !== 'flight'}
       onDragStart={handleDragStart}
       onDragEnd={onDragEnd}
       onMouseEnter={previewMode === 'hover' ? handlePreview : undefined}
@@ -134,7 +142,8 @@ export const CardView: React.FC<CardViewProps> = ({
       onFocus={handlePreview}
       onBlur={previewMode === 'hover' ? handlePreviewClear : undefined}
       onClick={variant === 'flight' ? undefined : handleActivate}
-      title={card.definition.name}
+      title={accessibleLabel}
+      aria-label={accessibleLabel}
       style={
         {
           ['--card-scale' as string]: `${scale}`,
@@ -146,10 +155,12 @@ export const CardView: React.FC<CardViewProps> = ({
     >
       <div className="arena-card__frame">
         <div className="arena-card__image-wrap">
-          {imageUrl ? (
+          {concealed ? (
+            <div className="arena-card-back" aria-hidden="true" />
+          ) : imageUrl ? (
             <img
               className="arena-card__image"
-              alt={card.definition.name}
+              alt={accessibleLabel}
               src={imageUrl}
               loading={variant === 'hand' ? 'eager' : 'lazy'}
             />
@@ -159,43 +170,47 @@ export const CardView: React.FC<CardViewProps> = ({
         </div>
         <div className="arena-card__surface" />
 
-        <div className="arena-card__chrome">
-          <div className="arena-card__name">{card.definition.name}</div>
-          {variant !== 'mini' && <ManaCostView cost={card.definition.manaCost} />}
-        </div>
+        {concealed ? null : (
+          <>
+            <div className="arena-card__chrome">
+              <div className="arena-card__name">{card.definition.name}</div>
+              {variant !== 'mini' && <ManaCostView cost={card.definition.manaCost} />}
+            </div>
 
-        <div className="arena-card__status-stack">
-          {card.markedDamage > 0 && (
-            <span className="arena-card__badge" data-kind="damage">
-              {card.markedDamage} dmg
-            </span>
-          )}
-          {card.summoningSick && card.definition.types.includes(CardType.CREATURE) && (
-            <span className="arena-card__badge" data-kind="sick">
-              summoning
-            </span>
-          )}
-          {card.tapped && (
-            <span className="arena-card__badge" data-kind="tap">
-              tapped
-            </span>
-          )}
-          {counterEntries.map(([counterType, count]) => (
-            <span key={counterType} className="arena-card__badge" data-kind="counter">
-              {count} {counterType}
-            </span>
-          ))}
-        </div>
+            <div className="arena-card__status-stack">
+              {card.markedDamage > 0 && (
+                <span className="arena-card__badge" data-kind="damage">
+                  {card.markedDamage} dmg
+                </span>
+              )}
+              {card.summoningSick && card.definition.types.includes(CardType.CREATURE) && (
+                <span className="arena-card__badge" data-kind="sick">
+                  summoning
+                </span>
+              )}
+              {card.tapped && (
+                <span className="arena-card__badge" data-kind="tap">
+                  tapped
+                </span>
+              )}
+              {counterEntries.map(([counterType, count]) => (
+                <span key={counterType} className="arena-card__badge" data-kind="counter">
+                  {count} {counterType}
+                </span>
+              ))}
+            </div>
 
-        <div className="arena-card__footer">
-          <div style={{ display: 'grid', gap: 6, minWidth: 0 }}>
-            <div className="arena-card__type">{getTypeLine(card)}</div>
-            {variant !== 'mini' && oracleSnippet ? (
-              <div className="arena-card__text-chip">{oracleSnippet}</div>
-            ) : null}
-          </div>
-          {stats ? <div className="arena-card__stats">{stats}</div> : null}
-        </div>
+            <div className="arena-card__footer">
+              <div style={{ display: 'grid', gap: 6, minWidth: 0 }}>
+                <div className="arena-card__type">{getTypeLine(card)}</div>
+                {variant !== 'mini' && oracleSnippet ? (
+                  <div className="arena-card__text-chip">{oracleSnippet}</div>
+                ) : null}
+              </div>
+              {stats ? <div className="arena-card__stats">{stats}</div> : null}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

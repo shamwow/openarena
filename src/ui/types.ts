@@ -27,6 +27,7 @@ export interface PreviewCardState {
   ownerName: string;
   controllerName: string;
   seat: SeatPosition;
+  hidden: boolean;
 }
 
 export interface RectSnapshot {

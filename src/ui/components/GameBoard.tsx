@@ -54,11 +54,15 @@ function createPreviewState(
   state: NonNullable<ReturnType<typeof useGameEngine>['state']>,
 ): PreviewCardState {
   const seat = BOARD_SEATS.find((entry) => entry.playerId === card.controller) ?? BOARD_SEATS[3];
+  const hidden =
+    card.zone === Zone.HAND &&
+    (BOARD_SEATS.find((entry) => entry.playerId === card.controller)?.handHidden ?? false);
   return {
     card,
     ownerName: state.players[card.owner]?.name ?? card.owner,
     controllerName: state.players[card.controller]?.name ?? card.controller,
     seat: seat.position,
+    hidden,
   };
 }
 
