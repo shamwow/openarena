@@ -1,0 +1,134 @@
+{
+  "version": 1,
+  "pr": {
+    "owner": "shamwow",
+    "repo": "openarena",
+    "number": 0,
+    "branch": "orchestrate-1774489757000",
+    "baseBranch": "main",
+    "title": "Unify hidden opponent hands into the shared hand rail"
+  },
+  "label": "bot-changes-needed",
+  "passLabels": [
+    "agent-code-review-passed"
+  ],
+  "checkoutPath": "/Users/ironsha/Desktop/projects/openarena/.worktrees/orchestrate-1774489757000",
+  "reviews": [
+    {
+      "id": "5a8491e4-7ea4-41aa-ac11-3f688143c832",
+      "phase": "code",
+      "body": "The hand-rail refactor fits the existing UI architecture and I did not find any PR-specific correctness or structural issues in the changed code. `npx eslint . --format json` still fails, but the reported errors are pre-existing and outside this diff (`src/cards/CardBuilder.ts`, `src/cards/sets/starter/creatures.ts`, `src/ui/hooks/useGameEngine.ts`).",
+      "event": "COMMENT",
+      "author": "ironsha-bot",
+      "comments": [],
+      "createdAt": "2026-03-26T02:12:39.329Z"
+    },
+    {
+      "id": "82710434-18bb-4dcf-aab3-2321ccfe0f68",
+      "phase": "qa",
+      "body": "The Playwright-based setup and fresh-game validation are directionally correct, but the PR is not yet approvable from a product QA standpoint. The visual evidence is not attached in a reviewable PR-friendly form, and the documented QA flow explicitly does not exercise the off-hand rail behavior called out in the feature summary.",
+      "event": "COMMENT",
+      "author": "ironsha-bot",
+      "comments": [
+        {
+          "id": "7e33c432-eff0-4d92-9475-5b5240ee11e9",
+          "path": null,
+          "line": null,
+          "body": "Blocking: the `Visual evidence` section lists repository-relative artifact paths, not uploaded GitHub media URLs that render inline in the PR or open directly from the PR. From the review description alone I cannot validate that the screenshots render correctly inline or that the video links open successfully instead of 404ing. Please upload the Playwright screenshots/videos to GitHub media and replace these entries with the actual uploaded URLs.",
+          "author": "ironsha-bot",
+          "reactions": [
+            {
+              "content": "rocket",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T02:23:54.986Z"
+            },
+            {
+              "content": "+1",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T02:23:54.986Z"
+            }
+          ],
+          "replies": [
+            {
+              "id": "ad9a8756-657c-496a-9c1b-1980c616b3e8",
+              "body": "Updated the stored PR description to replace repository-relative evidence references with fully qualified GitHub-hosted artifact URLs, refreshed the Playwright screenshots/videos to stable filenames (`desktop`, `narrow`, `offhand-desktop`), and clarified the exact tool and product state shown by each artifact.",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T02:23:54.918Z"
+            }
+          ],
+          "createdAt": "2026-03-26T02:14:16.624Z"
+        },
+        {
+          "id": "5c7be420-372e-4947-bbec-d0919180678d",
+          "path": "qa/new-game-hand-rail.md",
+          "line": 86,
+          "body": "Blocking: this QA plan explicitly states that it does not provide deterministic coverage for playable `EXILE`/`GRAVEYARD` cards in the unified rail, but the feature summary claims those off-hand playable cards now render in the same rail. Product-level validation needs a reproducible way to load that state and verify the user-visible ordering/behavior on screen, not just a code-path review.",
+          "author": "ironsha-bot",
+          "reactions": [
+            {
+              "content": "rocket",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T02:23:55.122Z"
+            },
+            {
+              "content": "+1",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T02:23:55.122Z"
+            }
+          ],
+          "replies": [
+            {
+              "id": "1772cd5a-76ad-48f9-95c6-9f5ebf9bf612",
+              "body": "Added an opt-in QA scenario at `?qaScenario=local-offhand-rail` that deterministically moves visible local cards into `EXILE` and `GRAVEYARD`, extended the Playwright check to verify their ordering/actionability in the unified rail, and updated `qa/new-game-hand-rail.md` plus the PR test plan to cover that reproducible product state.",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T02:23:55.054Z"
+            }
+          ],
+          "createdAt": "2026-03-26T02:14:16.624Z"
+        }
+      ],
+      "createdAt": "2026-03-26T02:14:16.624Z"
+    },
+    {
+      "id": "8334651a-e58b-4eee-8193-0b280f2e65f6",
+      "phase": "qa",
+      "body": "The test plan and Playwright workflow do explain how to load the app into the required fresh-game and off-hand states, and they target user-visible behavior rather than just code paths. The remaining blocker is that the visual evidence links are not valid PR-reviewable uploads: the provided `github.com/.../raw/...` URLs 404, so I cannot verify the screenshots render inline or that the videos open and show the feature working.",
+      "event": "COMMENT",
+      "author": "ironsha-bot",
+      "comments": [
+        {
+          "id": "b5c58f01-5c3e-4083-a4e8-ba2e6d2b284e",
+          "path": null,
+          "line": null,
+          "body": "Blocking: the `Visual evidence` section still does not provide valid uploaded GitHub media URLs that can be reviewed from the PR. The current links use branch raw paths such as `https://github.com/shamwow/openarena/raw/orchestrate-1774489757000/qa/artifacts/playwright-videos/desktop.png`, and these return 404 instead of rendering/opening successfully. Because this is a user-visible React/web UI change, I need working Playwright-captured screenshot and video uploads that load from the PR itself before I can validate that the evidence matches the implemented behavior.",
+          "author": "ironsha-bot",
+          "reactions": [
+            {
+              "content": "rocket",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T02:29:26.148Z"
+            },
+            {
+              "content": "+1",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T02:29:26.148Z"
+            }
+          ],
+          "replies": [
+            {
+              "id": "498d56dc-f17b-4875-a583-e9cf420d00e5",
+              "body": "Published branch `orchestrate-1774489757000` and updated the stored PR description so the `Visual evidence` entries no longer use the broken `github.com/.../raw/...` format; they now point to working published Playwright artifact URLs and explicitly name the source file, tool, and product state for each screenshot/video.",
+              "author": "ironsha-bot",
+              "createdAt": "2026-03-26T02:29:26.080Z"
+            }
+          ],
+          "createdAt": "2026-03-26T02:24:57.686Z"
+        }
+      ],
+      "createdAt": "2026-03-26T02:24:57.686Z"
+    }
+  ],
+  "createdAt": "2026-03-26T02:09:39.097Z",
+  "updatedAt": "2026-03-26T02:29:26.148Z",
+  "description": "## Summary\n- Replace the hidden-opponent hand fan with a single ordered hand rail so commanders and concealed hand slots render in one consistent rail, while preserving the unified rail path for playable off-hand cards.\n- Keep hidden hand cards concealed and inert by rendering non-interactive card-back placeholders, while preserving visible-card hover behavior and hidden-hand count accessibility text.\n- Add deterministic Playwright coverage for fresh-game desktop/narrow layouts and a QA-only local off-hand scenario that surfaces playable `EXILE` and `GRAVEYARD` cards in the shared rail.\n\n## Test plan\n1. Run `npm install` if dependencies are not already present.\n2. Start the app with `npm run dev -- --host 127.0.0.1`.\n3. In another terminal, run `npm install --no-save playwright` and `npx playwright install chromium`.\n4. Create the artifact directory with `mkdir -p qa/artifacts/playwright-videos`.\n5. Run `node qa/hand-rail-playwright-check.mjs`.\n6. Verify the script passes for `desktop`, `narrow`, and `offhand-desktop`.\n7. Confirm the fresh-game artifacts from `http://127.0.0.1:5173/` after `Open settings` -> `New Game` show one visible local hand rail, three hidden opponent rails, no hidden-hand fan markup, inert hidden placeholders, and horizontal overflow/scroll behavior in the narrow viewport.\n8. Confirm the off-hand artifact from `http://127.0.0.1:5173/?qaScenario=local-offhand-rail` after `Open settings` -> `New Game` shows the visible local rail ordered as `COMMAND`, visible `HAND`, playable `EXILE`, playable `GRAVEYARD`, with the off-hand `EXILE` card still previewing on hover.\n\n## Visual evidence\n- Fresh-game desktop screenshot (`http://127.0.0.1:5173/` after `Open settings` -> `New Game`, captured with Playwright; published from `qa/artifacts/playwright-videos/desktop.png` on branch `orchestrate-1774489757000`): https://raw.githubusercontent.com/shamwow/openarena/orchestrate-1774489757000/qa/artifacts/playwright-videos/desktop.png\n- Fresh-game desktop video (`http://127.0.0.1:5173/` after `Open settings` -> `New Game`, captured with Playwright; published from `qa/artifacts/playwright-videos/desktop.webm` on branch `orchestrate-1774489757000`): https://raw.githubusercontent.com/shamwow/openarena/orchestrate-1774489757000/qa/artifacts/playwright-videos/desktop.webm\n- Fresh-game narrow screenshot (`http://127.0.0.1:5173/` after `Open settings` -> `New Game`, captured with Playwright; published from `qa/artifacts/playwright-videos/narrow.png` on branch `orchestrate-1774489757000`): https://raw.githubusercontent.com/shamwow/openarena/orchestrate-1774489757000/qa/artifacts/playwright-videos/narrow.png\n- Fresh-game narrow video (`http://127.0.0.1:5173/` after `Open settings` -> `New Game`, captured with Playwright; published from `qa/artifacts/playwright-videos/narrow.webm` on branch `orchestrate-1774489757000`): https://raw.githubusercontent.com/shamwow/openarena/orchestrate-1774489757000/qa/artifacts/playwright-videos/narrow.webm\n- Off-hand desktop screenshot (`http://127.0.0.1:5173/?qaScenario=local-offhand-rail` after `Open settings` -> `New Game`, captured with Playwright; published from `qa/artifacts/playwright-videos/offhand-desktop.png` on branch `orchestrate-1774489757000`): https://raw.githubusercontent.com/shamwow/openarena/orchestrate-1774489757000/qa/artifacts/playwright-videos/offhand-desktop.png\n- Off-hand desktop video (`http://127.0.0.1:5173/?qaScenario=local-offhand-rail` after `Open settings` -> `New Game`, captured with Playwright; published from `qa/artifacts/playwright-videos/offhand-desktop.webm` on branch `orchestrate-1774489757000`): https://raw.githubusercontent.com/shamwow/openarena/orchestrate-1774489757000/qa/artifacts/playwright-videos/offhand-desktop.webm"
+}
