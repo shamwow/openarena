@@ -99,6 +99,10 @@ Current durable preset for integration checks:
   - Starts on turn 7 in precombat main with `Pass Priority` visible.
   - Distinctive visible markers include `Talrand, Sky Summoner`, `Rhystic Study`, `Blood Artist`, `Swiftfoot Boots`, `Command Tower`, and `Sol Ring`.
   - Passing priority should advance the board to a later step instead of doing nothing.
+- `hand-overflow-zoom-demo`
+  - Starts on turn 9 in precombat main with the local hand already exposed and no modal blocking input.
+  - Distinctive visible markers include `Heliod, Sun-Crowned` in the command slot, `Command Tower`, `Reliquary Tower`, `Sol Ring`, and `Swiftfoot Boots` on the local battlefield, plus a wide local hand containing `Wrath of God`, `Path to Exile`, `Sun Titan`, and two `Serra Angel` copies.
+  - Opponents still show hidden-hand placeholders while `Talrand, Sky Summoner`, `Rhystic Study`, `Blood Artist`, `Krenko, Mob Boss`, and `Goblin Guide` remain visible on their boards.
 
 How to verify a preset loaded:
 
@@ -106,6 +110,15 @@ How to verify a preset loaded:
 - Assert the current phase/step marker is correct.
 - Assert the action state is correct, for example `Pass Priority` is present when the preset is meant to be interactive.
 - For UI verification work, record a Playwright video in addition to screenshots.
+
+Reviewer flow for the hand zoom regression:
+
+1. Start the dev server with `npm run dev -- --host 127.0.0.1 --port 0`.
+2. Parse the actual `http://127.0.0.1:<PORT>/` URL from Vite output.
+3. Open `http://127.0.0.1:<PORT>/?test-game-state=hand-overflow-zoom-demo`.
+4. Verify `.arena-board` is visible, the local player already has a dense visible hand, at least one opponent still shows hidden-hand placeholders, and no modal covers the board.
+5. Run `OPENARENA_BASE_URL=http://127.0.0.1:<PORT> npm run verify:hand-zoom`.
+6. Review screenshots in `artifacts/hand-zoom/screenshots/`, the bounding box log at `artifacts/hand-zoom/bounding-boxes.json`, and the Playwright video in `artifacts/hand-zoom/videos/`.
 
 ## Recommended waits
 

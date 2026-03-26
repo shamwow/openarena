@@ -15,8 +15,8 @@ interface CardViewProps {
   variant?: 'battlefield' | 'hand' | 'mini' | 'flight';
   isPreviewed?: boolean;
   previewMode?: 'hover' | 'tap';
-  scale?: number;
-  lift?: number;
+  scale?: number | string;
+  lift?: number | string;
   mountRef?: (node: HTMLDivElement | null) => void;
   draggableAction?: PlayerAction | null;
   onDragStart?: (payload: DragCardPayload) => void;
@@ -114,6 +114,8 @@ export const CardView: React.FC<CardViewProps> = ({
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)[0];
+  const resolvedScale = typeof scale === 'number' ? `${scale}` : scale;
+  const resolvedLift = typeof lift === 'number' ? `${lift}px` : lift;
 
   return (
     <div
@@ -137,8 +139,8 @@ export const CardView: React.FC<CardViewProps> = ({
       title={card.definition.name}
       style={
         {
-          ['--card-scale' as string]: `${scale}`,
-          ['--card-lift' as string]: `${lift}px`,
+          ['--card-scale' as string]: resolvedScale,
+          ['--card-lift' as string]: resolvedLift,
           ['--card-cursor' as string]:
             hasAction || onPreview ? 'pointer' : 'default',
         } as React.CSSProperties

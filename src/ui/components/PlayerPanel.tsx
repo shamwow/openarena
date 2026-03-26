@@ -384,6 +384,7 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
     }
 
     const presentation = getHandPresentation(item.railIndex);
+    const isPrimaryHovered = hoveredHandIndex === item.railIndex;
     const anchorZone =
       isRailAnchorZone(item.card.zone) && anchorCardIds.get(item.card.zone) === item.card.objectId
         ? item.card.zone
@@ -406,8 +407,8 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
           onPreviewClear={onPreviewClear}
           isPreviewed={previewCardId === item.card.objectId}
           previewMode={touchFriendly ? 'tap' : 'hover'}
-          scale={presentation.scale}
-          lift={presentation.lift}
+          scale={isPrimaryHovered ? 'var(--arena-hand-hover-scale-primary)' : presentation.scale}
+          lift={isPrimaryHovered ? 'var(--arena-hand-hover-lift-primary)' : presentation.lift}
           draggableAction={getPrimaryCardAction(item.card, legalActions)}
           onDragStart={onDragStart}
           onDragEnd={onDragEnd}
@@ -541,17 +542,21 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
 
         <div
           className="arena-seat__hand-area"
-          ref={(node) => registerZoneAnchor(`${player.id}:HAND`, node)}
           data-hidden={seat.handHidden}
           title={seat.handHidden ? `${hand.length} cards in hand` : undefined}
           aria-label={seat.handHidden ? `${player.name} has ${hand.length} cards in hand` : undefined}
-          onMouseLeave={() => setHoveredHandIndex(null)}
         >
           {railItems.length > 0 ? (
-            <div className="arena-seat__hand-scroll">
-              <div className="arena-seat__hand-rail">
-                <div className="arena-seat__hand-cards">
-                  {railItems.map((item) => renderRailItem(item))}
+            <div
+              className="arena-seat__hand-viewport"
+              ref={(node) => registerZoneAnchor(`${player.id}:HAND`, node)}
+              onMouseLeave={() => setHoveredHandIndex(null)}
+            >
+              <div className="arena-seat__hand-scroll">
+                <div className="arena-seat__hand-rail">
+                  <div className="arena-seat__hand-cards">
+                    {railItems.map((item) => renderRailItem(item))}
+                  </div>
                 </div>
               </div>
             </div>

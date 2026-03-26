@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "verify:hand-zoom": "node scripts/verify-hand-zoom.mjs"
   },
   "dependencies": {
     "immer": "^11.1.4",
