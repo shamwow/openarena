@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { CardBuilder } from '../../../src/cards/CardBuilder.ts';
 import { ThoughtVessel } from '../../../src/cards/sets/starter/artifacts.ts';
-import { ActionType, CardType, GameEventType, Step, Zone, type GameEvent } from '../../../src/engine/types.ts';
+import { CardType, GameEventType, Step, Zone, type GameEvent } from '../../../src/engine/types.ts';
 import { createHarness, battlefieldNames, getCard, graveyardNames, handNames, makeCommander } from './helpers.ts';
 import type { ChoiceRequest } from '../../../src/engine/GameEngine.ts';
 import type { EventBus } from '../../../src/engine/EventBus.ts';

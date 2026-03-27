@@ -3,7 +3,7 @@ import type {
   AbilityDefinition, ActivatedAbilityDef, TriggeredAbilityDef,
   StaticAbilityDef, SpellAbilityDef, ModalAbilityDef, Cost, TriggerCondition,
   EffectFn, TargetSpec, StaticEffectDef, ManaPool, ProtectionFrom,
-  AlternativeCast, AdditionalCost, Zone, ManaCost, ManaProduction,
+  AlternativeCast, AdditionalCost, Zone, ManaProduction,
 } from '../engine/types';
 import {
   parseManaCost,
@@ -83,7 +83,8 @@ export class CardBuilder {
     return this;
   }
 
-  oracleText(_text: string): this {
+  oracleText(text: string): this {
+    void text;
     return this;
   }
 
@@ -183,6 +184,12 @@ export class CardBuilder {
       description: '{T}: Add one mana of any color.',
     };
     this.def.abilities.push(ability);
+    return this;
+  }
+
+  /** Make this permanent enter tapped. */
+  entersTapped(): this {
+    this.def.entersTapped = true;
     return this;
   }
 
@@ -701,6 +708,7 @@ export class CardBuilder {
       alternativeCosts: this.def.alternativeCosts,
       additionalCosts: this.def.additionalCosts,
       castCostAdjustments: this.def.castCostAdjustments,
+      entersTapped: this.def.entersTapped,
       tags: this.def.tags,
       backFace: this.def.backFace,
       isMDFC: this.def.isMDFC,

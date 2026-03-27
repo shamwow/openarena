@@ -179,26 +179,28 @@ export class ManaManager {
     return battlefield
       .filter(card => card.controller === player && !card.tapped)
       .flatMap((card) => {
-        const ability = getEffectiveAbilities(card).find(candidate => candidate.kind === 'activated' && candidate.isManaAbility);
-        if (!ability || ability.kind !== 'activated') {
-          return [];
-        }
-        if (!this.canActivateManaAbility(card, ability)) {
-          return [];
-        }
-
-        const productions = this.getManaProductions(card, ability, state.players[player].colorIdentity);
-        if (productions.length === 0) {
+        const abilities = getEffectiveAbilities(card).filter(
+          candidate => candidate.kind === 'activated' && candidate.isManaAbility,
+        );
+        if (abilities.length === 0) {
           return [];
         }
 
-        const triggeredBonuses = ability.cost.tap && hasType(card, 'Creature' as import('./types').CardType)
-          ? this.getTriggeredTapForManaBonuses(state, player, card)
-          : [{}];
+        const options = abilities.flatMap((ability) => {
+          if (!this.canActivateManaAbility(card, ability)) {
+            return [];
+          }
 
-        return [{
-          sourceId: card.objectId,
-          options: productions.flatMap((production) =>
+          const productions = this.getManaProductions(card, ability, state.players[player].colorIdentity);
+          if (productions.length === 0) {
+            return [];
+          }
+
+          const triggeredBonuses = ability.cost.tap && hasType(card, 'Creature' as import('./types').CardType)
+            ? this.getTriggeredTapForManaBonuses(state, player, card)
+            : [{}];
+
+          return productions.flatMap((production) =>
             this.expandManaProduction(production, state.players[player].colorIdentity).flatMap((baseMana) =>
               triggeredBonuses.map((bonusMana) => ({
                 sourceId: card.objectId,
@@ -209,7 +211,16 @@ export class ManaManager {
                 trackedManaEffect: ability.trackedManaEffect,
               }))
             )
-          ),
+          );
+        });
+
+        if (options.length === 0) {
+          return [];
+        }
+
+        return [{
+          sourceId: card.objectId,
+          options,
         }];
       });
   }

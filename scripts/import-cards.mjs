@@ -479,7 +479,6 @@ function validateLogicScript(content, card) {
   }
 
   // Parse-only validation of the generated function body.
-  // eslint-disable-next-line no-new-func
   new Function('CardBuilder', 'CardType', 'ManaColor', 'Keyword', content);
 
   if (!content.includes(card.name)) {

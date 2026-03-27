@@ -109,6 +109,9 @@ export class ZoneManager {
     if (options?.faceDown) card.faceDown = true;
 
     if (resolvedZone === 'BATTLEFIELD') {
+      if (card.definition.entersTapped) {
+        card.tapped = true;
+      }
       if (
         card.definition.entersTappedUnlessYouControl &&
         !this.controlsPermanentMatchingFilter(

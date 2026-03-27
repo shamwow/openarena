@@ -5,7 +5,7 @@ import {
   hasType,
   markExileInsteadOfDyingThisTurn,
 } from '../../../engine/GameState';
-import { CardType, GameEventType, ManaColor, parseManaCost } from '../../../engine/types';
+import { CardType, GameEventType, Keyword, ManaColor, parseManaCost } from '../../../engine/types';
 
 // --- White Spells ---
 
@@ -226,6 +226,42 @@ export const Chaos_Warp = CardBuilder.create('Chaos Warp')
   .oracleText('The owner of target permanent shuffles it into their library, then reveals the top card of their library. If it\'s a permanent card, they put it onto the battlefield.')
   .build();
 
+export const IrohDemonstration = CardBuilder.create("Iroh's Demonstration")
+  .cost('{1}{R}')
+  .types(CardType.SORCERY)
+  .subtypes('Lesson')
+  .modal([
+    {
+      label: "Iroh's Demonstration deals 1 damage to each creature your opponents control.",
+      effect: (ctx) => {
+        const opponentCreatures = ctx.game
+          .getBattlefield({ types: [CardType.CREATURE] })
+          .filter((card) => card.controller !== ctx.controller);
+
+        for (const creature of opponentCreatures) {
+          ctx.game.dealDamage(ctx.source.objectId, creature.objectId, 1, false);
+        }
+      },
+    },
+    {
+      label: "Iroh's Demonstration deals 4 damage to target creature.",
+      targets: [{
+        what: 'creature',
+        count: 1,
+      }],
+      effect: (ctx) => {
+        const target = ctx.targets[0];
+        if (!target || typeof target === 'string') {
+          return;
+        }
+
+        ctx.game.dealDamage(ctx.source.objectId, target.objectId, 4, false);
+      },
+    },
+  ], 1, 'Choose one')
+  .oracleText("Choose one —\n• Iroh's Demonstration deals 1 damage to each creature your opponents control.\n• Iroh's Demonstration deals 4 damage to target creature.")
+  .build();
+
 export const CombustionTechnique = CardBuilder.create('Combustion Technique')
   .cost('{1}{R}')
   .types(CardType.INSTANT)
@@ -357,6 +393,31 @@ export const BlasphemousAct = CardBuilder.create('Blasphemous Act')
   .oracleText('This spell costs {1} less to cast for each creature on the battlefield.\nBlasphemous Act deals 13 damage to each creature.')
   .build();
 
+export const Gamble = CardBuilder.create('Gamble')
+  .cost('{R}')
+  .types(CardType.SORCERY)
+  .spellEffect(async (ctx) => {
+    await ctx.game.searchLibraryWithOptions({
+      player: ctx.controller,
+      filter: {},
+      destination: 'HAND',
+      count: 1,
+      optional: false,
+      shuffle: false,
+    });
+
+    const hand = ctx.game.getHand(ctx.controller);
+    if (hand.length > 0) {
+      const randomIndex = Math.floor(Math.random() * hand.length);
+      const randomCard = hand[randomIndex];
+      ctx.game.discardCard(ctx.controller, randomCard.objectId);
+    }
+
+    ctx.game.shuffleLibrary(ctx.controller);
+  }, { description: 'Search your library for a card, put it into your hand, discard a card at random, then shuffle.' })
+  .oracleText('Search your library for a card, put that card into your hand, discard a card at random, then shuffle.')
+  .build();
+
 // --- Green Spells ---
 
 export const Cultivate = CardBuilder.create('Cultivate')
@@ -412,6 +473,94 @@ export const CycleOfRenewal = CardBuilder.create('Cycle of Renewal')
     }
   }, { description: 'Sacrifice a land. Search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle.' })
   .oracleText('Sacrifice a land. Search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle your library.')
+  .build();
+
+export const ManyPartings = CardBuilder.create('Many Partings')
+  .cost('{1}{G}')
+  .types(CardType.SORCERY)
+  .spellEffect(async (ctx) => {
+    await ctx.game.searchLibraryWithOptions({
+      player: ctx.controller,
+      filter: { types: [CardType.LAND], supertypes: ['Basic'] },
+      destination: 'HAND',
+      count: 1,
+      optional: true,
+      shuffle: true,
+    });
+
+    const controlsCommander = ctx.game
+      .getBattlefield(undefined, ctx.controller)
+      .some((card) => ctx.state.players[ctx.controller].commanderIds.includes(card.cardId));
+    if (controlsCommander) {
+      ctx.game.createPredefinedToken(ctx.controller, 'Food');
+    }
+  }, { description: 'Search your library for up to one basic land card, put it into your hand, then shuffle. If you control a commander, create a Food token.' })
+  .oracleText('Search your library for up to one basic land card, put it into your hand, then shuffle. If you control a commander, create a Food token.')
+  .build();
+
+export const HeroicIntervention = CardBuilder.create('Heroic Intervention')
+  .cost('{1}{G}')
+  .types(CardType.INSTANT)
+  .spellEffect((ctx) => {
+    const permanents = ctx.game.getBattlefield(undefined, ctx.controller);
+    for (const permanent of permanents) {
+      ctx.game.grantKeywordUntilEndOfTurn(permanent.objectId, Keyword.HEXPROOF);
+      ctx.game.grantKeywordUntilEndOfTurn(permanent.objectId, Keyword.INDESTRUCTIBLE);
+    }
+  }, { description: 'Permanents you control gain hexproof and indestructible until end of turn.' })
+  .oracleText('Permanents you control gain hexproof and indestructible until end of turn.')
+  .build();
+
+export const InspiringCall = CardBuilder.create('Inspiring Call')
+  .cost('{2}{G}')
+  .types(CardType.INSTANT)
+  .spellEffect((ctx) => {
+    const creaturesWithCounters = ctx.game
+      .getBattlefield({ types: [CardType.CREATURE] }, ctx.controller)
+      .filter((card) => (card.counters['+1/+1'] ?? 0) > 0);
+
+    ctx.game.drawCards(ctx.controller, creaturesWithCounters.length);
+
+    for (const creature of creaturesWithCounters) {
+      ctx.game.grantKeywordUntilEndOfTurn(creature.objectId, Keyword.INDESTRUCTIBLE);
+    }
+  }, { description: 'Draw a card for each creature you control with a +1/+1 counter on it. Those creatures gain indestructible until end of turn.' })
+  .oracleText('Draw a card for each creature you control with a +1/+1 counter on it. Those creatures gain indestructible until end of turn.')
+  .build();
+
+export const HowToStartARiot = CardBuilder.create('How to Start a Riot')
+  .cost('{2}{R}')
+  .types(CardType.INSTANT)
+  .subtypes('Lesson')
+  .spellEffect((ctx) => {
+    const targetCreature = ctx.targets[0];
+    if (targetCreature && typeof targetCreature !== 'string') {
+      ctx.game.grantKeywordUntilEndOfTurn(targetCreature.objectId, Keyword.MENACE);
+    }
+
+    const targetPlayer = ctx.targets[1];
+    if (targetPlayer && typeof targetPlayer === 'string') {
+      const pumpedCreatures = ctx.game.getBattlefield({ types: [CardType.CREATURE] }, targetPlayer);
+      ctx.game.grantPumpToObjectsUntilEndOfTurn(
+        pumpedCreatures.map((card) => card.objectId),
+        2,
+        0,
+      );
+    }
+  }, {
+    targets: [
+      {
+        what: 'creature',
+        count: 1,
+      },
+      {
+        what: 'player',
+        count: 1,
+      },
+    ],
+    description: 'Target creature gains menace until end of turn. Creatures target player controls get +2/+0 until end of turn.',
+  })
+  .oracleText('Target creature gains menace until end of turn. Creatures target player controls get +2/+0 until end of turn.')
   .build();
 
 export const KodamasReach = CardBuilder.create("Kodama's Reach")
@@ -679,6 +828,58 @@ export const AlliesAtLast = CardBuilder.create('Allies at Last')
     description: 'Up to two target creatures you control each deal damage equal to their power to target creature an opponent controls.',
   })
   .oracleText('Affinity for Allies (This spell costs {1} less to cast for each Ally you control.)\nUp to two target creatures you control each deal damage equal to their power to target creature an opponent controls.')
+  .build();
+
+export const HogMonkeyRampage = CardBuilder.create('Hog-Monkey Rampage')
+  .cost('{1}{R/G}')
+  .types(CardType.INSTANT)
+  .spellEffect((ctx) => {
+    const yourCreature = ctx.targets[0];
+    const opposingCreature = ctx.targets[1];
+
+    let yourPower: number | null = null;
+    if (yourCreature && typeof yourCreature !== 'string') {
+      yourPower = yourCreature.modifiedPower ?? yourCreature.definition.power ?? 0;
+      if (yourPower >= 4) {
+        ctx.game.addCounters(yourCreature.objectId, '+1/+1', 1, {
+          player: ctx.controller,
+          sourceId: ctx.source.objectId,
+          sourceCardId: ctx.source.cardId,
+          sourceZoneChangeCounter: ctx.source.zoneChangeCounter,
+        });
+        yourPower += 1;
+      }
+    }
+
+    if (
+      !yourCreature ||
+      !opposingCreature ||
+      typeof yourCreature === 'string' ||
+      typeof opposingCreature === 'string' ||
+      yourPower === null
+    ) {
+      return;
+    }
+
+    const opposingPower = opposingCreature.modifiedPower ?? opposingCreature.definition.power ?? 0;
+    ctx.game.dealDamage(yourCreature.objectId, opposingCreature.objectId, yourPower, false);
+    ctx.game.dealDamage(opposingCreature.objectId, yourCreature.objectId, opposingPower, false);
+  }, {
+    targets: [
+      {
+        what: 'creature',
+        controller: 'you',
+        count: 1,
+      },
+      {
+        what: 'creature',
+        controller: 'opponent',
+        count: 1,
+      },
+    ],
+    description: 'Choose target creature you control and target creature an opponent controls. Put a +1/+1 counter on the creature you control if it has power 4 or greater. Then those creatures fight each other.',
+  })
+  .oracleText('Choose target creature you control and target creature an opponent controls. Put a +1/+1 counter on the creature you control if it has power 4 or greater. Then those creatures fight each other.')
   .build();
 
 export const BitterWork = CardBuilder.create('Bitter Work')

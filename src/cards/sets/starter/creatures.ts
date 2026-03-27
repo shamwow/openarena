@@ -1,6 +1,8 @@
 import { CardBuilder } from '../../CardBuilder';
-import { hasType } from '../../../engine/GameState';
+import { createFirebendingTriggeredAbility } from '../../firebending';
+import { findCard, getEffectiveSubtypes, hasType } from '../../../engine/GameState';
 import { CardType, GameEventType, Keyword, ManaColor, Step } from '../../../engine/types';
+import type { ActivatedAbilityDef } from '../../../engine/types';
 
 // --- White Creatures ---
 
@@ -144,6 +146,107 @@ export const GoblinGuide = CardBuilder.create('Goblin Guide')
   .oracleText('Haste')
   .build();
 
+export const FreedomFighterRecruit = CardBuilder.create('Freedom Fighter Recruit')
+  .cost('{1}{R}')
+  .types(CardType.CREATURE)
+  .subtypes('Human', 'Rebel', 'Ally')
+  .stats(0, 2)
+  .staticAbility(
+    {
+      type: 'set-base-pt',
+      filter: { self: true },
+      layer: 'cda',
+      power: (game, source) => game.turnOrder.reduce((count, playerId) => (
+        count + game.zones[playerId].BATTLEFIELD.filter((card) => (
+          !card.phasedOut &&
+          card.controller === source.controller &&
+          hasType(card, CardType.CREATURE)
+        )).length
+      ), 0),
+      toughness: 2,
+    },
+    { description: "Freedom Fighter Recruit's power is equal to the number of creatures you control." },
+  )
+  .oracleText("Freedom Fighter Recruit's power is equal to the number of creatures you control.")
+  .build();
+
+export const LongshotRebelBowman = CardBuilder.create('Longshot, Rebel Bowman')
+  .cost('{3}{R}')
+  .types(CardType.CREATURE)
+  .supertypes('Legendary')
+  .subtypes('Human', 'Rebel', 'Ally')
+  .stats(3, 3)
+  .reach()
+  .staticAbility(
+    {
+      type: 'cost-modification',
+      costDelta: { generic: -1 },
+      filter: {
+        controller: 'you',
+        custom: (card) => !hasType(card, CardType.CREATURE),
+      },
+    },
+    { description: 'Noncreature spells you cast cost {1} less to cast.' },
+  )
+  .triggered(
+    {
+      on: 'custom',
+      match: (event, source) =>
+        event.type === GameEventType.SPELL_CAST
+        && event.castBy === source.controller
+        && !event.spellTypes.includes(CardType.CREATURE),
+    },
+    (ctx) => {
+      for (const opponent of ctx.game.getOpponents(ctx.controller)) {
+        ctx.game.dealDamage(ctx.source.objectId, opponent, 2, false);
+      }
+    },
+    {
+      description: 'Whenever you cast a noncreature spell, Longshot, Rebel Bowman deals 2 damage to each opponent.',
+    },
+  )
+  .oracleText('Reach\nNoncreature spells you cast cost {1} less to cast.\nWhenever you cast a noncreature spell, Longshot, Rebel Bowman deals 2 damage to each opponent.')
+  .build();
+
+function createAnyColorManaAbility(): ActivatedAbilityDef {
+  return {
+    kind: 'activated' as const,
+    cost: { tap: true },
+    effect: async (ctx) => {
+      const color = await ctx.choices.chooseOne(
+        'Choose a color of mana to add',
+        ['W', 'U', 'B', 'R', 'G'] as const,
+        (c) => ({ W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green' }[c]),
+      );
+      ctx.game.addMana(ctx.controller, color, 1);
+    },
+    timing: 'instant' as const,
+    isManaAbility: true,
+    manaProduction: [{ amount: 1, colors: ['W', 'U', 'B', 'R', 'G'] }],
+    description: '{T}: Add one mana of any color.',
+  };
+}
+
+export const GreatDivideGuide = CardBuilder.create('Great Divide Guide')
+  .cost('{1}{G}')
+  .types(CardType.CREATURE)
+  .subtypes('Human', 'Scout', 'Ally')
+  .stats(2, 3)
+  .staticAbility(
+    {
+      type: 'grant-abilities',
+      filter: {
+        controller: 'you',
+        custom: (card) => hasType(card, CardType.LAND)
+          || (card.modifiedSubtypes ?? card.definition.subtypes).includes('Ally'),
+      },
+      abilities: [createAnyColorManaAbility()],
+    },
+    { description: "Each land and Ally you control has '{T}: Add one mana of any color.'" },
+  )
+  .oracleText("Each land and Ally you control has '{T}: Add one mana of any color.'")
+  .build();
+
 export const InfernalPlunge = CardBuilder.create('Inferno Titan')
   .id('inferno-titan')
   .cost('{4}{R}{R}')
@@ -279,6 +382,50 @@ export const EarthbendingStudent = CardBuilder.create('Earthbending Student')
     { description: 'Land creatures you control have vigilance.' },
   )
   .oracleText('When Earthbending Student enters, earthbend 2.\nLand creatures you control have vigilance.')
+  .build();
+
+export const HaruHiddenTalent = CardBuilder.create('Haru, Hidden Talent')
+  .cost('{1}{G}')
+  .types(CardType.CREATURE)
+  .supertypes('Legendary')
+  .subtypes('Human', 'Peasant', 'Ally')
+  .stats(1, 1)
+  .triggered(
+    {
+      on: 'custom',
+      match: (event, source, game) => {
+        if (event.type !== GameEventType.ENTERS_BATTLEFIELD) return false;
+        if (event.controller !== source.controller) return false;
+        if (
+          event.objectId === source.objectId &&
+          event.objectZoneChangeCounter === source.zoneChangeCounter
+        ) {
+          return false;
+        }
+
+        const enteringCard = findCard(game, event.objectId, event.objectZoneChangeCounter);
+        return Boolean(enteringCard && getEffectiveSubtypes(enteringCard).includes('Ally'));
+      },
+    },
+    async (ctx) => {
+      const lands = ctx.game.getBattlefield({ types: [CardType.LAND] }, ctx.controller);
+      if (lands.length === 0) return;
+
+      const target = await ctx.choices.chooseOne(
+        'Choose a land you control',
+        lands,
+        (card) => card.definition.name,
+      );
+
+      if (target && typeof target !== 'string') {
+        ctx.game.earthbendLand(target.objectId, 1, ctx.controller);
+      }
+    },
+    {
+      description: 'Whenever another Ally you control enters, earthbend 1.',
+    },
+  )
+  .oracleText('Whenever another Ally you control enters, earthbend 1. (Target land you control becomes a 0/0 creature with haste that\'s still a land. Put a +1/+1 counter on it. When it dies or is exiled, return it to the battlefield tapped.)')
   .build();
 
 export const AvatarKyoshiEarthbender = CardBuilder.create('Avatar Kyoshi, Earthbender')
@@ -417,6 +564,71 @@ export const BumiUnleashed = CardBuilder.create('Bumi, Unleashed')
     },
   )
   .oracleText('Trample\nWhen Bumi enters, earthbend 4.\nWhenever Bumi deals combat damage to a player, untap all lands you control. After this phase, there is an additional combat phase. Only land creatures can attack during that combat phase.')
+  .build();
+
+export const IrohDragonOfTheWest = CardBuilder.create('Iroh, Dragon of the West')
+  .cost('{2}{R}{R}')
+  .types(CardType.CREATURE)
+  .supertypes('Legendary')
+  .subtypes('Human', 'Noble', 'Ally')
+  .stats(4, 4)
+  .haste()
+  .triggered(
+    {
+      on: 'custom',
+      match: (event, source) =>
+        event.type === GameEventType.STEP_CHANGE &&
+        event.step === Step.BEGINNING_OF_COMBAT &&
+        event.activePlayer === source.controller,
+    },
+    (ctx) => {
+      const eligibleCreatures = ctx.game
+        .getBattlefield({ types: [CardType.CREATURE] }, ctx.controller)
+        .filter((card) => Object.values(card.counters).some((count) => count > 0));
+
+      for (const creature of eligibleCreatures) {
+        ctx.game.grantAbilitiesUntilEndOfTurn(
+          ctx.source.objectId,
+          creature.objectId,
+          creature.zoneChangeCounter,
+          [createFirebendingTriggeredAbility(2)],
+        );
+      }
+    },
+    {
+      description: 'At the beginning of combat on your turn, creatures you control with counters on them gain firebending 2 until end of turn.',
+    },
+  )
+  .triggered(
+    { on: 'attacks', filter: { self: true } },
+    async (ctx) => {
+      const sourcePower = ctx.source.modifiedPower ?? ctx.source.definition.power ?? 0;
+      const attackingCreatures = ctx.game
+        .getBattlefield({ types: [CardType.CREATURE] }, ctx.controller)
+        .filter((card) => (
+          card.objectId !== ctx.source.objectId &&
+          (ctx.state.combat?.attackers.has(card.objectId) ?? false) &&
+          (card.modifiedPower ?? card.definition.power ?? 0) < sourcePower
+        ));
+
+      if (attackingCreatures.length === 0) return;
+
+      const target = await ctx.choices.chooseOne(
+        'Put a +1/+1 counter on target attacking creature with lesser power',
+        attackingCreatures,
+        (card) => card.definition.name,
+      );
+
+      ctx.game.addCounters(target.objectId, '+1/+1', 1, {
+        player: ctx.controller,
+        sourceId: ctx.source.objectId,
+        sourceCardId: ctx.source.cardId,
+        sourceZoneChangeCounter: ctx.source.zoneChangeCounter,
+      });
+    },
+    { description: 'Mentor' },
+  )
+  .oracleText('Haste\nMentor\nAt the beginning of combat on your turn, creatures you control with counters on them gain firebending 2 until end of turn.')
   .build();
 
 export const AnimalAttendant = CardBuilder.create('Animal Attendant')

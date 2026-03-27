@@ -366,7 +366,10 @@ export class GameEngineImpl implements IGameEngine {
       if (card.definition.adventure) {
         const adventure = card.definition.adventure;
         const adventureIsInstant = adventure.types.includes(CardType.INSTANT);
-        const adventureCastCost = this.getCastCostForLegalAction(playerId, card, { mana: { ...adventure.manaCost } });
+        const adventureDefinition = this.getEffectiveSpellDefinition(card, { castAsAdventure: true });
+        const adventureCastCost = adventureDefinition
+          ? this.getCastCostForLegalAction(playerId, card, { mana: { ...adventure.manaCost } }, adventureDefinition)
+          : null;
         if ((adventureIsInstant || isSorcerySpeed) && adventureCastCost &&
           this.canAffordCostWithTapSubstitution(playerId, card, adventureCastCost)) {
           actions.push({
@@ -893,6 +896,10 @@ export class GameEngineImpl implements IGameEngine {
     return this.state.zones[player].LIBRARY;
   }
 
+  discardCard(player: PlayerId, objectId: ObjectId): void {
+    this.zoneManager.discardCard(this.state, player, objectId);
+  }
+
   shuffleLibrary(player: PlayerId): void {
     this.zoneManager.shuffleLibrary(this.state, player);
   }
@@ -1052,7 +1059,8 @@ export class GameEngineImpl implements IGameEngine {
     this.priorityManager.playerTookAction(this.state, controller);
   }
 
-  airbendObject(objectId: ObjectId, cost: Cost, _actingPlayer: PlayerId): void {
+  airbendObject(objectId: ObjectId, cost: Cost, actingPlayer: PlayerId): void {
+    void actingPlayer;
     const card = findCard(this.state, objectId);
     if (!card) return;
 
@@ -1209,6 +1217,35 @@ export class GameEngineImpl implements IGameEngine {
           keywords.push(keyword);
         }
         permanent.modifiedKeywords = keywords;
+      },
+    });
+  }
+
+  grantPumpToObjectsUntilEndOfTurn(objectIds: ObjectId[], power: number, toughness: number): void {
+    const objectInstanceKeys = new Set(
+      objectIds.flatMap((objectId) => {
+        const card = findCard(this.state, objectId);
+        if (!card || card.zone !== Zone.BATTLEFIELD || card.phasedOut) {
+          return [];
+        }
+        return [`${card.objectId}:${card.zoneChangeCounter}`];
+      }),
+    );
+    if (objectInstanceKeys.size === 0) return;
+
+    const timestamp = getNextTimestamp(this.state);
+    this.continuousEffects.addEffect(this.state, {
+      id: `grant-pump-eot:${timestamp}:${power}:${toughness}`,
+      sourceId: uuid(),
+      layer: Layer.PT_MODIFY as LayerType,
+      timestamp,
+      duration: { type: 'until-end-of-turn' },
+      appliesTo: (permanent) =>
+        objectInstanceKeys.has(`${permanent.objectId}:${permanent.zoneChangeCounter}`) &&
+        !permanent.phasedOut,
+      apply: (permanent) => {
+        permanent.modifiedPower = (permanent.modifiedPower ?? permanent.definition.power ?? 0) + power;
+        permanent.modifiedToughness = (permanent.modifiedToughness ?? permanent.definition.toughness ?? 0) + toughness;
       },
     });
   }
@@ -3272,6 +3309,52 @@ export class GameEngineImpl implements IGameEngine {
       ).length;
       cost.generic = Math.max(0, cost.generic - matching * adjustment.amount);
     }
+
+    for (const permanent of this.getBattlefield(undefined)) {
+      for (const ability of getEffectiveAbilities(permanent)) {
+        if (ability.kind !== 'static') continue;
+        if (ability.condition && !ability.condition(this.state, permanent)) continue;
+        if (ability.effect.type !== 'cost-modification') continue;
+        const spellReference: CardInstance = {
+          ...source,
+          definition,
+          modifiedTypes: [...definition.types],
+          modifiedSubtypes: [...definition.subtypes],
+          modifiedSupertypes: [...definition.supertypes],
+        };
+        if (!this.matchesSpellFilter(spellReference, ability.effect.filter, playerId, permanent.controller)) continue;
+        this.applyManaCostDelta(cost, ability.effect.costDelta);
+      }
+    }
+  }
+
+  private matchesSpellFilter(
+    spell: CardInstance,
+    filter: CardFilter,
+    casterId: PlayerId,
+    sourceController: PlayerId,
+  ): boolean {
+    if (filter.controller === 'opponent' && casterId === sourceController) return false;
+    if (filter.controller === 'you' && casterId !== sourceController) return false;
+
+    if (filter.types && !filter.types.some((type) => hasType(spell, type))) return false;
+
+    return this.matchesFilter(
+      spell,
+      { ...filter, controller: undefined, types: undefined },
+      sourceController,
+    );
+  }
+
+  private applyManaCostDelta(cost: ManaCost, delta: Partial<ManaCost>): void {
+    cost.generic = Math.max(0, cost.generic + (delta.generic ?? 0));
+    cost.W = Math.max(0, cost.W + (delta.W ?? 0));
+    cost.U = Math.max(0, cost.U + (delta.U ?? 0));
+    cost.B = Math.max(0, cost.B + (delta.B ?? 0));
+    cost.R = Math.max(0, cost.R + (delta.R ?? 0));
+    cost.G = Math.max(0, cost.G + (delta.G ?? 0));
+    cost.C = Math.max(0, cost.C + (delta.C ?? 0));
+    cost.X = Math.max(0, cost.X + (delta.X ?? 0));
   }
 
   private applyTrackedManaToSpell(

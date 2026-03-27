@@ -303,6 +303,7 @@ export interface CardDefinition {
   alternativeCosts?: AlternativeCast[];
   additionalCosts?: AdditionalCost[];
   castCostAdjustments?: CastCostAdjustment[];
+  entersTapped?: boolean;
   entersTappedUnlessYouControl?: CardFilter;
   tags?: string[];
   backFace?: CardDefinition;
@@ -569,7 +570,13 @@ export interface SearchLibraryOptions {
 export type StaticEffectDef =
   | { type: 'pump'; power: number; toughness: number; filter: CardFilter; duration?: EffectDuration }
   | { type: 'attached-pump'; power: number | ((game: GameState, source: CardInstance) => number); toughness: number | ((game: GameState, source: CardInstance) => number) }
-  | { type: 'set-base-pt'; power: number; toughness: number; filter: CardFilter }
+  | {
+      type: 'set-base-pt';
+      power: number | ((game: GameState, source: CardInstance) => number);
+      toughness: number | ((game: GameState, source: CardInstance) => number);
+      filter: CardFilter;
+      layer?: 'cda' | 'set';
+    }
   | { type: 'add-types'; types: CardType[]; filter: CardFilter }
   | { type: 'grant-keyword'; keyword: Keyword; filter: CardFilter }
   | { type: 'grant-abilities'; abilities: AbilityDefinition[]; filter: CardFilter }
@@ -1188,6 +1195,7 @@ export interface GameEngine {
   getHand(player: PlayerId): CardInstance[];
   getGraveyard(player: PlayerId): CardInstance[];
   getLibrary(player: PlayerId): CardInstance[];
+  discardCard(player: PlayerId, objectId: ObjectId): void;
   shuffleLibrary(player: PlayerId): void;
   emitEvent(event: GameEvent): void;
   getOpponents(player: PlayerId): PlayerId[];
@@ -1213,6 +1221,7 @@ export interface GameEngine {
   airbendObject(objectId: ObjectId, cost: Cost, actingPlayer: PlayerId): void;
   earthbendLand(targetId: ObjectId, counterCount: number, returnController: PlayerId): void;
   grantKeywordUntilEndOfTurn(objectId: ObjectId, keyword: Keyword): void;
+  grantPumpToObjectsUntilEndOfTurn(objectIds: ObjectId[], power: number, toughness: number): void;
   grantAbilitiesUntilEndOfTurn(
     sourceId: ObjectId,
     objectId: ObjectId,

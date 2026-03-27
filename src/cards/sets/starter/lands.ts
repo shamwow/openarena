@@ -129,3 +129,32 @@ export const FireNationPalace = CardBuilder.create('Fire Nation Palace')
   )
   .oracleText('This land enters tapped unless you control a basic land.\n{T}: Add {R}.\n{1}{R}, {T}: Target creature you control gains firebending 4 until end of turn. (Whenever it attacks, add {R}{R}{R}{R}. This mana lasts until end of combat.)')
   .build();
+
+export const OmashuCity = CardBuilder.create('Omashu City')
+  .types(CardType.LAND)
+  .entersTapped()
+  .activated(
+    { tap: true },
+    async (ctx) => {
+      const color = await ctx.choices.chooseOne(
+        'Choose a color of mana to add',
+        ['R', 'G'] as const,
+        (candidate) => ({ R: 'Red', G: 'Green' }[candidate]),
+      );
+      ctx.game.addMana(ctx.controller, color, 1);
+    },
+    {
+      isManaAbility: true,
+      manaProduction: [{ amount: 1, colors: ['R', 'G'] }],
+      description: '{T}: Add {R} or {G}.',
+    },
+  )
+  .activated(
+    { mana: parseManaCost('{4}'), tap: true, sacrifice: { self: true } },
+    (ctx) => {
+      ctx.game.drawCards(ctx.controller, 1);
+    },
+    { description: '{4}, {T}, Sacrifice this land: Draw a card.' },
+  )
+  .oracleText('This land enters tapped.\n{T}: Add {R} or {G}.\n{4}, {T}, Sacrifice this land: Draw a card.')
+  .build();

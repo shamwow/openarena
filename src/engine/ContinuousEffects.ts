@@ -172,7 +172,7 @@ export class ContinuousEffectsEngine {
               id: `${source.objectId}:${source.zoneChangeCounter}:replacement:${replacements.length}`,
               sourceId: source.objectId,
               isSelfReplacement: false,
-              appliesTo: (event, game) => this.matchesReplacementEvent(effect.replaces, event.type) && (!effect.replace || Boolean(source)) && source.zone === 'BATTLEFIELD',
+              appliesTo: (event) => this.matchesReplacementEvent(effect.replaces, event.type) && (!effect.replace || Boolean(source)) && source.zone === 'BATTLEFIELD',
               replace: (event, game) => effect.replace(game, source, event),
             });
           }
@@ -248,13 +248,15 @@ export class ContinuousEffectsEngine {
         return {
           id: `${source.objectId}:${source.zoneChangeCounter}:set-base-pt:${ability.description}`,
           sourceId: source.objectId,
-          layer: Layer.PT_SET,
+          layer: effect.layer === 'cda' ? Layer.PT_CDA : Layer.PT_SET,
           timestamp: source.timestamp,
           duration: { type: 'static', sourceId: source.objectId },
           appliesTo: permanent => this.matchesFilter(permanent, effect.filter, source, state),
           apply: permanent => {
-            permanent.modifiedPower = effect.power;
-            permanent.modifiedToughness = effect.toughness;
+            permanent.modifiedPower =
+              typeof effect.power === 'function' ? effect.power(state, source) : effect.power;
+            permanent.modifiedToughness =
+              typeof effect.toughness === 'function' ? effect.toughness(state, source) : effect.toughness;
           },
         };
 
