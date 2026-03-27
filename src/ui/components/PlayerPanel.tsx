@@ -422,27 +422,17 @@ const PlayerPanelInner: React.FC<PlayerPanelProps> = ({
       data-info-side={infoSide}
     >
       <div className="arena-seat__overlay" data-side={infoSide}>
-        <div className="arena-seat__crest">
-          <h2
-            className="arena-seat__name"
-            style={{
-              color: player.hasLost ? 'rgba(143, 132, 111, 0.9)' : undefined,
-              textDecoration: player.hasLost ? 'line-through' : undefined,
-            }}
-          >
-            {player.name}
-          </h2>
+        <div className="arena-seat__crest" data-avatar-side={seat.position.endsWith('right') ? 'right' : 'left'}>
+          <div className="arena-seat__avatar" aria-hidden="true" />
           <div
             className="arena-seat__life"
             data-danger={lifeState.danger}
             data-critical={lifeState.critical}
           >
             {player.life}
+            <span className="arena-seat__life-label">{player.name} Life Total</span>
           </div>
-          <div className="arena-preview__meta">life total</div>
         </div>
-
-        <ManaPoolDisplay pool={player.manaPool} />
 
         {player.poisonCounters > 0 ||
         Object.values(player.commanderDamageReceived).some((damage) => damage > 0) ? (
