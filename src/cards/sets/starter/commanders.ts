@@ -16,7 +16,12 @@ export const HeliodSunCrowned = CardBuilder.create('Heliod, Sun-Crowned')
       const creatures = ctx.game.getBattlefield({ types: [CardType.CREATURE], controller: 'you' });
       if (creatures.length > 0) {
         const target = await ctx.choices.chooseOne('Put a +1/+1 counter on target creature or enchantment', creatures, c => c.definition.name);
-        ctx.game.addCounters(target.objectId, '+1/+1', 1);
+        ctx.game.addCounters(target.objectId, '+1/+1', 1, {
+          player: ctx.controller,
+          sourceId: ctx.source.objectId,
+          sourceCardId: ctx.source.cardId,
+          sourceZoneChangeCounter: ctx.source.zoneChangeCounter,
+        });
       }
     },
     { description: 'Whenever you gain life, put a +1/+1 counter on target creature or enchantment you control.' }
@@ -135,7 +140,12 @@ export const MarwynTheNurturer = CardBuilder.create('Marwyn, the Nurturer')
   .triggered(
     { on: 'enter-battlefield', filter: { subtypes: ['Elf'], controller: 'you' } },
     (ctx) => {
-      ctx.game.addCounters(ctx.source.objectId, '+1/+1', 1);
+      ctx.game.addCounters(ctx.source.objectId, '+1/+1', 1, {
+        player: ctx.controller,
+        sourceId: ctx.source.objectId,
+        sourceCardId: ctx.source.cardId,
+        sourceZoneChangeCounter: ctx.source.zoneChangeCounter,
+      });
     },
     { description: 'Whenever another Elf enters the battlefield under your control, put a +1/+1 counter on Marwyn.' }
   )

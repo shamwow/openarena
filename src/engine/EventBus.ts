@@ -6,6 +6,7 @@ import { CardType } from './types';
 import {
   cloneCardInstance,
   findCard,
+  getEffectiveAbilities,
   getEffectiveSubtypes,
   getEffectiveSupertypes,
   hasType,
@@ -100,6 +101,9 @@ export class EventBus {
   /** Check all triggered abilities on the battlefield against an event */
   checkTriggers(event: GameEvent, state: GameState): PendingTrigger[] {
     const triggers: PendingTrigger[] = [];
+    if (!state.triggeredAbilitiesUsedThisTurn) {
+      state.triggeredAbilitiesUsedThisTurn = new Set<string>();
+    }
 
     for (const playerId of state.turnOrder) {
       if (state.players[playerId].hasLost) continue;
@@ -108,11 +112,18 @@ export class EventBus {
 
       for (const card of battlefield) {
         if (card.phasedOut) continue;
-        for (const ability of card.definition.abilities) {
+        for (const [abilityIndex, ability] of getEffectiveAbilities(card).entries()) {
           if (ability.kind !== 'triggered') continue;
+          const usageKey = `${card.objectId}:${card.zoneChangeCounter}:${abilityIndex}`;
+          if (ability.oncePerTurn && state.triggeredAbilitiesUsedThisTurn.has(usageKey)) {
+            continue;
+          }
           if (this.matchesTrigger(ability.trigger, event, card, state)) {
             if (ability.interveningIf && !ability.interveningIf(state, card, event)) {
               continue;
+            }
+            if (ability.oncePerTurn) {
+              state.triggeredAbilitiesUsedThisTurn.add(usageKey);
             }
             triggers.push({
               ability,
@@ -158,9 +169,19 @@ export class EventBus {
       const commandZone = state.zones[playerId]['COMMAND'];
       if (commandZone) {
         for (const card of commandZone) {
-          for (const ability of card.definition.abilities) {
+          for (const [abilityIndex, ability] of getEffectiveAbilities(card).entries()) {
             if (ability.kind !== 'triggered') continue;
+            const usageKey = `${card.objectId}:${card.zoneChangeCounter}:command:${abilityIndex}`;
+            if (ability.oncePerTurn && state.triggeredAbilitiesUsedThisTurn.has(usageKey)) {
+              continue;
+            }
             if (this.matchesTrigger(ability.trigger, event, card, state)) {
+              if (ability.interveningIf && !ability.interveningIf(state, card, event)) {
+                continue;
+              }
+              if (ability.oncePerTurn) {
+                state.triggeredAbilitiesUsedThisTurn.add(usageKey);
+              }
               triggers.push({
                 ability,
                 source: cloneCardInstance(card),
@@ -177,6 +198,13 @@ export class EventBus {
       if (this.matchesTrigger(delayedTrigger.ability.trigger, event, delayedTrigger.source, state)) {
         if (delayedTrigger.ability.interveningIf && !delayedTrigger.ability.interveningIf(state, delayedTrigger.source, event)) {
           continue;
+        }
+        const usageKey = `${delayedTrigger.source.objectId}:${delayedTrigger.source.zoneChangeCounter}:delayed:${delayedTrigger.id}`;
+        if (delayedTrigger.ability.oncePerTurn && state.triggeredAbilitiesUsedThisTurn.has(usageKey)) {
+          continue;
+        }
+        if (delayedTrigger.ability.oncePerTurn) {
+          state.triggeredAbilitiesUsedThisTurn.add(usageKey);
         }
         triggers.push({
           ability: delayedTrigger.ability,
@@ -329,6 +357,10 @@ export class EventBus {
       case 'counter-placed':
         if (event.type !== 'COUNTER_ADDED') return false;
         if (trigger.counterType && event.counterType !== trigger.counterType) return false;
+        if (trigger.whose) {
+          if (!event.player) return false;
+          if (!this.matchesPlayerFilter(trigger.whose, event.player, source.controller)) return false;
+        }
         return this.matchesCardFilter(trigger.filter, event.objectId, source, state, event.objectZoneChangeCounter, event.lastKnownInfo);
 
       case 'custom':

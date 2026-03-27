@@ -227,6 +227,23 @@ export class ContinuousEffectsEngine {
           },
         };
 
+      case 'attached-pump':
+        if (!source.attachedTo) return null;
+        return {
+          id: `${source.objectId}:${source.zoneChangeCounter}:attached-pump:${ability.description}`,
+          sourceId: source.objectId,
+          layer: Layer.PT_MODIFY,
+          timestamp: source.timestamp,
+          duration: { type: 'static', sourceId: source.objectId },
+          appliesTo: permanent => permanent.objectId === source.attachedTo,
+          apply: permanent => {
+            const power = typeof effect.power === 'function' ? effect.power(state, source) : effect.power;
+            const toughness = typeof effect.toughness === 'function' ? effect.toughness(state, source) : effect.toughness;
+            permanent.modifiedPower = (permanent.modifiedPower ?? permanent.definition.power ?? 0) + power;
+            permanent.modifiedToughness = (permanent.modifiedToughness ?? permanent.definition.toughness ?? 0) + toughness;
+          },
+        };
+
       case 'set-base-pt':
         return {
           id: `${source.objectId}:${source.zoneChangeCounter}:set-base-pt:${ability.description}`,
@@ -274,6 +291,21 @@ export class ContinuousEffectsEngine {
               keywords.push(effect.keyword);
             }
             permanent.modifiedKeywords = keywords;
+          },
+        };
+
+      case 'grant-abilities':
+        return {
+          id: `${source.objectId}:${source.zoneChangeCounter}:grant-abilities:${ability.description}`,
+          sourceId: source.objectId,
+          layer: Layer.ABILITY,
+          timestamp: source.timestamp,
+          duration: { type: 'static', sourceId: source.objectId },
+          appliesTo: permanent => this.matchesFilter(permanent, effect.filter, source, state),
+          apply: permanent => {
+            const abilities = permanent.modifiedAbilities ?? [...permanent.definition.abilities];
+            abilities.push(...effect.abilities);
+            permanent.modifiedAbilities = abilities;
           },
         };
 

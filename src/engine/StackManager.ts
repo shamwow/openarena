@@ -160,6 +160,7 @@ export class StackManager {
       targets,
       targetZoneChangeCounters: this.captureTargetZoneChangeCounters(state, targets),
       targetSpecs: ability.targets,
+      triggeringEvent,
       ability,
       resolve: ability.effect,
     };
@@ -209,11 +210,26 @@ export class StackManager {
     );
     if (ability && ability.kind === 'modal' && entry.modeChoices && entry.modeChoices.length > 0) {
       const modalAbility = ability as ModalAbilityDef;
+      const targetSpecs = this.getTargetSpecs(entry);
+      const groupCounts = this.getTargetGroupCounts(entry, targetSpecs);
+      let targetSpecIndex = 0;
+      let targetIndex = 0;
+
       for (const modeIdx of entry.modeChoices) {
         const mode = modalAbility.modes[modeIdx];
-        if (mode) {
-          await mode.effect(ctx);
-        }
+        if (!mode) continue;
+
+        const modeSpecCount = mode.targets?.length ?? 0;
+        const modeGroupCounts = groupCounts.slice(targetSpecIndex, targetSpecIndex + modeSpecCount);
+        const modeTargetCount = modeGroupCounts.reduce((total, count) => total + count, 0);
+        const modeCtx: EffectContext = {
+          ...ctx,
+          targets: ctx.targets.slice(targetIndex, targetIndex + modeTargetCount),
+        };
+
+        await mode.effect(modeCtx);
+        targetSpecIndex += modeSpecCount;
+        targetIndex += modeTargetCount;
       }
     } else if (entry.chosenHalf === 'fused' && entry.cardInstance?.definition.splitHalf) {
       // Fuse: execute both halves' effects in sequence (left then right)
@@ -338,14 +354,37 @@ export class StackManager {
       return true;
     }
 
-    for (const [index, target] of entry.targets.entries()) {
-      const spec = targetSpecs[index];
-      if (!spec) continue;
-      if (this.isTargetStillLegal(state, entry, target, spec, index)) {
-        return true;
+    const groupCounts = this.getTargetGroupCounts(entry, targetSpecs);
+    let targetIndex = 0;
+
+    for (let specIndex = 0; specIndex < targetSpecs.length; specIndex++) {
+      const spec = targetSpecs[specIndex];
+      const groupCount = groupCounts[specIndex] ?? 0;
+      for (let offset = 0; offset < groupCount; offset++) {
+        const target = entry.targets[targetIndex];
+        if (target !== undefined && this.isTargetStillLegal(state, entry, target, spec, targetIndex)) {
+          return true;
+        }
+        targetIndex += 1;
       }
     }
     return false;
+  }
+
+  private getTargetGroupCounts(entry: StackEntry, targetSpecs: TargetSpec[]): number[] {
+    if (entry.targetGroupCounts && entry.targetGroupCounts.length === targetSpecs.length) {
+      return entry.targetGroupCounts;
+    }
+
+    let remaining = entry.targets.length;
+    return targetSpecs.map((spec) => {
+      if (remaining <= 0) {
+        return 0;
+      }
+      const count = Math.min(spec.count, remaining);
+      remaining -= count;
+      return count;
+    });
   }
 
   private getTargetSpecs(entry: StackEntry): TargetSpec[] {
@@ -515,6 +554,7 @@ export class StackManager {
       if (hasType(card, CardType.PLANESWALKER) && card.definition.loyalty !== undefined) {
         card.counters.loyalty = card.definition.loyalty;
       }
+      this.applyEntersBattlefieldCounters(card, entry);
       state.zones[toOwner].BATTLEFIELD.push(card);
       if (card.definition.attachmentType === 'Aura' && card.attachedTo) {
         const host = findCard(state, card.attachedTo);
@@ -572,6 +612,8 @@ export class StackManager {
       for (const trigger of etbTriggers) {
         state.pendingTriggers.push(trigger);
       }
+
+      this.emitCounterAddedEvents(state, card, entry);
     } else if (toZone === 'GRAVEYARD') {
       const graveyardEvent: GameEvent = {
         type: GameEventType.ZONE_CHANGE,
@@ -603,5 +645,43 @@ export class StackManager {
       ? card.definition.alternativeCosts.find(ac => ac.id === entry.castMethod)
       : undefined;
     return altCost?.afterResolution ?? defaultZone;
+  }
+
+  private applyEntersBattlefieldCounters(card: CardInstance, entry: StackEntry): void {
+    for (const [counterType, amount] of Object.entries(entry.entersBattlefieldWithCounters ?? {})) {
+      if (amount <= 0) {
+        continue;
+      }
+      card.counters[counterType] = (card.counters[counterType] ?? 0) + amount;
+    }
+  }
+
+  private emitCounterAddedEvents(state: GameState, card: CardInstance, entry: StackEntry): void {
+    for (const [counterType, amount] of Object.entries(entry.entersBattlefieldWithCounters ?? {})) {
+      if (amount <= 0) {
+        continue;
+      }
+
+      const event: GameEvent = {
+        type: GameEventType.COUNTER_ADDED,
+        timestamp: getNextTimestamp(state),
+        sourceId: entry.sourceId,
+        sourceCardId: entry.sourceCardId,
+        sourceZoneChangeCounter: entry.sourceZoneChangeCounter,
+        objectId: card.objectId,
+        cardId: card.cardId,
+        objectZoneChangeCounter: card.zoneChangeCounter,
+        counterType,
+        amount,
+        player: entry.controller,
+      };
+      state.eventLog.push(event);
+      this.eventBus.emit(event);
+
+      const triggers = this.eventBus.checkTriggers(event, state);
+      for (const trigger of triggers) {
+        state.pendingTriggers.push(trigger);
+      }
+    }
   }
 }

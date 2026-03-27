@@ -1,5 +1,6 @@
 import { CardBuilder } from '../../CardBuilder';
-import { CardType, ManaColor } from '../../../engine/types';
+import { createFirebendingTriggeredAbility } from '../../firebending';
+import { CardType, ManaColor, parseManaCost } from '../../../engine/types';
 
 // --- Basic Lands ---
 
@@ -48,6 +49,34 @@ export const Forest = CardBuilder.create('Forest')
   .oracleText('{T}: Add {G}.')
   .build();
 
+export const BaSingSe = CardBuilder.create('Ba Sing Se')
+  .types(CardType.LAND)
+  .entersTappedUnlessYouControl({
+    types: [CardType.LAND],
+    supertypes: ['Basic'],
+  })
+  .tapForMana('G')
+  .activated(
+    { mana: parseManaCost('{2}{G}'), tap: true },
+    (ctx) => {
+      const target = ctx.targets[0];
+      if (target && typeof target !== 'string') {
+        ctx.game.earthbendLand(target.objectId, 2, ctx.controller);
+      }
+    },
+    {
+      timing: 'sorcery',
+      targets: [{
+        what: 'permanent',
+        filter: { types: [CardType.LAND], controller: 'you' },
+        count: 1,
+      }],
+      description: '{2}{G}, {T}: Earthbend 2.',
+    },
+  )
+  .oracleText('This land enters tapped unless you control a basic land.\n{T}: Add {G}.\n{2}{G}, {T}: Earthbend 2. Activate only as a sorcery.')
+  .build();
+
 // --- Nonbasic Lands ---
 
 export const CommandTower = CardBuilder.create('Command Tower')
@@ -67,4 +96,36 @@ export const ReliquaryTower = CardBuilder.create('Reliquary Tower')
   .tapForMana('C')
   .tag('no-max-hand-size')
   .oracleText('You have no maximum hand size.\n{T}: Add {C}.')
+  .build();
+
+export const FireNationPalace = CardBuilder.create('Fire Nation Palace')
+  .types(CardType.LAND)
+  .entersTappedUnlessYouControl({
+    types: [CardType.LAND],
+    supertypes: ['Basic'],
+  })
+  .tapForMana('R')
+  .activated(
+    { mana: parseManaCost('{1}{R}'), tap: true },
+    (ctx) => {
+      const target = ctx.targets[0];
+      if (target && typeof target !== 'string') {
+        ctx.game.grantAbilitiesUntilEndOfTurn(
+          ctx.source.objectId,
+          target.objectId,
+          target.zoneChangeCounter,
+          [createFirebendingTriggeredAbility(4)],
+        );
+      }
+    },
+    {
+      targets: [{
+        what: 'creature',
+        filter: { controller: 'you' },
+        count: 1,
+      }],
+      description: '{1}{R}, {T}: Target creature you control gains firebending 4 until end of turn.',
+    },
+  )
+  .oracleText('This land enters tapped unless you control a basic land.\n{T}: Add {R}.\n{1}{R}, {T}: Target creature you control gains firebending 4 until end of turn. (Whenever it attacks, add {R}{R}{R}{R}. This mana lasts until end of combat.)')
   .build();

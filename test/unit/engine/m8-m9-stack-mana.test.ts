@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { CardBuilder } from '../../../src/cards/CardBuilder.ts';
+import { ArcaneSignet } from '../../../src/cards/sets/starter/artifacts.ts';
 import { ActionType, CardType, Zone, parseManaCost } from '../../../src/engine/types.ts';
-import { createHarness, getCard, getLegalAction, makeCommander, settleEngine } from './helpers.ts';
+import { createDefaultChoiceResponder, createHarness, getCard, getLegalAction, makeCommander, settleEngine } from './helpers.ts';
 
 function makeLand(name: string, color: 'W' | 'U' | 'B' | 'R' | 'G') {
   return CardBuilder.create(name)
@@ -416,4 +417,65 @@ test('commander tax casting can use mixed sources including Treasure', async () 
 
   assert.equal(state.zones.player1.BATTLEFIELD.some(card => card.definition.name === 'Tax Commander'), true);
   assert.equal(state.zones.player1.BATTLEFIELD.some(card => card.definition.name === 'Treasure Source'), false);
+});
+
+test('Arcane Signet only offers mana colors from the controller commander identity', async () => {
+  const { state, engine } = createHarness({
+    decks: [
+      {
+        commander: makeCommander('Azorius Commander', '{1}{W}{U}'),
+        cards: [ArcaneSignet],
+        playerName: 'Azorius',
+      },
+      {
+        commander: makeCommander('Opponent', '{1}{B}'),
+        cards: [],
+        playerName: 'Opponent',
+      },
+      {
+        commander: makeCommander('Third', '{1}{G}'),
+        cards: [],
+        playerName: 'Third',
+      },
+      {
+        commander: makeCommander('Fourth', '{1}{R}'),
+        cards: [],
+        playerName: 'Fourth',
+      },
+    ],
+    choiceResponder: (request) => {
+      if (request.type === 'chooseOne' && request.prompt.includes('Choose a color of mana to add')) {
+        assert.deepEqual(request.options, ['W', 'U']);
+        request.resolve('U');
+        return;
+      }
+      createDefaultChoiceResponder()(request);
+    },
+    setup: (builder) => {
+      builder
+        .moveCard({ playerId: 'player1', name: 'Arcane Signet' }, Zone.BATTLEFIELD)
+        .setTurn({
+          activePlayer: 'player1',
+          currentPhase: 'PRECOMBAT_MAIN',
+          currentStep: 'MAIN',
+          priorityPlayer: 'player1',
+          passedPriority: [],
+        });
+    },
+  });
+
+  let producedColor: string | null = null;
+  const originalAddMana = engine.addMana.bind(engine);
+  engine.addMana = ((player, color, amount, options) => {
+    producedColor = color;
+    return originalAddMana(player, color, amount, options);
+  }) as typeof engine.addMana;
+
+  const action = getLegalAction(engine, 'player1', candidate =>
+    candidate.type === ActionType.ACTIVATE_ABILITY && candidate.sourceId === getCard(state, 'player1', Zone.BATTLEFIELD, 'Arcane Signet').objectId
+  );
+  await engine.submitAction(action);
+
+  assert.equal(producedColor, 'U');
+  assert.equal(getCard(state, 'player1', Zone.BATTLEFIELD, 'Arcane Signet').tapped, true);
 });

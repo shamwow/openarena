@@ -1,6 +1,6 @@
 import type { GameState, PlayerId, GameEvent, CardInstance } from './types';
 import { Phase, Step, GameEventType, Keyword } from './types';
-import { getNextTimestamp } from './GameState';
+import { clearExileInsteadOfDyingThisTurn, getNextTimestamp } from './GameState';
 import type { EventBus } from './EventBus';
 import type { ZoneManager } from './ZoneManager';
 import type { ManaManager } from './ManaManager';
@@ -54,6 +54,18 @@ export class TurnManager {
     if (state.currentStep === Step.FIRST_STRIKE_DAMAGE) {
       this.transitionToStep(state, Phase.COMBAT, Step.COMBAT_DAMAGE);
       return;
+    }
+
+    if (state.currentStep === Step.END_OF_COMBAT) {
+      const nextExtraCombat = state.pendingExtraCombatPhases?.shift();
+      if (nextExtraCombat) {
+        state.currentCombatAttackRestriction = nextExtraCombat.attackRestriction ?? null;
+        this.manaManager.emptyAllPools(state);
+        this.transitionToStep(state, Phase.COMBAT, Step.BEGINNING_OF_COMBAT);
+        return;
+      }
+
+      state.currentCombatAttackRestriction = null;
     }
 
     const currentIndex = this.getCurrentIndex(state);
@@ -218,6 +230,11 @@ export class TurnManager {
 
     // Clear combat state
     state.combat = null;
+    state.currentCombatAttackRestriction = null;
+    state.pendingExtraCombatPhases = [];
+
+    // Remove any same-turn death replacement markers at cleanup.
+    clearExileInsteadOfDyingThisTurn(state);
   }
 
   forceCleanup(state: GameState, discardToHandSize = true): void {
@@ -347,6 +364,7 @@ export class TurnManager {
     }
 
     state.loyaltyAbilitiesUsedThisTurn = [];
+    state.triggeredAbilitiesUsedThisTurn = new Set<string>();
     this.transitionToStep(state, Phase.BEGINNING, Step.UNTAP);
 
     const event: GameEvent = {

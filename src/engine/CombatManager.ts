@@ -3,9 +3,10 @@ import type {
   ProtectionFrom,
   AttackTarget,
   ManaCost,
+  CardFilter,
 } from './types';
 import { CardType, Keyword, GameEventType } from './types';
-import { findCard, hasSubtype, hasType, getNextTimestamp } from './GameState';
+import { findCard, getEffectiveSubtypes, getEffectiveSupertypes, hasSubtype, hasType, getNextTimestamp } from './GameState';
 import type { EventBus } from './EventBus';
 import type { ZoneManager } from './ZoneManager';
 import type { ManaManager } from './ManaManager';
@@ -455,6 +456,11 @@ export class CombatManager {
       state.eventLog.push(event);
       this.eventBus.emit(event);
 
+      const triggers = this.eventBus.checkTriggers(event, state);
+      for (const t of triggers) {
+        state.pendingTriggers.push(t);
+      }
+
       // Monarch transfer: when combat damage is dealt to the monarch,
       // the attacking player's controller becomes the new monarch
       if (state.monarch === (targetId as PlayerId) && source) {
@@ -593,6 +599,12 @@ export class CombatManager {
     if (card.controller !== state.activePlayer) return false;
     if (this.hasKeyword(card, Keyword.DEFENDER)) return false;
     if (card.summoningSick && !this.hasKeyword(card, Keyword.HASTE)) return false;
+    if (
+      state.currentCombatAttackRestriction &&
+      !this.matchesFilter(card, state.currentCombatAttackRestriction, state.activePlayer, state)
+    ) {
+      return false;
+    }
     return true;
   }
 
@@ -719,5 +731,40 @@ export class CombatManager {
       }
     }
     return total;
+  }
+
+  private matchesFilter(
+    card: CardInstance,
+    filter: CardFilter,
+    sourceController: PlayerId,
+    state: GameState,
+  ): boolean {
+    if (card.zone === 'BATTLEFIELD' && card.phasedOut) return false;
+    if (filter.types && !filter.types.some((type) => hasType(card, type))) return false;
+    if (filter.subtypes && !filter.subtypes.some((type) => getEffectiveSubtypes(card).includes(type))) return false;
+    if (filter.supertypes && !filter.supertypes.some((type) => getEffectiveSupertypes(card).includes(type))) return false;
+    if (filter.colors && !filter.colors.some((color) => card.definition.colorIdentity.includes(color))) return false;
+    if (filter.keywords && !filter.keywords.some((keyword) => (card.modifiedKeywords ?? card.definition.keywords).includes(keyword))) return false;
+    if (filter.controller === 'you' && card.controller !== sourceController) return false;
+    if (filter.controller === 'opponent' && card.controller === sourceController) return false;
+    if (filter.name && card.definition.name !== filter.name) return false;
+    if (filter.self === true && card.controller !== sourceController) return false;
+    if (filter.tapped === true && !card.tapped) return false;
+    if (filter.tapped === false && card.tapped) return false;
+    if (filter.isToken === true && !card.isToken) return false;
+    if (filter.power) {
+      const power = card.modifiedPower ?? card.definition.power ?? 0;
+      if (filter.power.op === 'lte' && power > filter.power.value) return false;
+      if (filter.power.op === 'gte' && power < filter.power.value) return false;
+      if (filter.power.op === 'eq' && power !== filter.power.value) return false;
+    }
+    if (filter.toughness) {
+      const toughness = card.modifiedToughness ?? card.definition.toughness ?? 0;
+      if (filter.toughness.op === 'lte' && toughness > filter.toughness.value) return false;
+      if (filter.toughness.op === 'gte' && toughness < filter.toughness.value) return false;
+      if (filter.toughness.op === 'eq' && toughness !== filter.toughness.value) return false;
+    }
+    if (filter.custom && !filter.custom(card, state)) return false;
+    return true;
   }
 }

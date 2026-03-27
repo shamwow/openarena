@@ -1,5 +1,6 @@
 import { CardBuilder } from '../../CardBuilder';
-import { CardType, ManaColor } from '../../../engine/types';
+import { hasType } from '../../../engine/GameState';
+import { CardType, GameEventType, Keyword, ManaColor, Step } from '../../../engine/types';
 
 // --- White Creatures ---
 
@@ -189,6 +190,272 @@ export const ElvishMystic = CardBuilder.create('Elvish Mystic')
   .stats(1, 1)
   .tapForMana('G')
   .oracleText('{T}: Add {G}.')
+  .build();
+
+export const BadgermoleCub = CardBuilder.create('Badgermole Cub')
+  .cost('{1}{G}')
+  .types(CardType.CREATURE)
+  .subtypes('Badger', 'Mole')
+  .stats(2, 2)
+  .triggered(
+    { on: 'tap-for-mana', filter: { types: [CardType.CREATURE], controller: 'you' } },
+    (ctx) => {
+      ctx.game.addMana(ctx.controller, 'G', 1);
+    },
+    {
+      isManaAbility: true,
+      manaProduction: [{ amount: 1, colors: ['G'] }],
+      description: 'Whenever you tap a creature for mana, add an additional {G}.',
+    },
+  )
+  .oracleText('Whenever you tap a creature for mana, add an additional {G}.')
+  .build();
+
+export const EarthKingdomGeneral = CardBuilder.create('Earth Kingdom General')
+  .cost('{3}{G}')
+  .types(CardType.CREATURE)
+  .subtypes('Human', 'Soldier', 'Ally')
+  .stats(2, 2)
+  .etbEffect(async (ctx) => {
+    const lands = ctx.game.getBattlefield({ types: [CardType.LAND] }, ctx.controller);
+    if (lands.length === 0) return;
+
+    const target = await ctx.choices.chooseOne(
+      'Choose a land you control',
+      lands,
+      (card) => card.definition.name,
+    );
+
+    if (target && typeof target !== 'string') {
+      ctx.game.earthbendLand(target.objectId, 2, ctx.controller);
+    }
+  }, { description: 'When Earth Kingdom General enters, earthbend 2.' })
+  .triggered(
+    { on: 'counter-placed', counterType: '+1/+1', whose: 'yours', filter: { types: [CardType.CREATURE] } },
+    async (ctx) => {
+      if (ctx.event?.type !== GameEventType.COUNTER_ADDED) return;
+      const gain = await ctx.choices.chooseYesNo(`Earth Kingdom General: Gain ${ctx.event.amount} life?`);
+      if (gain) {
+        ctx.game.gainLife(ctx.controller, ctx.event.amount);
+      }
+    },
+    {
+      oncePerTurn: true,
+      optional: true,
+      description: 'Whenever you put one or more +1/+1 counters on a creature, you may gain that much life. Do this only once each turn.',
+    },
+  )
+  .oracleText('When Earth Kingdom General enters, earthbend 2.\nWhenever you put one or more +1/+1 counters on a creature, you may gain that much life. Do this only once each turn.')
+  .build();
+
+export const EarthbendingStudent = CardBuilder.create('Earthbending Student')
+  .cost('{2}{G}')
+  .types(CardType.CREATURE)
+  .subtypes('Human', 'Warrior', 'Ally')
+  .stats(1, 3)
+  .etbEffect(async (ctx) => {
+    const lands = ctx.game.getBattlefield({ types: [CardType.LAND] }, ctx.controller);
+    if (lands.length === 0) return;
+
+    const target = await ctx.choices.chooseOne(
+      'Choose a land you control',
+      lands,
+      (card) => card.definition.name,
+    );
+
+    if (target && typeof target !== 'string') {
+      ctx.game.earthbendLand(target.objectId, 2, ctx.controller);
+    }
+  }, { description: 'When Earthbending Student enters, earthbend 2.' })
+  .staticAbility(
+    {
+      type: 'grant-keyword',
+      keyword: Keyword.VIGILANCE,
+      filter: {
+        controller: 'you',
+        custom: (card) => hasType(card, CardType.LAND) && hasType(card, CardType.CREATURE),
+      },
+    },
+    { description: 'Land creatures you control have vigilance.' },
+  )
+  .oracleText('When Earthbending Student enters, earthbend 2.\nLand creatures you control have vigilance.')
+  .build();
+
+export const AvatarKyoshiEarthbender = CardBuilder.create('Avatar Kyoshi, Earthbender')
+  .cost('{5}{G}{G}{G}')
+  .types(CardType.CREATURE)
+  .supertypes('Legendary')
+  .subtypes('Human', 'Avatar')
+  .stats(6, 6)
+  .staticAbility(
+    {
+      type: 'grant-keyword',
+      keyword: Keyword.HEXPROOF,
+      filter: { self: true },
+    },
+    {
+      condition: (game, source) => game.activePlayer === source.controller,
+      description: 'During your turn, Avatar Kyoshi has hexproof.',
+    },
+  )
+  .triggered(
+    {
+      on: 'custom',
+      match: (event, source) =>
+        event.type === GameEventType.STEP_CHANGE &&
+        event.step === Step.BEGINNING_OF_COMBAT &&
+        event.activePlayer === source.controller,
+    },
+    async (ctx) => {
+      const lands = ctx.game.getBattlefield({ types: [CardType.LAND], controller: 'you' });
+      if (lands.length === 0) return;
+
+      const target = await ctx.choices.chooseOne(
+        'Choose a land you control',
+        lands,
+        (card) => card.definition.name,
+      );
+
+      if (target && typeof target !== 'string') {
+        ctx.game.earthbendLand(target.objectId, 8, ctx.controller);
+        ctx.game.untapPermanent(target.objectId);
+      }
+    },
+    {
+      description: 'At the beginning of combat on your turn, earthbend 8, then untap that land.',
+    },
+  )
+  .oracleText('During your turn, Avatar Kyoshi has hexproof.\nAt the beginning of combat on your turn, earthbend 8, then untap that land.')
+  .build();
+
+export const BumiEclecticEarthbender = CardBuilder.create('Bumi, Eclectic Earthbender')
+  .cost('{3}{G}{G}')
+  .types(CardType.CREATURE)
+  .supertypes('Legendary')
+  .subtypes('Human', 'Noble', 'Ally')
+  .stats(4, 4)
+  .etbEffect(async (ctx) => {
+    const lands = ctx.game.getBattlefield({ types: [CardType.LAND] }, ctx.controller);
+    if (lands.length === 0) return;
+
+    const target = await ctx.choices.chooseOne(
+      'Choose a land you control',
+      lands,
+      (card) => card.definition.name,
+    );
+
+    if (target && typeof target !== 'string') {
+      ctx.game.earthbendLand(target.objectId, 1, ctx.controller);
+    }
+  }, { description: 'When Bumi enters, earthbend 1.' })
+  .triggered(
+    { on: 'attacks', filter: { self: true } },
+    (ctx) => {
+      const lands = ctx.game.getBattlefield({
+        types: [CardType.LAND],
+      }, ctx.controller).filter((card) => hasType(card, CardType.CREATURE));
+
+      for (const land of lands) {
+        ctx.game.addCounters(land.objectId, '+1/+1', 2, {
+          player: ctx.controller,
+          sourceId: ctx.source.objectId,
+          sourceCardId: ctx.source.cardId,
+          sourceZoneChangeCounter: ctx.source.zoneChangeCounter,
+        });
+      }
+    },
+    {
+      description: 'Whenever Bumi attacks, put two +1/+1 counters on each land creature you control.',
+    },
+  )
+  .oracleText('When Bumi enters, earthbend 1.\nWhenever Bumi attacks, put two +1/+1 counters on each land creature you control.')
+  .build();
+
+export const BumiUnleashed = CardBuilder.create('Bumi, Unleashed')
+  .cost('{3}{R}{G}')
+  .types(CardType.CREATURE)
+  .supertypes('Legendary')
+  .subtypes('Human', 'Noble', 'Ally')
+  .stats(5, 4)
+  .trample()
+  .etbEffect(async (ctx) => {
+    const lands = ctx.game.getBattlefield({ types: [CardType.LAND] }, ctx.controller);
+    if (lands.length === 0) return;
+
+    const target = await ctx.choices.chooseOne(
+      'Choose a land you control',
+      lands,
+      (card) => card.definition.name,
+    );
+
+    if (target && typeof target !== 'string') {
+      ctx.game.earthbendLand(target.objectId, 4, ctx.controller);
+    }
+  }, { description: 'When Bumi enters, earthbend 4.' })
+  .triggered(
+    {
+      on: 'custom',
+      match: (event, source) =>
+        event.type === GameEventType.DAMAGE_DEALT &&
+        event.sourceId === source.objectId &&
+        event.isCombatDamage &&
+        typeof event.targetId === 'string' &&
+        event.targetId.startsWith('player'),
+    },
+    (ctx) => {
+      const lands = ctx.game.getBattlefield({ types: [CardType.LAND] }, ctx.controller);
+      for (const land of lands) {
+        ctx.game.untapPermanent(land.objectId);
+      }
+
+      ctx.game.grantExtraCombat({
+        attackRestriction: { types: [CardType.LAND] },
+      });
+    },
+    {
+      description: 'Whenever Bumi deals combat damage to a player, untap all lands you control. After this phase, there is an additional combat phase. Only land creatures can attack during that combat phase.',
+    },
+  )
+  .oracleText('Trample\nWhen Bumi enters, earthbend 4.\nWhenever Bumi deals combat damage to a player, untap all lands you control. After this phase, there is an additional combat phase. Only land creatures can attack during that combat phase.')
+  .build();
+
+export const AnimalAttendant = CardBuilder.create('Animal Attendant')
+  .cost('{1}{G}')
+  .types(CardType.CREATURE)
+  .subtypes('Human', 'Citizen')
+  .stats(2, 2)
+  .activated(
+    { tap: true },
+    async (ctx) => {
+      const color = await ctx.choices.chooseOne(
+        'Choose a color of mana to add',
+        ['W', 'U', 'B', 'R', 'G'] as const,
+        (candidate) => ({ W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green' }[candidate]),
+      );
+      ctx.game.addMana(ctx.controller, color, 1, {
+        trackedMana: {
+          sourceId: ctx.source.objectId,
+          effect: {
+            kind: 'etb-counter-on-non-human-creature',
+            counterType: '+1/+1',
+            amount: 1,
+          },
+        },
+      });
+    },
+    {
+      timing: 'instant',
+      isManaAbility: true,
+      manaProduction: [{ amount: 1, colors: ['W', 'U', 'B', 'R', 'G'] }],
+      trackedManaEffect: {
+        kind: 'etb-counter-on-non-human-creature',
+        counterType: '+1/+1',
+        amount: 1,
+      },
+      description: '{T}: Add one mana of any color. If that mana is spent to cast a non-Human creature spell, that creature enters with an additional +1/+1 counter on it.',
+    },
+  )
+  .oracleText('{T}: Add one mana of any color. If that mana is spent to cast a non-Human creature spell, that creature enters with an additional +1/+1 counter on it.')
   .build();
 
 export const SakuraTribeElder = CardBuilder.create('Sakura-Tribe Elder')

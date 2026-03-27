@@ -69,6 +69,7 @@ export function createBaseGameState(
       commanderIds: commanderInstances.map(commander => commander.cardId),
       colorIdentity,
       drewFromEmptyLibrary: false,
+      trackedMana: [],
       spellsCastThisTurn: 0,
       experienceCounters: 0,
       energyCounters: 0,
@@ -97,6 +98,7 @@ export function createBaseGameState(
     combat: null,
     continuousEffects: [],
     replacementEffects: [],
+    exileInsteadOfDyingThisTurn: new Set(),
     lastKnownInformation: {},
     timestampCounter,
     objectIdCounter: 0,
@@ -110,8 +112,11 @@ export function createBaseGameState(
     isGameOver: false,
     winner: null,
     loyaltyAbilitiesUsedThisTurn: [],
+    triggeredAbilitiesUsedThisTurn: new Set<string>(),
     pendingFreeCasts: [],
     pendingExtraTurns: [],
+    pendingExtraCombatPhases: [],
+    currentCombatAttackRestriction: null,
   };
 }
 
@@ -144,6 +149,7 @@ export function createCardInstance(
     attachedTo: null,
     attachments: [],
     isToken: false,
+    exhaustedAbilityZoneChangeCounters: {},
   };
 }
 
@@ -152,6 +158,9 @@ export function cloneCardInstance(card: CardInstance): CardInstance {
     ...card,
     counters: { ...card.counters },
     attachments: [...card.attachments],
+    exhaustedAbilityZoneChangeCounters: card.exhaustedAbilityZoneChangeCounters
+      ? { ...card.exhaustedAbilityZoneChangeCounters }
+      : undefined,
     modifiedTypes: card.modifiedTypes ? [...card.modifiedTypes] : undefined,
     modifiedSubtypes: card.modifiedSubtypes ? [...card.modifiedSubtypes] : undefined,
     modifiedSupertypes: card.modifiedSupertypes ? [...card.modifiedSupertypes] : undefined,
@@ -173,8 +182,85 @@ export function getObjectInstanceKey(objectId: string, zoneChangeCounter: number
   return `${objectId}:${zoneChangeCounter}`;
 }
 
+export function markExileInsteadOfDyingThisTurn(
+  state: GameState,
+  objectId: string,
+  zoneChangeCounter: number,
+): void {
+  state.exileInsteadOfDyingThisTurn.add(getObjectInstanceKey(objectId, zoneChangeCounter));
+}
+
+export function shouldExileInsteadOfDyingThisTurn(
+  state: GameState,
+  objectId: string,
+  zoneChangeCounter: number,
+): boolean {
+  const card = findCard(state, objectId, zoneChangeCounter);
+  if (card?.exileInsteadOfDyingThisTurnZoneChangeCounter === zoneChangeCounter) {
+    return true;
+  }
+
+  return state.exileInsteadOfDyingThisTurn.has(getObjectInstanceKey(objectId, zoneChangeCounter));
+}
+
+export function clearExileInsteadOfDyingThisTurn(
+  state: GameState,
+  objectId?: string,
+  zoneChangeCounter?: number,
+): void {
+  if (objectId === undefined) {
+    state.exileInsteadOfDyingThisTurn.clear();
+    for (const pid of state.turnOrder) {
+      for (const zone of Object.keys(state.zones[pid]) as Zone[]) {
+        for (const card of state.zones[pid][zone]) {
+          delete card.exileInsteadOfDyingThisTurnZoneChangeCounter;
+        }
+      }
+    }
+    for (const entry of state.stack) {
+      if (entry.cardInstance) {
+        delete entry.cardInstance.exileInsteadOfDyingThisTurnZoneChangeCounter;
+      }
+    }
+    return;
+  }
+
+  if (zoneChangeCounter === undefined) {
+    for (const key of [...state.exileInsteadOfDyingThisTurn]) {
+      if (key.startsWith(`${objectId}:`)) {
+        state.exileInsteadOfDyingThisTurn.delete(key);
+      }
+    }
+    for (const pid of state.turnOrder) {
+      for (const zone of Object.keys(state.zones[pid]) as Zone[]) {
+        for (const card of state.zones[pid][zone]) {
+          if (card.objectId === objectId) {
+            delete card.exileInsteadOfDyingThisTurnZoneChangeCounter;
+          }
+        }
+      }
+    }
+    for (const entry of state.stack) {
+      if (entry.cardInstance?.objectId === objectId) {
+        delete entry.cardInstance.exileInsteadOfDyingThisTurnZoneChangeCounter;
+      }
+    }
+    return;
+  }
+
+  state.exileInsteadOfDyingThisTurn.delete(getObjectInstanceKey(objectId, zoneChangeCounter));
+  const card = findCard(state, objectId, zoneChangeCounter);
+  if (card?.exileInsteadOfDyingThisTurnZoneChangeCounter === zoneChangeCounter) {
+    delete card.exileInsteadOfDyingThisTurnZoneChangeCounter;
+  }
+}
+
 export function getEffectiveTypes(card: CardInstance): CardType[] {
   return card.modifiedTypes ?? card.definition.types;
+}
+
+export function getEffectiveAbilities(card: CardInstance): import('./types').AbilityDefinition[] {
+  return card.modifiedAbilities ?? card.definition.abilities;
 }
 
 export function getEffectiveSubtypes(card: CardInstance): string[] {

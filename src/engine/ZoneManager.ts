@@ -1,13 +1,16 @@
 import type {
-  GameState, CardInstance, PlayerId, Zone, ObjectId, GameEvent,
+  GameState, CardInstance, PlayerId, Zone, ObjectId, GameEvent, CardFilter,
 } from './types';
 import { GameEventType, CardType } from './types';
 import {
   createCardInstance,
   findCard,
+  clearExileInsteadOfDyingThisTurn,
   getEffectiveSubtypes,
+  getEffectiveSupertypes,
   getNextTimestamp,
   hasType,
+  shouldExileInsteadOfDyingThisTurn,
   rememberLastKnownInformation,
 } from './GameState';
 import type { EventBus } from './EventBus';
@@ -34,9 +37,18 @@ export class ZoneManager {
     if (!card) return;
 
     const fromZone = card.zone;
+    const leavingZoneChangeCounter = card.zoneChangeCounter;
     const fromController = card.controller;
     const replacementDecision = this.resolveCommanderReplacementDecision(state, card, toZone, options?.commanderReplacementDecision);
-    const resolvedZone = replacementDecision ? 'COMMAND' : toZone;
+    let resolvedZone = replacementDecision ? 'COMMAND' : toZone;
+    if (
+      fromZone === 'BATTLEFIELD' &&
+      resolvedZone === 'GRAVEYARD' &&
+      (shouldExileInsteadOfDyingThisTurn(state, objectId, leavingZoneChangeCounter) ||
+        card.exileInsteadOfDyingThisTurnZoneChangeCounter === leavingZoneChangeCounter)
+    ) {
+      resolvedZone = 'EXILE';
+    }
     const targetOwner = replacementDecision ? card.owner : (toOwner ?? card.owner);
     const leavingSnapshot = rememberLastKnownInformation(state, card);
 
@@ -63,6 +75,7 @@ export class ZoneManager {
       card.modifiedSupertypes = undefined;
       card.modifiedKeywords = undefined;
       card.modifiedAbilities = undefined;
+      card.exileInsteadOfDyingThisTurnZoneChangeCounter = undefined;
 
       // Detach any attachments
       for (const attachId of card.attachments) {
@@ -96,6 +109,16 @@ export class ZoneManager {
     if (options?.faceDown) card.faceDown = true;
 
     if (resolvedZone === 'BATTLEFIELD') {
+      if (
+        card.definition.entersTappedUnlessYouControl &&
+        !this.controlsPermanentMatchingFilter(
+          state,
+          targetOwner,
+          card.definition.entersTappedUnlessYouControl,
+        )
+      ) {
+        card.tapped = true;
+      }
       card.summoningSick = true;
       card.controller = targetOwner;
 
@@ -201,9 +224,9 @@ export class ZoneManager {
       this.eventBus.emit(ltbEvent);
 
       const ltbTriggers = this.eventBus.checkTriggers(ltbEvent, state);
-      for (const t of ltbTriggers) {
-        state.pendingTriggers.push(t);
-      }
+        for (const t of ltbTriggers) {
+          state.pendingTriggers.push(t);
+        }
 
       // "Dies" is a specific battlefield→graveyard transition
       if (resolvedZone === 'GRAVEYARD') {
@@ -232,6 +255,53 @@ export class ZoneManager {
         }
       }
     }
+
+    if (fromZone === 'BATTLEFIELD') {
+      clearExileInsteadOfDyingThisTurn(state, objectId);
+    }
+  }
+
+  private controlsPermanentMatchingFilter(
+    state: GameState,
+    controller: PlayerId,
+    filter: CardFilter,
+  ): boolean {
+    return state.zones[controller].BATTLEFIELD.some((card) => this.matchesFilter(state, card, filter, controller));
+  }
+
+  private matchesFilter(
+    state: GameState,
+    card: CardInstance,
+    filter: CardFilter,
+    sourceController?: PlayerId,
+  ): boolean {
+    if (card.zone === 'BATTLEFIELD' && card.phasedOut) return false;
+    if (filter.types && !filter.types.some((t) => hasType(card, t))) return false;
+    if (filter.subtypes && !filter.subtypes.some((t) => getEffectiveSubtypes(card).includes(t))) return false;
+    if (filter.supertypes && !filter.supertypes.some((t) => getEffectiveSupertypes(card).includes(t))) return false;
+    if (filter.colors && !filter.colors.some((c) => card.definition.colorIdentity.includes(c))) return false;
+    if (filter.keywords && !filter.keywords.some((k) => (card.modifiedKeywords ?? card.definition.keywords).includes(k))) return false;
+    if (filter.controller === 'you' && sourceController && card.controller !== sourceController) return false;
+    if (filter.controller === 'opponent' && sourceController && card.controller === sourceController) return false;
+    if (filter.name && card.definition.name !== filter.name) return false;
+    if (filter.self === true && sourceController && card.controller !== sourceController) return false;
+    if (filter.tapped === true && !card.tapped) return false;
+    if (filter.tapped === false && card.tapped) return false;
+    if (filter.isToken === true && !card.isToken) return false;
+    if (filter.power) {
+      const p = card.modifiedPower ?? card.definition.power ?? 0;
+      if (filter.power.op === 'lte' && p > filter.power.value) return false;
+      if (filter.power.op === 'gte' && p < filter.power.value) return false;
+      if (filter.power.op === 'eq' && p !== filter.power.value) return false;
+    }
+    if (filter.toughness) {
+      const t = card.modifiedToughness ?? card.definition.toughness ?? 0;
+      if (filter.toughness.op === 'lte' && t > filter.toughness.value) return false;
+      if (filter.toughness.op === 'gte' && t < filter.toughness.value) return false;
+      if (filter.toughness.op === 'eq' && t !== filter.toughness.value) return false;
+    }
+    if (filter.custom && !filter.custom(card, state)) return false;
+    return true;
   }
 
   drawCard(state: GameState, player: PlayerId): CardInstance | null {

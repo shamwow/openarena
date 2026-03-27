@@ -1,5 +1,7 @@
 import type {
+  AddManaOptions,
   CardInstance,
+  CardDefinition,
   GameEvent,
   GameState,
   ManaColor,
@@ -8,9 +10,11 @@ import type {
   ManaProduction,
   ManaSymbol,
   PlayerId,
+  TrackedMana,
+  TrackedManaEffect,
 } from './types';
 import { GameEventType, Keyword, emptyManaPool } from './types';
-import { getEffectiveSubtypes, getEffectiveSupertypes, getNextTimestamp, hasType } from './GameState';
+import { getEffectiveAbilities, getEffectiveSubtypes, getEffectiveSupertypes, getNextTimestamp, hasType } from './GameState';
 import type { EventBus } from './EventBus';
 
 export interface AutoTapPlanEntry {
@@ -19,11 +23,20 @@ export interface AutoTapPlanEntry {
   plannerMana?: Partial<ManaPool>;
   tap: boolean;
   sacrificeSelf: boolean;
+  trackedManaEffect?: TrackedManaEffect;
 }
 
 interface PaymentResult {
   pool: ManaPool;
   life: number;
+}
+
+export interface PayManaContext {
+  spellDefinition?: CardDefinition;
+}
+
+export interface PayManaResult {
+  spentTrackedMana: TrackedMana[];
 }
 
 interface ManaSource {
@@ -38,9 +51,23 @@ export class ManaManager {
     this.eventBus = eventBus;
   }
 
-  addMana(state: GameState, player: PlayerId, color: keyof ManaPool, amount: number): void {
+  addMana(
+    state: GameState,
+    player: PlayerId,
+    color: keyof ManaPool,
+    amount: number,
+    options?: AddManaOptions,
+  ): void {
     const actualColor = this.normalizeProducedColor(state, player, color);
     state.players[player].manaPool[actualColor] += amount;
+    if (options?.trackedMana) {
+      for (let i = 0; i < amount; i += 1) {
+        state.players[player].trackedMana.push({
+          color: actualColor,
+          ...options.trackedMana,
+        });
+      }
+    }
 
     const event: GameEvent = {
       type: GameEventType.MANA_PRODUCED,
@@ -58,12 +85,23 @@ export class ManaManager {
   }
 
   payMana(state: GameState, player: PlayerId, cost: ManaCost): boolean {
+    return this.payManaWithContext(state, player, cost) !== null;
+  }
+
+  payManaWithContext(
+    state: GameState,
+    player: PlayerId,
+    cost: ManaCost,
+    context?: PayManaContext,
+  ): PayManaResult | null {
     const result = this.solvePaymentFromPool(state.players[player].manaPool, cost, state.players[player].life);
     if (!result) {
-      return false;
+      return null;
     }
 
+    const spentMana = this.diffManaPools(state.players[player].manaPool, result.pool);
     const lifeLost = state.players[player].life - result.life;
+    const spentTrackedMana = this.consumeTrackedMana(state, player, spentMana, context);
     state.players[player].manaPool = result.pool;
     state.players[player].life = result.life;
 
@@ -78,11 +116,12 @@ export class ManaManager {
       this.eventBus.emit(event);
     }
 
-    return true;
+    return { spentTrackedMana };
   }
 
   emptyPool(state: GameState, player: PlayerId): void {
     state.players[player].manaPool = emptyManaPool();
+    state.players[player].trackedMana = [];
   }
 
   emptyAllPools(state: GameState): void {
@@ -140,7 +179,7 @@ export class ManaManager {
     return battlefield
       .filter(card => card.controller === player && !card.tapped)
       .flatMap((card) => {
-        const ability = card.definition.abilities.find(candidate => candidate.kind === 'activated' && candidate.isManaAbility);
+        const ability = getEffectiveAbilities(card).find(candidate => candidate.kind === 'activated' && candidate.isManaAbility);
         if (!ability || ability.kind !== 'activated') {
           return [];
         }
@@ -167,6 +206,7 @@ export class ManaManager {
                 plannerMana: this.mergeManaMaps(baseMana, bonusMana),
                 tap: Boolean(ability.cost.tap),
                 sacrificeSelf: Boolean(ability.cost.sacrifice?.self),
+                trackedManaEffect: ability.trackedManaEffect,
               }))
             )
           ),
@@ -263,6 +303,78 @@ export class ManaManager {
     return merged;
   }
 
+  private diffManaPools(before: ManaPool, after: ManaPool): ManaPool {
+    return {
+      W: Math.max(0, before.W - after.W),
+      U: Math.max(0, before.U - after.U),
+      B: Math.max(0, before.B - after.B),
+      R: Math.max(0, before.R - after.R),
+      G: Math.max(0, before.G - after.G),
+      C: Math.max(0, before.C - after.C),
+    };
+  }
+
+  private consumeTrackedMana(
+    state: GameState,
+    player: PlayerId,
+    spentMana: ManaPool,
+    context?: PayManaContext,
+  ): TrackedMana[] {
+    const spentBudget: ManaPool = { ...spentMana };
+    const trackedMana = state.players[player].trackedMana;
+    const preferred: number[] = [];
+    const fallback: number[] = [];
+
+    for (let index = 0; index < trackedMana.length; index += 1) {
+      const entry = trackedMana[index];
+      if (entry.effect && this.trackedManaEffectAppliesToSpell(entry.effect, context?.spellDefinition)) {
+        preferred.push(index);
+      } else {
+        fallback.push(index);
+      }
+    }
+
+    const consumed = this.consumeTrackedManaIndexes(trackedMana, spentBudget, preferred);
+    consumed.push(...this.consumeTrackedManaIndexes(trackedMana, spentBudget, fallback));
+
+    const consumedSet = new Set(consumed);
+    state.players[player].trackedMana = trackedMana.filter((_, index) => !consumedSet.has(index));
+    return consumed.map((index) => trackedMana[index]);
+  }
+
+  private consumeTrackedManaIndexes(
+    trackedMana: TrackedMana[],
+    spentBudget: ManaPool,
+    indexes: number[],
+  ): number[] {
+    const consumed: number[] = [];
+    for (const index of indexes) {
+      const entry = trackedMana[index];
+      if (spentBudget[entry.color] <= 0) {
+        continue;
+      }
+      spentBudget[entry.color] -= 1;
+      consumed.push(index);
+    }
+    return consumed;
+  }
+
+  private trackedManaEffectAppliesToSpell(
+    effect: TrackedManaEffect,
+    spellDefinition?: CardDefinition,
+  ): boolean {
+    if (!spellDefinition) {
+      return false;
+    }
+
+    switch (effect.kind) {
+      case 'etb-counter-on-non-human-creature':
+        return spellDefinition.types.includes('Creature' as import('./types').CardType) && !spellDefinition.subtypes.includes('Human');
+      default:
+        return false;
+    }
+  }
+
   private getTriggeredTapForManaBonuses(
     state: GameState,
     player: PlayerId,
@@ -272,7 +384,7 @@ export class ManaManager {
 
     for (const source of state.zones[player].BATTLEFIELD) {
       if (source.phasedOut) continue;
-      const abilities = source.modifiedAbilities ?? source.definition.abilities;
+      const abilities = getEffectiveAbilities(source);
       for (const ability of abilities) {
         if (ability.kind !== 'triggered') continue;
         if (!ability.isManaAbility || !ability.manaProduction || ability.manaProduction.length === 0) continue;

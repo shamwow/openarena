@@ -222,6 +222,7 @@ export class TestGameStateBuilder {
     card.modifiedToughness = undefined;
     card.modifiedKeywords = undefined;
     card.modifiedAbilities = undefined;
+    card.exileInsteadOfDyingThisTurnZoneChangeCounter = undefined;
   }
 
   private removeCardFromAllZones(objectId: string): void {

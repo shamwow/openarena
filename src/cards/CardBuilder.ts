@@ -1,5 +1,5 @@
 import type {
-  CardDefinition, CardType, ManaColor, Keyword,
+  CardDefinition, CardFilter, CardType, ManaColor, Keyword,
   AbilityDefinition, ActivatedAbilityDef, TriggeredAbilityDef,
   StaticAbilityDef, SpellAbilityDef, ModalAbilityDef, Cost, TriggerCondition,
   EffectFn, TargetSpec, StaticEffectDef, ManaPool, ProtectionFrom,
@@ -11,6 +11,7 @@ import {
   manaCostColorIdentity,
   CardType as CardTypeConst,
 } from '../engine/types';
+import { createFirebendingTriggeredAbility } from './firebending';
 
 export class CardBuilder {
   private def: Partial<CardDefinition> & {
@@ -154,7 +155,6 @@ export class CardBuilder {
   /** Add a tap-for-any-color ability */
   tapForAnyColor(): this {
     type ColoredMana = Exclude<keyof ManaPool, 'C'>;
-    const options: ColoredMana[] = ['W', 'U', 'B', 'R', 'G'];
     const labels: Record<ColoredMana, string> = {
       W: 'White',
       U: 'Blue',
@@ -166,9 +166,13 @@ export class CardBuilder {
       kind: 'activated',
       cost: { tap: true },
       effect: async (ctx) => {
+        const options = ctx.state.players[ctx.controller].colorIdentity.filter(
+          (color): color is ColoredMana => color !== 'C'
+        );
+        const resolvedOptions: ColoredMana[] = options.length > 0 ? options : ['W', 'U', 'B', 'R', 'G'];
         const color = await ctx.choices.chooseOne(
           'Choose a color of mana to add',
-          options,
+          resolvedOptions,
           (c) => labels[c]
         );
         ctx.game.addMana(ctx.controller, color, 1);
@@ -182,6 +186,12 @@ export class CardBuilder {
     return this;
   }
 
+  /** Make this permanent enter tapped unless you already control a permanent matching the filter. */
+  entersTappedUnlessYouControl(filter: CardFilter): this {
+    this.def.entersTappedUnlessYouControl = filter;
+    return this;
+  }
+
   /** Add a generic activated ability */
   activated(
     cost: Cost,
@@ -190,6 +200,10 @@ export class CardBuilder {
       timing?: 'instant' | 'sorcery';
       isManaAbility?: boolean;
       activationZone?: Zone;
+      activateOnlyDuringYourTurn?: boolean;
+      manaProduction?: ManaProduction[];
+      trackedManaEffect?: import('../engine/types').TrackedManaEffect;
+      isExhaust?: boolean;
       targets?: TargetSpec[];
       description?: string;
     }
@@ -202,6 +216,10 @@ export class CardBuilder {
       timing: opts?.timing ?? 'instant',
       isManaAbility: opts?.isManaAbility ?? false,
       activationZone: opts?.activationZone,
+      activateOnlyDuringYourTurn: opts?.activateOnlyDuringYourTurn ?? false,
+      manaProduction: opts?.manaProduction,
+      trackedManaEffect: opts?.trackedManaEffect,
+      isExhaust: opts?.isExhaust ?? false,
       description: opts?.description ?? '',
     };
     this.def.abilities.push(ability);
@@ -217,6 +235,7 @@ export class CardBuilder {
       optional?: boolean;
       interveningIf?: TriggeredAbilityDef['interveningIf'];
       isManaAbility?: boolean;
+      oncePerTurn?: boolean;
       manaProduction?: ManaProduction[];
       description?: string;
     }
@@ -230,6 +249,7 @@ export class CardBuilder {
       optional: opts?.optional ?? false,
       interveningIf: opts?.interveningIf,
       isManaAbility: opts?.isManaAbility ?? false,
+      oncePerTurn: opts?.oncePerTurn ?? false,
       description: opts?.description ?? '',
     };
     this.def.abilities.push(ability);
@@ -308,12 +328,14 @@ export class CardBuilder {
   modal(
     modes: Array<{ label: string; effect: EffectFn; targets?: TargetSpec[] }>,
     chooseCount: number,
-    description?: string
+    description?: string,
+    opts?: { allowRepeatedModes?: boolean }
   ): this {
     const ability: ModalAbilityDef = {
       kind: 'modal',
       modes,
       chooseCount,
+      allowRepeatedModes: opts?.allowRepeatedModes ?? false,
       description: description ?? `Choose ${chooseCount} —`,
     };
     this.def.abilities.push(ability);
@@ -336,13 +358,8 @@ export class CardBuilder {
   }
 
   firebending(amount = 1): this {
-    return this.triggered(
-      { on: 'attacks', filter: { self: true } },
-      (ctx) => {
-        ctx.game.addMana(ctx.controller, 'R', amount);
-      },
-      { description: 'Firebending' },
-    );
+    this.def.abilities.push(createFirebendingTriggeredAbility(amount));
+    return this;
   }
 
   /** Add an equip activated ability (sorcery-speed, attaches to target creature). */
@@ -360,7 +377,7 @@ export class CardBuilder {
       kind: 'activated',
       cost: manaCost,
       effect: async (ctx) => {
-        const target = ctx.targets[0] ?? await ctx.chooseTarget(targetSpec);
+        const target = ctx.targets.length > 0 ? ctx.targets[0] : await ctx.chooseTarget(targetSpec);
         if (target && typeof target !== 'string') {
           ctx.game.attachPermanent(ctx.source.objectId, target.objectId);
         }
@@ -456,12 +473,21 @@ export class CardBuilder {
 
   /** Add kicker — an optional additional cost that can be paid when casting. */
   kicker(cost: Cost | string): this {
+    return this.additionalCost('kicker', cost, 'Kicker', { optional: true });
+  }
+
+  additionalCost(
+    id: string,
+    cost: Cost | string,
+    description: string,
+    opts?: { optional?: boolean },
+  ): this {
     const parsed = this.parseCostParam(cost);
     const addCost: AdditionalCost = {
-      id: 'kicker',
+      id,
       cost: parsed,
-      optional: true,
-      description: `Kicker`,
+      optional: opts?.optional ?? false,
+      description,
     };
     if (!this.def.additionalCosts) {
       this.def.additionalCosts = [];
@@ -507,6 +533,19 @@ export class CardBuilder {
         description: 'Cycling',
       },
     ).tag('cycling');
+  }
+
+  affinity(filter: import('../engine/types').CardFilter, description = 'Affinity'): this {
+    if (!this.def.castCostAdjustments) {
+      this.def.castCostAdjustments = [];
+    }
+    this.def.castCostAdjustments.push({
+      kind: 'affinity',
+      amount: 1,
+      filter,
+      description,
+    });
+    return this;
   }
 
   landfall(effect: EffectFn, opts?: { optional?: boolean; description?: string }): this {
@@ -661,6 +700,7 @@ export class CardBuilder {
       waterbend: this.def.waterbend,
       alternativeCosts: this.def.alternativeCosts,
       additionalCosts: this.def.additionalCosts,
+      castCostAdjustments: this.def.castCostAdjustments,
       tags: this.def.tags,
       backFace: this.def.backFace,
       isMDFC: this.def.isMDFC,
@@ -672,6 +712,7 @@ export class CardBuilder {
       morphCost: this.def.morphCost,
       suspendCost: this.def.suspendCost,
       suspendTimeCounters: this.def.suspendTimeCounters,
+      entersTappedUnlessYouControl: this.def.entersTappedUnlessYouControl,
     };
   }
 

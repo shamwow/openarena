@@ -1,5 +1,6 @@
 import { CardBuilder } from '../../CardBuilder';
-import { CardType, parseManaCost } from '../../../engine/types';
+import { hasType } from '../../../engine/GameState';
+import { CardType, Keyword, parseManaCost } from '../../../engine/types';
 
 export const RhysticStudy = CardBuilder.create('Rhystic Study')
   .cost('{2}{U}')
@@ -100,4 +101,86 @@ export const SylvanLibrary = CardBuilder.create('Sylvan Library')
     { description: 'At the beginning of your upkeep, draw two additional cards, then put two back or pay 4 life each.' }
   )
   .oracleText('At the beginning of your draw step, you may draw two additional cards. If you do, choose two cards in your hand drawn this turn. For each of those cards, pay 4 life or put the card on top of your library.')
+  .build();
+
+export const CrystallineArmor = CardBuilder.create('Crystalline Armor')
+  .cost('{3}{G}')
+  .types(CardType.ENCHANTMENT)
+  .enchant({ what: 'creature', count: 1 })
+  .staticAbility(
+    {
+      type: 'attached-pump',
+      power: (game, source) => game.zones[source.controller].BATTLEFIELD.filter(card => !card.phasedOut && hasType(card, CardType.LAND)).length,
+      toughness: (game, source) => game.zones[source.controller].BATTLEFIELD.filter(card => !card.phasedOut && hasType(card, CardType.LAND)).length,
+    },
+    { description: 'Enchanted creature gets +1/+1 for each land you control.' },
+  )
+  .grantToAttached({ type: 'grant-keyword', keyword: Keyword.TRAMPLE, filter: { self: true } })
+  .oracleText('Enchant creature\nEnchanted creature gets +1/+1 for each land you control and has trample.')
+  .build();
+
+export const EarthbenderAscension = CardBuilder.create('Earthbender Ascension')
+  .cost('{2}{G}')
+  .types(CardType.ENCHANTMENT)
+  .etbEffect(async (ctx) => {
+    const lands = ctx.game.getBattlefield({ types: [CardType.LAND], controller: 'you' });
+    if (lands.length > 0) {
+      const target = await ctx.choices.chooseOne(
+        'Choose a land you control',
+        lands,
+        (card) => card.definition.name,
+      );
+
+      if (target && typeof target !== 'string') {
+        ctx.game.earthbendLand(target.objectId, 2, ctx.controller);
+      }
+    }
+
+    const selected = await ctx.game.searchLibraryWithOptions({
+      player: ctx.controller,
+      filter: { types: [CardType.LAND], supertypes: ['Basic'] },
+      destination: 'BATTLEFIELD',
+      count: 1,
+      optional: true,
+      shuffle: true,
+    });
+
+    for (const card of selected) {
+      const instance = ctx.game.getCard(card.objectId);
+      if (instance) {
+        instance.tapped = true;
+      }
+    }
+  }, { description: 'When Earthbender Ascension enters, earthbend 2. Then search for a basic land tapped.' })
+  .landfall(async (ctx) => {
+    ctx.game.addCounters(ctx.source.objectId, 'quest', 1, {
+      player: ctx.controller,
+      sourceId: ctx.source.objectId,
+      sourceCardId: ctx.source.cardId,
+      sourceZoneChangeCounter: ctx.source.zoneChangeCounter,
+    });
+
+    const questCounters = ctx.game.getCard(ctx.source.objectId)?.counters.quest ?? 0;
+    if (questCounters < 4) return;
+
+    const creatures = ctx.game.getBattlefield({ types: [CardType.CREATURE], controller: 'you' });
+    if (creatures.length === 0) return;
+
+    const target = await ctx.choices.chooseOne(
+      'Choose a creature you control',
+      creatures,
+      (card) => card.definition.name,
+    );
+
+    if (!target || typeof target === 'string') return;
+
+    ctx.game.addCounters(target.objectId, '+1/+1', 1, {
+      player: ctx.controller,
+      sourceId: ctx.source.objectId,
+      sourceCardId: ctx.source.cardId,
+      sourceZoneChangeCounter: ctx.source.zoneChangeCounter,
+    });
+    ctx.game.grantKeywordUntilEndOfTurn(target.objectId, Keyword.TRAMPLE);
+  }, { description: 'Whenever a land enters under your control, add a quest counter. At four or more, grow a creature and grant trample.' })
+  .oracleText('When Earthbender Ascension enters, earthbend 2. Then search your library for a basic land card, put it onto the battlefield tapped, then shuffle.\nLandfall — Whenever a land you control enters, put a quest counter on Earthbender Ascension. When you do, if it has four or more quest counters on it, put a +1/+1 counter on target creature you control. It gains trample until end of turn.')
   .build();

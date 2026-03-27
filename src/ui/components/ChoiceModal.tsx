@@ -66,38 +66,59 @@ function ChoiceButton({
 }
 
 export const ChoiceModal: React.FC<ChoiceModalProps> = ({ choice, onResolve }) => {
-  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
+  const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
+
+  const allowDuplicates = choice.type === 'chooseN' && choice.allowDuplicates;
+  const maxSelections = choice.count ?? 1;
+  const selectionCounts = selectedIndices.reduce<Map<number, number>>((counts, index) => {
+    counts.set(index, (counts.get(index) ?? 0) + 1);
+    return counts;
+  }, new Map());
 
   const toggleSelection = (index: number) => {
+    if (allowDuplicates) {
+      setSelectedIndices((current) => {
+        if (current.length >= maxSelections) {
+          return current;
+        }
+        return [...current, index];
+      });
+      return;
+    }
+
     setSelectedIndices((current) => {
-      const next = new Set(current);
-      if (next.has(index)) {
-        next.delete(index);
-      } else {
-        const maxSelections = choice.count ?? 1;
-        if (choice.type === 'chooseN' && next.size >= maxSelections) {
-          return current;
-        }
-        if (choice.type === 'chooseUpToN' && next.size >= maxSelections) {
-          return current;
-        }
-        next.add(index);
+      const existingIndex = current.indexOf(index);
+      if (existingIndex >= 0) {
+        return current.filter((selectedIndex) => selectedIndex !== index);
       }
-      return next;
+
+      if ((choice.type === 'chooseN' || choice.type === 'chooseUpToN') && current.length >= maxSelections) {
+        return current;
+      }
+
+      return [...current, index];
     });
   };
 
+  const clearSelections = () => {
+    setSelectedIndices([]);
+  };
+
   const confirmMultiChoice = () => {
-    const selected = Array.from(selectedIndices).map((index) => choice.options[index]);
+    const selected = selectedIndices.map((index) => choice.options[index]);
     onResolve(selected);
   };
 
   const canConfirm =
     choice.type === 'chooseN'
-      ? selectedIndices.size === (choice.count ?? 1)
+      ? selectedIndices.length === maxSelections
       : choice.type === 'chooseUpToN'
-        ? selectedIndices.size > 0 && selectedIndices.size <= (choice.count ?? 1)
+        ? selectedIndices.length > 0 && selectedIndices.length <= maxSelections
         : true;
+
+  const selectionSummary = allowDuplicates
+    ? selectedIndices.map((index, selectionIndex) => `${selectionIndex + 1}. ${getLabel(choice.options[index], choice.labelFn)}`).join('  ')
+    : null;
 
   return (
     <div className="arena-choice-modal">
@@ -160,21 +181,31 @@ export const ChoiceModal: React.FC<ChoiceModalProps> = ({ choice, onResolve }) =
               {choice.type === 'orderObjects'
                 ? 'Select items in the order you want.'
                 : choice.type === 'chooseN'
-                  ? `Select exactly ${choice.count}.`
+                  ? `Select exactly ${choice.count}.${allowDuplicates ? ' Repeat selections are allowed.' : ''}`
                   : `Select up to ${choice.count}.`}
             </div>
 
-            {choice.options.map((option, index) => (
-              <ChoiceButton
-                key={`multi-${index}`}
-                label={getLabel(option, choice.labelFn)}
-                selected={selectedIndices.has(index)}
-                onClick={() => toggleSelection(index)}
-              />
-            ))}
+            {selectionSummary && (
+              <div className="arena-preview__meta">
+                {selectionSummary}
+              </div>
+            )}
+
+            {choice.options.map((option, index) => {
+              const count = selectionCounts.get(index) ?? 0;
+              const label = getLabel(option, choice.labelFn);
+              return (
+                <ChoiceButton
+                  key={`multi-${index}`}
+                  label={count > 0 && allowDuplicates ? `${label} (${count})` : label}
+                  selected={count > 0}
+                  onClick={() => toggleSelection(index)}
+                />
+              );
+            })}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-              <button className="arena-ghost-button" onClick={() => setSelectedIndices(new Set())}>
+              <button className="arena-ghost-button" onClick={clearSelections}>
                 Clear
               </button>
               <button

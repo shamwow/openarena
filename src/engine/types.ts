@@ -202,6 +202,29 @@ export interface ManaProduction {
   restrictToColorIdentity?: boolean;
 }
 
+export interface TrackedManaEffect {
+  kind: 'etb-counter-on-non-human-creature';
+  counterType: string;
+  amount: number;
+}
+
+export interface TrackedMana {
+  color: ManaSymbol;
+  sourceId?: ObjectId;
+  effect?: TrackedManaEffect;
+}
+
+export interface AddManaOptions {
+  trackedMana?: Omit<TrackedMana, 'color'>;
+}
+
+export interface AddCounterOptions {
+  player?: PlayerId;
+  sourceId?: ObjectId;
+  sourceCardId?: ObjectId;
+  sourceZoneChangeCounter?: number;
+}
+
 export function manaCostColorIdentity(cost: ManaCost): ManaColor[] {
   const colors = new Set<ManaColor>();
   if (cost.W > 0) colors.add(ManaColor.WHITE);
@@ -250,6 +273,13 @@ export interface AdditionalCost {
   description: string;
 }
 
+export interface CastCostAdjustment {
+  kind: 'affinity';
+  amount: number;
+  filter: CardFilter;
+  description: string;
+}
+
 // --- Card Definition (immutable template) ---
 
 export interface CardDefinition {
@@ -272,6 +302,8 @@ export interface CardDefinition {
   waterbend?: number;
   alternativeCosts?: AlternativeCast[];
   additionalCosts?: AdditionalCost[];
+  castCostAdjustments?: CastCostAdjustment[];
+  entersTappedUnlessYouControl?: CardFilter;
   tags?: string[];
   backFace?: CardDefinition;
   isMDFC?: boolean;
@@ -320,6 +352,8 @@ export interface CardInstance {
   castAsAdventure?: boolean;
 
   isToken?: boolean;
+  exhaustedAbilityZoneChangeCounters?: Record<number, number>;
+  exileInsteadOfDyingThisTurnZoneChangeCounter?: number;
 
   // Overrides from continuous effects (computed, not stored permanently)
   modifiedTypes?: CardType[];
@@ -360,7 +394,10 @@ export interface ActivatedAbilityDef {
   timing: 'instant' | 'sorcery';
   isManaAbility: boolean;
   activationZone?: Zone;
+  activateOnlyDuringYourTurn?: boolean;
   manaProduction?: ManaProduction[];
+  trackedManaEffect?: TrackedManaEffect;
+  isExhaust?: boolean;
   description: string;
 }
 
@@ -372,6 +409,7 @@ export interface TriggeredAbilityDef {
   targets?: TargetSpec[];
   interveningIf?: (game: GameState, source: CardInstance, event: GameEvent) => boolean;
   isManaAbility?: boolean;
+  oncePerTurn?: boolean;
   optional: boolean;
   description: string;
 }
@@ -394,6 +432,7 @@ export interface ModalAbilityDef {
   kind: 'modal';
   modes: Array<{ label: string; effect: EffectFn; targets?: TargetSpec[] }>;
   chooseCount: number;
+  allowRepeatedModes?: boolean;
   description: string;
 }
 
@@ -436,7 +475,7 @@ export type TriggerCondition =
   | { on: 'untap'; filter?: CardFilter }
   | { on: 'gain-life'; whose?: 'yours' | 'opponents' | 'any' }
   | { on: 'lose-life'; whose?: 'yours' | 'opponents' | 'any' }
-  | { on: 'counter-placed'; counterType?: string; filter?: CardFilter }
+  | { on: 'counter-placed'; counterType?: string; filter?: CardFilter; whose?: 'yours' | 'opponents' | 'any' }
   | { on: 'discard'; whose?: 'yours' | 'opponents' | 'any' }
   | { on: 'landfall'; whose?: 'yours' | 'opponents' | 'any' }
   | { on: 'phase'; phase: Phase }
@@ -483,7 +522,7 @@ export interface EffectContext {
   state: GameState;
   source: CardInstance;
   controller: PlayerId;
-  targets: (CardInstance | PlayerId)[];
+  targets: (CardInstance | PlayerId | null)[];
   event?: GameEvent;
   choices: ChoiceHelper;
   xValue?: number;
@@ -498,7 +537,13 @@ export interface EffectContext {
 
 export interface ChoiceHelper {
   chooseOne<T>(prompt: string, options: T[], labelFn?: (t: T) => string): Promise<T>;
-  chooseN<T>(prompt: string, options: T[], n: number, labelFn?: (t: T) => string): Promise<T[]>;
+  chooseN<T>(
+    prompt: string,
+    options: T[],
+    n: number,
+    labelFn?: (t: T) => string,
+    opts?: { allowDuplicates?: boolean },
+  ): Promise<T[]>;
   chooseUpToN<T>(prompt: string, options: T[], n: number, labelFn?: (t: T) => string): Promise<T[]>;
   chooseYesNo(prompt: string): Promise<boolean>;
   chooseTargets(spec: TargetSpec): Promise<(CardInstance | PlayerId)[]>;
@@ -523,9 +568,11 @@ export interface SearchLibraryOptions {
 
 export type StaticEffectDef =
   | { type: 'pump'; power: number; toughness: number; filter: CardFilter; duration?: EffectDuration }
+  | { type: 'attached-pump'; power: number | ((game: GameState, source: CardInstance) => number); toughness: number | ((game: GameState, source: CardInstance) => number) }
   | { type: 'set-base-pt'; power: number; toughness: number; filter: CardFilter }
   | { type: 'add-types'; types: CardType[]; filter: CardFilter }
   | { type: 'grant-keyword'; keyword: Keyword; filter: CardFilter }
+  | { type: 'grant-abilities'; abilities: AbilityDefinition[]; filter: CardFilter }
   | { type: 'cost-modification'; costDelta: Partial<ManaCost>; filter: SpellFilter }
   | { type: 'attack-tax'; filter: CardFilter; cost: Cost; defender: 'source-controller' }
   | { type: 'cant-attack'; filter: CardFilter }
@@ -759,6 +806,7 @@ export interface CounterAddedEvent extends BaseGameEvent {
   objectId: ObjectId;
   counterType: string;
   amount: number;
+  player?: PlayerId;
 }
 
 export interface PlayerLostEvent extends BaseGameEvent {
@@ -973,6 +1021,7 @@ export interface StackEntry {
   targets: (ObjectId | PlayerId)[];
   targetZoneChangeCounters?: Array<number | null>;
   targetSpecs?: TargetSpec[];
+  targetGroupCounts?: number[];
   cardInstance?: CardInstance;
   ability?: AbilityDefinition;
   xValue?: number;
@@ -980,6 +1029,8 @@ export interface StackEntry {
   modeChoices?: number[];
   castMethod?: string;
   additionalCostsPaid?: string[];
+  entersBattlefieldWithCounters?: Record<string, number>;
+  triggeringEvent?: GameEvent;
   castAsAdventure?: boolean;
   chosenFace?: 'front' | 'back';
   chosenHalf?: 'left' | 'right' | 'fused';
@@ -991,6 +1042,10 @@ export interface StackEntry {
 export interface AttackTarget {
   type: 'player' | 'planeswalker';
   id: ObjectId | PlayerId;
+}
+
+export interface PendingCombatPhase {
+  attackRestriction?: CardFilter;
 }
 
 export interface CombatState {
@@ -1026,6 +1081,7 @@ export interface PlayerState {
   commanderIds: ObjectId[];
   colorIdentity: ManaColor[];
   drewFromEmptyLibrary: boolean;
+  trackedMana: TrackedMana[];
   spellsCastThisTurn?: number;
   experienceCounters?: number;
   energyCounters?: number;
@@ -1065,6 +1121,7 @@ export interface GameState {
   combat: CombatState | null;
   continuousEffects: ContinuousEffect[];
   replacementEffects: ReplacementEffect[];
+  exileInsteadOfDyingThisTurn: Set<string>;
   lastKnownInformation: Record<string, LastKnownInformation>;
   timestampCounter: number;
   objectIdCounter: number;
@@ -1078,6 +1135,7 @@ export interface GameState {
   isGameOver: boolean;
   winner: PlayerId | null;
   loyaltyAbilitiesUsedThisTurn?: string[];
+  triggeredAbilitiesUsedThisTurn?: Set<string>;
   dayNight?: 'day' | 'night';
   monarch?: PlayerId;
   initiativeHolder?: PlayerId;
@@ -1085,6 +1143,8 @@ export interface GameState {
   lastCompletedTurnPlayer?: PlayerId;
   pendingFreeCasts?: Array<{ objectId: ObjectId; playerId: PlayerId; reason: 'suspend' }>;
   pendingExtraTurns?: PlayerId[];
+  pendingExtraCombatPhases?: PendingCombatPhase[];
+  currentCombatAttackRestriction?: CardFilter | null;
   mulliganState?: {
     activePlayer: PlayerId;
     taken: Partial<Record<PlayerId, number>>;
@@ -1105,7 +1165,7 @@ export interface PendingTrigger {
 export interface GameEngine {
   getState(): GameState;
   drawCards(player: PlayerId, count: number): void;
-  addMana(player: PlayerId, color: keyof ManaPool, amount: number): void;
+  addMana(player: PlayerId, color: keyof ManaPool, amount: number, options?: AddManaOptions): void;
   payMana(player: PlayerId, cost: ManaCost): boolean;
   canPayMana(player: PlayerId, cost: ManaCost): boolean;
   gainLife(player: PlayerId, amount: number): void;
@@ -1117,7 +1177,7 @@ export interface GameEngine {
   moveCard(objectId: ObjectId, toZone: Zone, toOwner?: PlayerId): void;
   createToken(controller: PlayerId, definition: Partial<CardDefinition>): CardInstance;
   createPredefinedToken(controller: PlayerId, tokenType: PredefinedTokenType): CardInstance;
-  addCounters(objectId: ObjectId, counterType: string, amount: number): void;
+  addCounters(objectId: ObjectId, counterType: string, amount: number, options?: AddCounterOptions): void;
   removeCounters(objectId: ObjectId, counterType: string, amount: number): void;
   tapPermanent(objectId: ObjectId): void;
   untapPermanent(objectId: ObjectId): void;
@@ -1152,10 +1212,18 @@ export interface GameEngine {
   registerDelayedTrigger(trigger: DelayedTrigger): void;
   airbendObject(objectId: ObjectId, cost: Cost, actingPlayer: PlayerId): void;
   earthbendLand(targetId: ObjectId, counterCount: number, returnController: PlayerId): void;
+  grantKeywordUntilEndOfTurn(objectId: ObjectId, keyword: Keyword): void;
+  grantAbilitiesUntilEndOfTurn(
+    sourceId: ObjectId,
+    objectId: ObjectId,
+    zoneChangeCounter: number,
+    abilities: AbilityDefinition[],
+  ): void;
   unlessPlayerPays(player: PlayerId, sourceId: ObjectId, cost: Cost, prompt: string): Promise<boolean>;
   sacrificePermanents(player: PlayerId, filter: CardFilter, count: number, prompt?: string): Promise<CardInstance[]>;
   addPlayerCounters(player: PlayerId, counterType: 'experience' | 'energy', amount: number): void;
   removePlayerCounters(player: PlayerId, counterType: 'experience' | 'energy', amount: number): boolean;
   grantExtraTurn(player: PlayerId): void;
+  grantExtraCombat(options?: PendingCombatPhase): void;
   endTurn(): void;
 }

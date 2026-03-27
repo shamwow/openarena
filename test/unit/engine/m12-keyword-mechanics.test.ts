@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { CardBuilder } from '../../../src/cards/CardBuilder.ts';
+import { AlliesAtLast } from '../../../src/cards/sets/starter/spells.ts';
 import { ActionType, CardType, Phase, Step, Zone } from '../../../src/engine/types.ts';
 import { createHarness, getCard, getLegalAction, graveyardNames, handNames, makeCommander } from './helpers.ts';
 
@@ -74,6 +75,201 @@ test('kicked and non-kicked spells branch on the shared additional-cost state', 
 
   assert.equal(await runCase(false), 39);
   assert.equal(await runCase(true), 37);
+});
+
+test('Allies at Last becomes castable through affinity for Allies', () => {
+  const allyA = CardBuilder.create('Ally Vanguard')
+    .cost('{1}{G}')
+    .types(CardType.CREATURE)
+    .subtypes('Ally')
+    .stats(2, 2)
+    .build();
+  const allyB = CardBuilder.create('Ally Outrider')
+    .cost('{2}{G}')
+    .types(CardType.CREATURE)
+    .subtypes('Ally')
+    .stats(3, 3)
+    .build();
+  const forest = CardBuilder.create('Affinity Forest')
+    .types(CardType.LAND)
+    .subtypes('Forest')
+    .tapForMana('G')
+    .build();
+  const opposingCreature = CardBuilder.create('Target Dummy')
+    .cost('{3}')
+    .types(CardType.CREATURE)
+    .stats(4, 4)
+    .build();
+
+  const { state, engine } = createHarness({
+    decks: [
+      { commander: makeCommander('Affinity Commander', '{G}'), cards: [AlliesAtLast, allyA, allyB, forest], playerName: 'Affinity' },
+      { commander: makeCommander('Target Commander', '{2}'), cards: [opposingCreature], playerName: 'Target' },
+      { commander: makeCommander('P3 Commander', '{2}'), cards: [], playerName: 'P3' },
+      { commander: makeCommander('P4 Commander', '{2}'), cards: [], playerName: 'P4' },
+    ],
+    setup: (builder) => {
+      builder
+        .moveCard({ playerId: 'player1', name: 'Allies at Last' }, Zone.HAND)
+        .moveCard({ playerId: 'player1', name: 'Ally Vanguard' }, Zone.BATTLEFIELD)
+        .moveCard({ playerId: 'player1', name: 'Ally Outrider' }, Zone.BATTLEFIELD)
+        .moveCard({ playerId: 'player1', name: 'Affinity Forest' }, Zone.BATTLEFIELD)
+        .moveCard({ playerId: 'player2', name: 'Target Dummy' }, Zone.BATTLEFIELD)
+        .setBattlefieldCard({ playerId: 'player1', name: 'Ally Vanguard' }, { summoningSick: false })
+        .setBattlefieldCard({ playerId: 'player1', name: 'Ally Outrider' }, { summoningSick: false })
+        .setBattlefieldCard({ playerId: 'player2', name: 'Target Dummy' }, { summoningSick: false })
+        .setTurn({
+          activePlayer: 'player1',
+          currentPhase: Phase.PRECOMBAT_MAIN,
+          currentStep: Step.MAIN,
+          priorityPlayer: 'player1',
+          passedPriority: [],
+        });
+    },
+  });
+
+  const castAction = getLegalAction(engine, 'player1', (action) =>
+    action.type === ActionType.CAST_SPELL && action.cardId === getCard(state, 'player1', Zone.HAND, 'Allies at Last').objectId,
+  );
+
+  assert.equal(castAction.type, ActionType.CAST_SPELL);
+});
+
+test('Allies at Last prompts for omitted targets and each chosen Ally deals damage equal to its power', async () => {
+  const allyA = CardBuilder.create('Allied Cub')
+    .cost('{1}{G}')
+    .types(CardType.CREATURE)
+    .subtypes('Ally')
+    .stats(2, 2)
+    .build();
+  const allyB = CardBuilder.create('Allied Veteran')
+    .cost('{2}{G}')
+    .types(CardType.CREATURE)
+    .subtypes('Ally')
+    .stats(3, 3)
+    .build();
+  const forest = CardBuilder.create('Targeting Forest')
+    .types(CardType.LAND)
+    .subtypes('Forest')
+    .tapForMana('G')
+    .build();
+  const opposingCreature = CardBuilder.create('Blocking Brute')
+    .cost('{3}')
+    .types(CardType.CREATURE)
+    .stats(4, 4)
+    .build();
+
+  const { state, engine } = createHarness({
+    decks: [
+      { commander: makeCommander('Allies Commander', '{G}'), cards: [AlliesAtLast, allyA, allyB, forest], playerName: 'Allies' },
+      { commander: makeCommander('Target Commander', '{2}'), cards: [opposingCreature], playerName: 'Target' },
+      { commander: makeCommander('P3 Commander', '{2}'), cards: [], playerName: 'P3' },
+      { commander: makeCommander('P4 Commander', '{2}'), cards: [], playerName: 'P4' },
+    ],
+    setup: (builder) => {
+      builder
+        .moveCard({ playerId: 'player1', name: 'Allies at Last' }, Zone.HAND)
+        .moveCard({ playerId: 'player1', name: 'Allied Cub' }, Zone.BATTLEFIELD)
+        .moveCard({ playerId: 'player1', name: 'Allied Veteran' }, Zone.BATTLEFIELD)
+        .moveCard({ playerId: 'player1', name: 'Targeting Forest' }, Zone.BATTLEFIELD)
+        .moveCard({ playerId: 'player2', name: 'Blocking Brute' }, Zone.BATTLEFIELD)
+        .setBattlefieldCard({ playerId: 'player1', name: 'Allied Cub' }, { summoningSick: false })
+        .setBattlefieldCard({ playerId: 'player1', name: 'Allied Veteran' }, { summoningSick: false })
+        .setBattlefieldCard({ playerId: 'player2', name: 'Blocking Brute' }, { summoningSick: false })
+        .setTurn({
+          activePlayer: 'player1',
+          currentPhase: Phase.PRECOMBAT_MAIN,
+          currentStep: Step.MAIN,
+          priorityPlayer: 'player1',
+          passedPriority: [],
+        });
+    },
+  });
+
+  await engine.submitAction(getLegalAction(engine, 'player1', (action) =>
+    action.type === ActionType.CAST_SPELL && action.cardId === getCard(state, 'player1', Zone.HAND, 'Allies at Last').objectId,
+  ));
+
+  assert.ok(graveyardNames(state, 'player1').includes('Allies at Last'));
+  assert.ok(graveyardNames(state, 'player2').includes('Blocking Brute'));
+  assert.equal(getCard(state, 'player1', Zone.BATTLEFIELD, 'Targeting Forest').tapped, true);
+});
+
+test('Allies at Last preserves target order when one chosen Ally becomes illegal before resolution', async () => {
+  const allyA = CardBuilder.create('Resolving Ally A')
+    .cost('{1}{G}')
+    .types(CardType.CREATURE)
+    .subtypes('Ally')
+    .stats(2, 2)
+    .build();
+  const allyB = CardBuilder.create('Resolving Ally B')
+    .cost('{2}{G}')
+    .types(CardType.CREATURE)
+    .subtypes('Ally')
+    .stats(3, 3)
+    .build();
+  const forest = CardBuilder.create('Resolution Forest')
+    .types(CardType.LAND)
+    .subtypes('Forest')
+    .tapForMana('G')
+    .build();
+  const opposingCreature = CardBuilder.create('Surviving Target')
+    .cost('{3}')
+    .types(CardType.CREATURE)
+    .stats(3, 5)
+    .build();
+
+  const { state, engine } = createHarness({
+    decks: [
+      { commander: makeCommander('Resolution Commander', '{G}'), cards: [AlliesAtLast, allyA, allyB, forest], playerName: 'Allies' },
+      { commander: makeCommander('Target Commander', '{2}'), cards: [opposingCreature], playerName: 'Target' },
+      { commander: makeCommander('P3 Commander', '{2}'), cards: [], playerName: 'P3' },
+      { commander: makeCommander('P4 Commander', '{2}'), cards: [], playerName: 'P4' },
+    ],
+    setup: (builder) => {
+      builder
+        .moveCard({ playerId: 'player1', name: 'Allies at Last' }, Zone.HAND)
+        .moveCard({ playerId: 'player1', name: 'Resolving Ally A' }, Zone.BATTLEFIELD)
+        .moveCard({ playerId: 'player1', name: 'Resolving Ally B' }, Zone.BATTLEFIELD)
+        .moveCard({ playerId: 'player1', name: 'Resolution Forest' }, Zone.BATTLEFIELD)
+        .moveCard({ playerId: 'player2', name: 'Surviving Target' }, Zone.BATTLEFIELD)
+        .setBattlefieldCard({ playerId: 'player1', name: 'Resolving Ally A' }, { summoningSick: false })
+        .setBattlefieldCard({ playerId: 'player1', name: 'Resolving Ally B' }, { summoningSick: false })
+        .setBattlefieldCard({ playerId: 'player2', name: 'Surviving Target' }, { summoningSick: false })
+        .setTurn({
+          activePlayer: 'player1',
+          currentPhase: Phase.PRECOMBAT_MAIN,
+          currentStep: Step.MAIN,
+          priorityPlayer: 'player1',
+          passedPriority: [],
+        });
+    },
+  });
+
+  const internalEngine = engine as unknown as {
+    handleCastSpell: (
+      playerId: 'player1',
+      cardId: string,
+      targets?: (string | 'player1' | 'player2' | 'player3' | 'player4')[],
+    ) => Promise<void>;
+    resolveTopOfStack: () => Promise<void>;
+  };
+
+  await internalEngine.handleCastSpell(
+    'player1',
+    getCard(state, 'player1', Zone.HAND, 'Allies at Last').objectId,
+    [
+      getCard(state, 'player1', Zone.BATTLEFIELD, 'Resolving Ally A').objectId,
+      getCard(state, 'player1', Zone.BATTLEFIELD, 'Resolving Ally B').objectId,
+      getCard(state, 'player2', Zone.BATTLEFIELD, 'Surviving Target').objectId,
+    ],
+  );
+
+  engine.returnToHand(getCard(state, 'player1', Zone.BATTLEFIELD, 'Resolving Ally A').objectId);
+  await internalEngine.resolveTopOfStack();
+
+  assert.equal(getCard(state, 'player2', Zone.BATTLEFIELD, 'Surviving Target').markedDamage, 3);
+  assert.ok(graveyardNames(state, 'player1').includes('Allies at Last'));
 });
 
 test('cascade exiles into a lower-mana spell and casts it for free', async () => {
