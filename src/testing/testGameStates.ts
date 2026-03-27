@@ -170,11 +170,62 @@ function createTriggerHeavyDemoState(): GameState {
     .build();
 }
 
+function createBattlefieldGroupingDemoState(): GameState {
+  return createTestGameStateBuilder()
+    .moveCard({ playerId: 'player1', name: 'Serra Angel', nth: 0 }, Zone.HAND)
+    .moveCard({ playerId: 'player1', name: 'Swords to Plowshares' }, Zone.HAND)
+    .moveCard({ playerId: 'player1', name: 'Heliod, Sun-Crowned' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player1', name: 'Heliod, Sun-Crowned' }, { summoningSick: false })
+    .moveCard({ playerId: 'player1', name: 'Solemn Simulacrum' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player1', name: 'Solemn Simulacrum' }, { summoningSick: false })
+    .moveCard({ playerId: 'player1', name: 'Ghostly Prison' }, Zone.BATTLEFIELD)
+    .moveCard({ playerId: 'player1', name: 'Sol Ring' }, Zone.BATTLEFIELD)
+    .moveCard({ playerId: 'player1', name: 'Command Tower' }, Zone.BATTLEFIELD)
+    .moveCard({ playerId: 'player1', name: 'Plains', nth: 0 }, Zone.BATTLEFIELD)
+    .moveCard({ playerId: 'player2', name: 'Counterspell', nth: 0 }, Zone.HAND)
+    .moveCard({ playerId: 'player2', name: 'Mulldrifter', nth: 0 }, Zone.HAND)
+    .moveCard({ playerId: 'player2', name: 'Talrand, Sky Summoner' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player2', name: 'Talrand, Sky Summoner' }, { summoningSick: false })
+    .moveCard({ playerId: 'player2', name: 'Rhystic Study' }, Zone.BATTLEFIELD)
+    .moveCard({ playerId: 'player2', name: 'Sol Ring' }, Zone.BATTLEFIELD)
+    .moveCard({ playerId: 'player2', name: 'Island', nth: 0 }, Zone.BATTLEFIELD)
+    .moveCard({ playerId: 'player3', name: 'Doom Blade', nth: 0 }, Zone.HAND)
+    .moveCard({ playerId: 'player3', name: 'Sign in Blood', nth: 0 }, Zone.HAND)
+    .moveCard({ playerId: 'player3', name: 'Ayara, First of Locthwain' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player3', name: 'Ayara, First of Locthwain' }, { summoningSick: false })
+    .moveCard({ playerId: 'player3', name: 'Thought Vessel' }, Zone.BATTLEFIELD)
+    .moveCard({ playerId: 'player3', name: 'Swamp', nth: 0 }, Zone.BATTLEFIELD)
+    .moveCard({ playerId: 'player4', name: 'Lightning Bolt', nth: 0 }, Zone.HAND)
+    .moveCard({ playerId: 'player4', name: 'Shivan Dragon' }, Zone.HAND)
+    .moveCard({ playerId: 'player4', name: 'Goblin Guide' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player4', name: 'Goblin Guide' }, { summoningSick: false })
+    .moveCard({ playerId: 'player4', name: 'Lightning Greaves' }, Zone.BATTLEFIELD)
+    .moveCard({ playerId: 'player4', name: 'Mountain', nth: 0 }, Zone.BATTLEFIELD)
+    .setPlayer('player1', { life: 34 })
+    .setPlayer('player2', { life: 27 })
+    .setPlayer('player3', { life: 23 })
+    .setPlayer('player4', { life: 19 })
+    .setTurn({
+      turnNumber: 5,
+      activePlayer: 'player1',
+      currentPhase: Phase.PRECOMBAT_MAIN,
+      currentStep: Step.MAIN,
+      priorityPlayer: 'player1',
+      passedPriority: [],
+    })
+    .build();
+}
+
 export const testGameStateDefinitions: TestGameStateDefinition[] = [
   {
     id: 'priority-reset-demo',
     description: 'Precombat main state with distinctive permanents and a live pass/reset flow.',
     build: createPriorityResetDemoState,
+  },
+  {
+    id: 'battlefield-grouping-demo',
+    description: 'Battlefield state with mixed permanent types across seats for layout verification.',
+    build: createBattlefieldGroupingDemoState,
   },
   {
     id: 'big-hand',

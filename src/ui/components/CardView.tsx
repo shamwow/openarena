@@ -81,9 +81,12 @@ const CardViewInner: React.FC<CardViewProps> = ({
   const interactionAction = getPrimaryCardAction(card, legalActions);
   const imageUrl = art.normal ?? art.png ?? art.artCrop;
   const hasAction = interactionAction != null;
-  const stats = getStats(card);
-  const counterEntries = Object.entries(card.counters).filter(([, count]) => count > 0);
   const resolvedSourceZone = sourceZone ?? card.zone;
+  const isBareCardVariant = variant === 'battlefield' || variant === 'hand';
+  const stats = !isBareCardVariant ? getStats(card) : null;
+  const counterEntries = !isBareCardVariant
+    ? Object.entries(card.counters).filter(([, count]) => count > 0)
+    : [];
 
   const handlePreview = () => {
     onPreview?.(card);
@@ -125,6 +128,44 @@ const CardViewInner: React.FC<CardViewProps> = ({
   };
 
 
+  if (isBareCardVariant) {
+    return (
+      <div
+        ref={mountRef}
+        className="arena-card"
+        data-variant={variant}
+        data-has-action={hasAction}
+        data-previewed={isPreviewed}
+        data-selected={previewMode === 'tap' && isPreviewed}
+        data-tapped={card.tapped}
+        data-dragging={isDragging}
+        data-source-zone={resolvedSourceZone}
+        draggable={draggableAction != null && onDragStart != null}
+        onDragStart={handleDragStart}
+        onDragEnd={onDragEnd}
+        onMouseEnter={previewMode === 'hover' ? handlePreview : undefined}
+        onMouseLeave={previewMode === 'hover' ? handlePreviewClear : undefined}
+        onFocus={handlePreview}
+        onBlur={previewMode === 'hover' ? handlePreviewClear : undefined}
+        onClick={handleActivate}
+        title={card.definition.name}
+        style={
+          {
+            ['--card-cursor' as string]:
+              hasAction || onPreview ? 'pointer' : 'default',
+            ['--bare-card-image' as string]: imageUrl ? `url("${imageUrl}")` : 'none',
+          } as React.CSSProperties
+        }
+      >
+        {imageUrl ? (
+          <div className="arena-card__bare-image" aria-hidden="true" />
+        ) : (
+          <div className="arena-card__placeholder" />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       ref={mountRef}
@@ -159,7 +200,7 @@ const CardViewInner: React.FC<CardViewProps> = ({
               className="arena-card__image"
               alt={card.definition.name}
               src={imageUrl}
-              loading={variant === 'hand' ? 'eager' : 'lazy'}
+              loading="lazy"
             />
           ) : (
             <div className="arena-card__placeholder" />

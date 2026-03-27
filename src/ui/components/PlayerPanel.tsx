@@ -5,8 +5,10 @@ import type {
   PlayerId,
   PlayerState,
 } from '../../engine/types';
-import { CardType, Zone } from '../../engine/types';
+import { Zone } from '../../engine/types';
 import type { DragCardPayload, SeatMeta } from '../types';
+import type { BattlefieldGroupKey } from '../utils/battlefieldLayout';
+import { getBattlefieldGroups } from '../utils/battlefieldLayout';
 import { CardExplorer } from './CardExplorer';
 import { CardView } from './CardView';
 import { HandRail } from './HandRail';
@@ -56,6 +58,7 @@ function zonesContainCardId(
 }
 
 interface BattlefieldGroupProps {
+  groupKey: BattlefieldGroupKey;
   title: string;
   cards: CardInstance[];
   legalActions: PlayerAction[];
@@ -75,6 +78,7 @@ function battlefieldGroupPropsEqual(
   next: BattlefieldGroupProps,
 ): boolean {
   if (
+    prev.groupKey !== next.groupKey ||
     prev.title !== next.title ||
     prev.cards !== next.cards ||
     prev.legalActions !== next.legalActions ||
@@ -107,6 +111,7 @@ function battlefieldGroupPropsEqual(
 }
 
 const BattlefieldGroupInner: React.FC<BattlefieldGroupProps> = ({
+  groupKey,
   title,
   cards,
   legalActions,
@@ -125,11 +130,11 @@ const BattlefieldGroupInner: React.FC<BattlefieldGroupProps> = ({
   }
 
   return (
-    <div className="arena-seat__battlefield-group">
-      <div className="arena-seat__group-label">
-        <span>{title}</span>
-        <span>{cards.length}</span>
-      </div>
+    <div
+      className="arena-seat__battlefield-group"
+      data-group={groupKey}
+      aria-label={`${title} battlefield group`}
+    >
       <div className="arena-seat__card-row">
         {cards.map((card) => (
           <CardView
@@ -338,27 +343,14 @@ const PlayerPanelInner: React.FC<PlayerPanelProps> = ({
   const library = zones.LIBRARY;
   const command = zones.COMMAND;
 
-  const { lands, creatures, support } = useMemo(() => {
-    const nextLands: CardInstance[] = [];
-    const nextCreatures: CardInstance[] = [];
-    const nextSupport: CardInstance[] = [];
-
-    for (const card of battlefield) {
-      if (card.definition.types.includes(CardType.LAND)) {
-        nextLands.push(card);
-      } else if (card.definition.types.includes(CardType.CREATURE)) {
-        nextCreatures.push(card);
-      } else {
-        nextSupport.push(card);
-      }
-    }
-
-    return {
-      lands: nextLands,
-      creatures: nextCreatures,
-      support: nextSupport,
-    };
-  }, [battlefield]);
+  const battlefieldGroups = useMemo(
+    () => getBattlefieldGroups(battlefield),
+    [battlefield],
+  );
+  const orderedBattlefieldGroups = useMemo(
+    () => (seat.position.startsWith('top') ? [...battlefieldGroups].reverse() : battlefieldGroups),
+    [battlefieldGroups, seat.position],
+  );
 
   const lifeState = getLifeDanger(player);
   const infoSide = seat.position.endsWith('right') ? 'left' : 'right';
@@ -429,48 +421,24 @@ const PlayerPanelInner: React.FC<PlayerPanelProps> = ({
         onDragOver={handleBattlefieldDragOver}
         onDragLeave={onBattlefieldDragLeave}
       >
-        <BattlefieldGroup
-          title="Creatures"
-          cards={creatures}
-          legalActions={legalActions}
-          previewCardId={previewCardId}
-          touchFriendly={touchFriendly}
-          draggingCardId={draggingCardId}
-          onAction={onAction}
-          onPreview={onPreview}
-          onPreviewClear={onPreviewClear}
-          onDragStart={onDragStart}
-          onDragEnd={onDragEnd}
-          registerCardElement={registerCardElement}
-        />
-        <BattlefieldGroup
-          title="Support"
-          cards={support}
-          legalActions={legalActions}
-          previewCardId={previewCardId}
-          touchFriendly={touchFriendly}
-          draggingCardId={draggingCardId}
-          onAction={onAction}
-          onPreview={onPreview}
-          onPreviewClear={onPreviewClear}
-          onDragStart={onDragStart}
-          onDragEnd={onDragEnd}
-          registerCardElement={registerCardElement}
-        />
-        <BattlefieldGroup
-          title="Lands"
-          cards={lands}
-          legalActions={legalActions}
-          previewCardId={previewCardId}
-          touchFriendly={touchFriendly}
-          draggingCardId={draggingCardId}
-          onAction={onAction}
-          onPreview={onPreview}
-          onPreviewClear={onPreviewClear}
-          onDragStart={onDragStart}
-          onDragEnd={onDragEnd}
-          registerCardElement={registerCardElement}
-        />
+        {orderedBattlefieldGroups.map((group) => (
+          <BattlefieldGroup
+            key={group.key}
+            groupKey={group.key}
+            title={group.title}
+            cards={group.cards}
+            legalActions={legalActions}
+            previewCardId={previewCardId}
+            touchFriendly={touchFriendly}
+            draggingCardId={draggingCardId}
+            onAction={onAction}
+            onPreview={onPreview}
+            onPreviewClear={onPreviewClear}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            registerCardElement={registerCardElement}
+          />
+        ))}
       </div>
 
       <div className="arena-seat__zone-rail">

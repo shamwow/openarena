@@ -286,7 +286,7 @@ select {
 
 .arena-seat[data-position="top-left"] .arena-seat__battlefield,
 .arena-seat[data-position="top-right"] .arena-seat__battlefield {
-  padding: 128px 10px 104px;
+  padding: 108px 10px 40px;
 }
 
 .arena-seat[data-position="top-left"] .arena-seat__overlay,
@@ -320,6 +320,11 @@ select {
 .arena-seat[data-position="top-right"] .arena-card[data-variant="hand"] {
   transform-origin: center center;
   transform: scaleY(-1);
+}
+
+.arena-seat[data-position="top-left"] .arena-card[data-variant="battlefield"],
+.arena-seat[data-position="top-right"] .arena-card[data-variant="battlefield"] {
+  --bare-card-image-transform: rotate(180deg);
 }
 
 .arena-seat[data-position="top-left"] .arena-zone-pile__tag,
@@ -515,7 +520,7 @@ select {
   min-width: 0;
   min-height: 0;
   border-radius: inherit;
-  padding: 104px 10px 128px;
+  padding: 80px 10px 108px;
   border: 0;
   background:
     radial-gradient(circle at 50% 35%, rgba(58, 112, 126, 0.15), transparent 36%),
@@ -524,7 +529,7 @@ select {
   display: grid;
   gap: 12px;
   align-content: start;
-  overflow: hidden auto;
+  overflow: hidden;
 }
 
 .arena-seat__zone-rail {
@@ -698,19 +703,16 @@ select {
   background: rgba(255, 255, 255, 0.44);
 }
 
-.arena-card[data-variant="hand"] {
+.arena-card[data-variant="hand"],
+.arena-card[data-variant="battlefield"] {
   --card-width: var(--hand-card-width, 72px);
-  --card-height: var(--hand-card-height, 96px);
+  --card-height: var(--hand-card-height, 101px);
+  --bare-card-image-transform: none;
   --card-zone-accent: transparent;
   --card-zone-glow: none;
   --card-zone-tint-top: transparent;
   --card-zone-tint-bottom: transparent;
   border: 1px solid transparent;
-  background-image:
-    var(--bare-card-image, none);
-  background-position: center, center;
-  background-repeat: no-repeat, no-repeat;
-  background-size: contain;
   box-shadow: none;
   transform-origin: center bottom;
   transition:
@@ -773,18 +775,6 @@ select {
 
 .arena-seat__battlefield-group {
   display: grid;
-  gap: 8px;
-}
-
-.arena-seat__group-label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  color: var(--arena-text-muted);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
 }
 
 .arena-seat__card-row {
@@ -829,6 +819,17 @@ select {
     border-color var(--arena-motion);
 }
 
+.arena-card__bare-image {
+  position: absolute;
+  inset: 0;
+  background-image: var(--bare-card-image, none);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  transform: var(--bare-card-image-transform);
+  transform-origin: center center;
+}
+
 .arena-card[data-variant="hand"][data-source-zone="COMMAND"] {
   --card-zone-accent: rgba(233, 202, 130, 0.84);
   --card-zone-glow: none;
@@ -850,11 +851,6 @@ select {
   --card-zone-tint-bottom: rgba(94, 152, 188, 0.04);
 }
 
-
-.arena-card[data-variant="battlefield"] {
-  --card-width: 118px;
-  --card-height: 164px;
-}
 
 .arena-card[data-variant="mini"] {
   --card-width: 82px;
@@ -1543,4 +1539,3 @@ select {
     rgba(9, 18, 28, 0.84);
   box-shadow: var(--arena-shadow);
 }
-
