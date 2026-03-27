@@ -172,7 +172,6 @@ export interface CardDefinition {
   power?: number;
   toughness?: number;
   loyalty?: number;
-  oracleText: string;
   abilities: AbilityDefinition[];
   keywords: Keyword[];
 }

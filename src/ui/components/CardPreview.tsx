@@ -63,9 +63,6 @@ export const CardPreview: React.FC<CardPreviewProps> = ({ preview }) => {
             {preview.card.definition.keywords.join(', ')}
           </div>
         )}
-        <div className="arena-preview__oracle">
-          {preview.card.definition.oracleText || 'No rules text'}
-        </div>
         <div className="arena-preview__footer">
           <div className="arena-preview__meta">
             {preview.card.tapped ? 'Tapped' : 'Untapped'}

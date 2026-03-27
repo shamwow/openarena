@@ -33,3 +33,4 @@ dist-ssr
 .plan.md
 
 .worktrees/
+.cache/

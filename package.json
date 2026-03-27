@@ -6,11 +6,20 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "db:migrate": "node scripts/db-migrate.mjs",
+    "mtgjson:download": "node scripts/mtgjson-download.mjs",
+    "mtgjson:restore": "node scripts/mtgjson-restore.mjs",
+    "mtgjson:refresh": "node scripts/mtgjson-download.mjs && node scripts/mtgjson-restore.mjs",
+    "scryfall:image-map:refresh": "node scripts/scryfall-image-map-refresh.mjs",
+    "cards:import": "node scripts/import-cards.mjs",
+    "cards:import:resume": "node scripts/import-cards.mjs --resume",
+    "test:integration": "node --test test/integration/**/*.test.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
     "immer": "^11.1.4",
+    "pg": "^8.20.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "uuid": "^13.0.0"
