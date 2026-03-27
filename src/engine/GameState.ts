@@ -1,12 +1,13 @@
 import { v4 as uuid } from 'uuid';
 import type {
   GameState, PlayerId, CardDefinition, CardInstance,
-  ManaColor, Zone, PlayerState,
+  LastKnownInformation, ManaColor, Zone, PlayerState,
 } from './types';
 import { Phase, Step, emptyManaPool } from './types';
 
 export interface DeckConfig {
   commander: CardDefinition;
+  commanders?: CardDefinition[];
   cards: CardDefinition[];
   playerName: string;
 }
@@ -33,9 +34,12 @@ export function createBaseGameState(
   for (let i = 0; i < 4; i++) {
     const pid = playerIds[i];
     const deck = decks[i];
+    const commanders = resolveDeckCommanders(deck);
 
-    // Create commander instance
-    const commanderInstance = createCardInstance(deck.commander, pid, 'COMMAND', timestampCounter++);
+    // Create commander instances
+    const commanderInstances = commanders.map(commander =>
+      createCardInstance(commander, pid, 'COMMAND', timestampCounter++)
+    );
 
     // Create card instances for the library
     const libraryCards = deck.cards.map(def =>
@@ -46,10 +50,8 @@ export function createBaseGameState(
       shuffleArray(libraryCards);
     }
 
-    // Derive color identity from commander
-    const colorIdentity = deck.commander.colorIdentity.length > 0
-      ? deck.commander.colorIdentity
-      : deriveColorIdentity(deck.commander);
+    // Derive color identity from all commanders
+    const colorIdentity = deriveCommanderColorIdentity(commanders);
 
     players[pid] = {
       id: pid,
@@ -64,9 +66,12 @@ export function createBaseGameState(
       hasLost: false,
       hasConceded: false,
       poisonCounters: 0,
-      commanderIds: [commanderInstance.objectId],
+      commanderIds: commanderInstances.map(commander => commander.cardId),
       colorIdentity,
       drewFromEmptyLibrary: false,
+      spellsCastThisTurn: 0,
+      experienceCounters: 0,
+      energyCounters: 0,
     };
 
     zones[pid] = {
@@ -76,7 +81,7 @@ export function createBaseGameState(
       GRAVEYARD: [],
       EXILE: [],
       STACK: [],
-      COMMAND: [commanderInstance],
+      COMMAND: commanderInstances,
     };
   }
 
@@ -92,15 +97,20 @@ export function createBaseGameState(
     combat: null,
     continuousEffects: [],
     replacementEffects: [],
+    lastKnownInformation: {},
     timestampCounter,
     objectIdCounter: 0,
     eventLog: [],
     priorityPlayer: null,
     passedPriority: new Set(),
     pendingTriggers: [],
+    delayedTriggers: [],
     waitingForChoice: false,
     isGameOver: false,
     winner: null,
+    loyaltyAbilitiesUsedThisTurn: [],
+    pendingFreeCasts: [],
+    pendingExtraTurns: [],
   };
 }
 
@@ -114,8 +124,11 @@ export function createCardInstance(
   zone: Zone,
   timestamp: number
 ): CardInstance {
+  const cardId = uuid();
   return {
-    objectId: uuid(),
+    cardId,
+    objectId: cardId,
+    zoneChangeCounter: 0,
     definitionId: definition.id,
     definition,
     owner,
@@ -129,7 +142,46 @@ export function createCardInstance(
     markedDamage: 0,
     attachedTo: null,
     attachments: [],
+    isToken: false,
   };
+}
+
+export function cloneCardInstance(card: CardInstance): CardInstance {
+  return {
+    ...card,
+    counters: { ...card.counters },
+    attachments: [...card.attachments],
+    modifiedKeywords: card.modifiedKeywords ? [...card.modifiedKeywords] : undefined,
+    modifiedAbilities: card.modifiedAbilities ? [...card.modifiedAbilities] : undefined,
+    protectionFrom: card.protectionFrom ? [...card.protectionFrom] : undefined,
+    attackTaxes: card.attackTaxes ? card.attackTaxes.map(tax => ({
+      sourceId: tax.sourceId,
+      defender: tax.defender,
+      cost: {
+        ...tax.cost,
+        mana: tax.cost.mana ? { ...tax.cost.mana } : undefined,
+      },
+    })) : undefined,
+  };
+}
+
+export function getObjectInstanceKey(objectId: string, zoneChangeCounter: number): string {
+  return `${objectId}:${zoneChangeCounter}`;
+}
+
+export function rememberLastKnownInformation(state: GameState, card: CardInstance): LastKnownInformation {
+  const snapshot = cloneCardInstance(card);
+  state.lastKnownInformation[getObjectInstanceKey(card.objectId, card.zoneChangeCounter)] = snapshot;
+  return snapshot;
+}
+
+export function getLastKnownInformation(
+  state: GameState,
+  objectId: string,
+  zoneChangeCounter: number | undefined,
+): LastKnownInformation | undefined {
+  if (zoneChangeCounter === undefined) return undefined;
+  return state.lastKnownInformation[getObjectInstanceKey(objectId, zoneChangeCounter)];
 }
 
 export function drawInitialHands(state: GameState): void {
@@ -163,6 +215,65 @@ function deriveColorIdentity(card: CardDefinition): ManaColor[] {
   return Array.from(colors);
 }
 
+function deriveCommanderColorIdentity(commanders: CardDefinition[]): ManaColor[] {
+  const colors = new Set<ManaColor>();
+  for (const commander of commanders) {
+    const identity = commander.colorIdentity.length > 0
+      ? commander.colorIdentity
+      : deriveColorIdentity(commander);
+    for (const color of identity) {
+      colors.add(color);
+    }
+  }
+  return Array.from(colors);
+}
+
+function resolveDeckCommanders(deck: DeckConfig): CardDefinition[] {
+  const commanders = deck.commanders?.length ? deck.commanders : [deck.commander];
+  if (commanders.length === 0 || commanders.length > 2) {
+    throw new Error(`Deck "${deck.playerName}" must have one or two commanders.`);
+  }
+  if (commanders.length === 2 && !isLegalCommanderPair(commanders[0], commanders[1])) {
+    throw new Error(
+      `Deck "${deck.playerName}" has an illegal commander pair: ${commanders[0].name} / ${commanders[1].name}.`
+    );
+  }
+  return commanders;
+}
+
+function isLegalCommanderPair(first: CardDefinition, second: CardDefinition): boolean {
+  if (hasTag(first, 'partner') && hasTag(second, 'partner')) return true;
+  if (hasTag(first, 'friends-forever') && hasTag(second, 'friends-forever')) return true;
+
+  const firstPartnerWith = getTagValue(first, 'partner-with:');
+  const secondPartnerWith = getTagValue(second, 'partner-with:');
+  if (firstPartnerWith && secondPartnerWith) {
+    const firstMatches = firstPartnerWith === second.id || firstPartnerWith === second.name;
+    const secondMatches = secondPartnerWith === first.id || secondPartnerWith === first.name;
+    if (firstMatches && secondMatches) return true;
+  }
+
+  const firstChoosesBackground = hasTag(first, 'choose-a-background');
+  const secondChoosesBackground = hasTag(second, 'choose-a-background');
+  if ((firstChoosesBackground && isBackground(second)) || (secondChoosesBackground && isBackground(first))) {
+    return true;
+  }
+
+  return false;
+}
+
+function isBackground(card: CardDefinition): boolean {
+  return card.subtypes.includes('Background') || hasTag(card, 'background');
+}
+
+function hasTag(card: CardDefinition, tag: string): boolean {
+  return card.tags?.includes(tag) ?? false;
+}
+
+function getTagValue(card: CardDefinition, prefix: string): string | undefined {
+  return card.tags?.find(tag => tag.startsWith(prefix))?.slice(prefix.length);
+}
+
 function shuffleArray<T>(arr: T[]): void {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -170,15 +281,27 @@ function shuffleArray<T>(arr: T[]): void {
   }
 }
 
-export function findCard(state: GameState, objectId: string): CardInstance | undefined {
+export function findCard(
+  state: GameState,
+  objectId: string,
+  zoneChangeCounter?: number,
+): CardInstance | undefined {
   for (const pid of state.turnOrder) {
     for (const zoneCards of Object.values(state.zones[pid])) {
-      const card = (zoneCards as CardInstance[]).find(c => c.objectId === objectId);
+      const card = (zoneCards as CardInstance[]).find(c =>
+        c.objectId === objectId &&
+        (zoneChangeCounter === undefined || c.zoneChangeCounter === zoneChangeCounter)
+      );
       if (card) return card;
     }
   }
   for (const entry of state.stack) {
-    if (entry.cardInstance?.objectId === objectId) return entry.cardInstance;
+    if (
+      entry.cardInstance?.objectId === objectId &&
+      (zoneChangeCounter === undefined || entry.cardInstance.zoneChangeCounter === zoneChangeCounter)
+    ) {
+      return entry.cardInstance;
+    }
   }
   return undefined;
 }

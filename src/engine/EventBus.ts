@@ -1,7 +1,9 @@
 import type {
   GameEvent, GameEventType, TriggeredAbilityDef, CardInstance,
-  GameState, ReplacementEffect, PlayerId,
+  GameState, ReplacementEffect, PlayerId, CounterAddedEvent, LastKnownInformation,
 } from './types';
+import { CardType } from './types';
+import { cloneCardInstance, findCard, getLastKnownInformation } from './GameState';
 
 export type EventListener = (event: GameEvent) => void;
 
@@ -10,6 +12,7 @@ export interface PendingTrigger {
   source: CardInstance;
   event: GameEvent;
   controller: PlayerId;
+  delayedTriggerId?: string;
 }
 
 export class EventBus {
@@ -97,6 +100,7 @@ export class EventBus {
       if (!battlefield) continue;
 
       for (const card of battlefield) {
+        if (card.phasedOut) continue;
         for (const ability of card.definition.abilities) {
           if (ability.kind !== 'triggered') continue;
           if (this.matchesTrigger(ability.trigger, event, card, state)) {
@@ -105,10 +109,40 @@ export class EventBus {
             }
             triggers.push({
               ability,
-              source: card,
+              source: cloneCardInstance(card),
               event,
               controller: card.controller,
             });
+          }
+        }
+      }
+
+      // Saga chapter triggers: when a lore counter is added, check for matching chapter
+      if (event.type === 'COUNTER_ADDED') {
+        const counterEvent = event as CounterAddedEvent;
+        if (counterEvent.counterType === 'lore') {
+          for (const card of battlefield) {
+            if (card.objectId !== counterEvent.objectId) continue;
+            if (!card.definition.sagaChapters) continue;
+            const currentLore = card.counters['lore'] ?? 0;
+            const matchingChapter = card.definition.sagaChapters.find(
+              ch => ch.chapter === currentLore
+            );
+            if (matchingChapter) {
+              const sagaTrigger: TriggeredAbilityDef = {
+                kind: 'triggered',
+                trigger: { on: 'counter-placed', counterType: 'lore' },
+                effect: matchingChapter.effect,
+                optional: false,
+                description: `Chapter ${matchingChapter.chapter}`,
+              };
+              triggers.push({
+                ability: sagaTrigger,
+                source: cloneCardInstance(card),
+                event,
+                controller: card.controller,
+              });
+            }
           }
         }
       }
@@ -122,13 +156,28 @@ export class EventBus {
             if (this.matchesTrigger(ability.trigger, event, card, state)) {
               triggers.push({
                 ability,
-                source: card,
+                source: cloneCardInstance(card),
                 event,
                 controller: card.controller,
               });
             }
           }
         }
+      }
+    }
+
+    for (const delayedTrigger of state.delayedTriggers) {
+      if (this.matchesTrigger(delayedTrigger.ability.trigger, event, delayedTrigger.source, state)) {
+        if (delayedTrigger.ability.interveningIf && !delayedTrigger.ability.interveningIf(state, delayedTrigger.source, event)) {
+          continue;
+        }
+        triggers.push({
+          ability: delayedTrigger.ability,
+          source: cloneCardInstance(delayedTrigger.source),
+          event,
+          controller: delayedTrigger.controller,
+          delayedTriggerId: delayedTrigger.id,
+        });
       }
     }
 
@@ -144,12 +193,26 @@ export class EventBus {
     switch (trigger.on) {
       case 'enter-battlefield':
         if (event.type !== 'ENTERS_BATTLEFIELD') return false;
-        return this.matchesCardFilter(trigger.filter, event.objectId, source, state);
+        return this.matchesCardFilter(
+          trigger.filter,
+          event.objectId,
+          source,
+          state,
+          event.objectZoneChangeCounter,
+          event.lastKnownInfo,
+        );
 
       case 'leave-battlefield':
         if (event.type !== 'LEAVES_BATTLEFIELD') return false;
         if (trigger.destination && event.destination !== trigger.destination) return false;
-        return this.matchesCardFilter(trigger.filter, event.objectId, source, state);
+        return this.matchesCardFilter(
+          trigger.filter,
+          event.objectId,
+          source,
+          state,
+          event.objectZoneChangeCounter,
+          event.lastKnownInfo,
+        );
 
       case 'cast-spell':
         if (event.type !== 'SPELL_CAST') return false;
@@ -158,21 +221,35 @@ export class EventBus {
       case 'dies':
         if (event.type !== 'ZONE_CHANGE') return false;
         if (event.fromZone !== 'BATTLEFIELD' || event.toZone !== 'GRAVEYARD') return false;
-        return this.matchesCardFilter(trigger.filter, event.objectId, source, state);
+        return this.matchesCardFilter(
+          trigger.filter,
+          event.objectId,
+          source,
+          state,
+          event.objectZoneChangeCounter,
+          event.lastKnownInfo,
+        );
 
       case 'attacks':
         if (event.type !== 'ATTACKS') return false;
-        return this.matchesCardFilter(trigger.filter, event.attackerId, source, state);
+        return this.matchesCardFilter(trigger.filter, event.attackerId, source, state, event.objectZoneChangeCounter, event.lastKnownInfo);
 
       case 'blocks':
         if (event.type !== 'BLOCKS') return false;
-        return this.matchesCardFilter(trigger.filter, event.blockerId, source, state);
+        return this.matchesCardFilter(trigger.filter, event.blockerId, source, state, event.objectZoneChangeCounter, event.lastKnownInfo);
 
       case 'deals-damage':
         if (event.type !== 'DAMAGE_DEALT') return false;
         if (trigger.damageType === 'combat' && !event.isCombatDamage) return false;
         if (trigger.damageType === 'noncombat' && event.isCombatDamage) return false;
-        return this.matchesCardFilter(trigger.filter, event.sourceId!, source, state);
+        return this.matchesCardFilter(
+          trigger.filter,
+          event.sourceId!,
+          source,
+          state,
+          event.sourceZoneChangeCounter,
+          event.lastKnownInfo,
+        );
 
       case 'upkeep':
         if (event.type !== 'STEP_CHANGE' || event.step !== 'UPKEEP') return false;
@@ -198,9 +275,50 @@ export class EventBus {
         if (event.type !== 'DISCARDED') return false;
         return this.matchesPlayerFilter(trigger.whose, event.player, source.controller);
 
+      case 'landfall':
+        if (event.type !== 'ZONE_CHANGE') return false;
+        if (event.fromZone === 'BATTLEFIELD' || event.toZone !== 'BATTLEFIELD') return false;
+        if (trigger.whose === 'opponents') {
+          return this.matchesCardFilter(
+            { types: [CardType.LAND], controller: 'opponent' },
+            event.objectId,
+            source,
+            state,
+            event.newObjectZoneChangeCounter,
+            findCard(state, event.objectId, event.newObjectZoneChangeCounter) ?? event.lastKnownInfo,
+          );
+        }
+        if (trigger.whose === 'any') {
+          return this.matchesCardFilter(
+            { types: [CardType.LAND] },
+            event.objectId,
+            source,
+            state,
+            event.newObjectZoneChangeCounter,
+            findCard(state, event.objectId, event.newObjectZoneChangeCounter) ?? event.lastKnownInfo,
+          );
+        }
+        return this.matchesCardFilter(
+          { types: [CardType.LAND], controller: 'you' },
+          event.objectId,
+          source,
+          state,
+          event.newObjectZoneChangeCounter,
+          findCard(state, event.objectId, event.newObjectZoneChangeCounter) ?? event.lastKnownInfo,
+        );
+
       case 'tap':
         if (event.type !== 'TAPPED') return false;
-        return this.matchesCardFilter(trigger.filter, event.objectId, source, state);
+        return this.matchesCardFilter(trigger.filter, event.objectId, source, state, event.objectZoneChangeCounter, event.lastKnownInfo);
+
+      case 'untap':
+        if (event.type !== 'UNTAPPED') return false;
+        return this.matchesCardFilter(trigger.filter, event.objectId, source, state, event.objectZoneChangeCounter, event.lastKnownInfo);
+
+      case 'counter-placed':
+        if (event.type !== 'COUNTER_ADDED') return false;
+        if (trigger.counterType && event.counterType !== trigger.counterType) return false;
+        return this.matchesCardFilter(trigger.filter, event.objectId, source, state, event.objectZoneChangeCounter, event.lastKnownInfo);
 
       case 'custom':
         return trigger.match(event, source, state);
@@ -236,15 +354,18 @@ export class EventBus {
     filter: import('./types').CardFilter | undefined,
     objectId: string,
     source: CardInstance,
-    state: GameState
+    state: GameState,
+    zoneChangeCounter?: number,
+    fallback?: LastKnownInformation,
   ): boolean {
     if (!filter) return true;
 
-    // Find the card in any zone
-    const card = this.findCardInState(objectId, state);
+    const card = this.resolveCardReference(objectId, state, zoneChangeCounter, fallback);
     if (!card) return false;
 
-    if (filter.self) return card.objectId === source.objectId;
+    if (filter.self) {
+      return card.objectId === source.objectId && card.zoneChangeCounter === source.zoneChangeCounter;
+    }
 
     if (filter.types && !filter.types.some(t => card.definition.types.includes(t))) return false;
     if (filter.subtypes && !filter.subtypes.some(t => card.definition.subtypes.includes(t))) return false;
@@ -288,22 +409,23 @@ export class EventBus {
       { ...filter, controller: undefined, types: undefined },
       event.objectId,
       source,
-      state
+      state,
+      event.objectZoneChangeCounter,
+      event.lastKnownInfo,
     );
   }
 
-  private findCardInState(objectId: string, state: GameState): CardInstance | undefined {
-    for (const playerId of state.turnOrder) {
-      for (const zone of Object.values(state.zones[playerId])) {
-        const card = zone.find((c: CardInstance) => c.objectId === objectId);
-        if (card) return card;
-      }
-    }
-    // Check stack
-    for (const entry of state.stack) {
-      if (entry.cardInstance?.objectId === objectId) return entry.cardInstance;
-    }
-    return undefined;
+  private resolveCardReference(
+    objectId: string,
+    state: GameState,
+    zoneChangeCounter?: number,
+    fallback?: LastKnownInformation,
+  ): CardInstance | LastKnownInformation | undefined {
+    return (
+      findCard(state, objectId, zoneChangeCounter)
+      ?? getLastKnownInformation(state, objectId, zoneChangeCounter)
+      ?? fallback
+    );
   }
 
   private compareNum(a: number, op: 'lte' | 'gte' | 'eq', b: number): boolean {

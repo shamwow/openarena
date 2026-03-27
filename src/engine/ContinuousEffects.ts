@@ -1,5 +1,12 @@
-import type { GameState, ContinuousEffect, CardInstance } from './types';
-import { CardType } from './types';
+import type {
+  CardFilter,
+  CardInstance,
+  ContinuousEffect,
+  GameState,
+  ReplacementEffect,
+  StaticAbilityDef,
+} from './types';
+import { CardType, GameEventType, Layer } from './types';
 
 /**
  * Implements the MTG Layer System (rule 613) for applying continuous effects.
@@ -19,8 +26,11 @@ export class ContinuousEffectsEngine {
       e => !this.isExpired(e, state)
     );
 
+    const compiledStaticEffects = this.compileStaticContinuousEffects(state);
+    state.replacementEffects = this.compileStaticReplacementEffects(state);
+
     // Sort effects by layer, then by timestamp (with dependency handling)
-    const sorted = this.sortEffects(state.continuousEffects);
+    const sorted = this.sortEffects([...state.continuousEffects, ...compiledStaticEffects]);
 
     // Apply effects in order
     for (const effect of sorted) {
@@ -48,13 +58,41 @@ export class ContinuousEffectsEngine {
   private resetComputedValues(state: GameState): void {
     for (const pid of state.turnOrder) {
       for (const card of state.zones[pid].BATTLEFIELD) {
-        card.modifiedPower = card.definition.power;
-        card.modifiedToughness = card.definition.toughness;
-        card.modifiedKeywords = [...card.definition.keywords];
-        card.modifiedAbilities = undefined;
+        // Layer 1: Copy effects — if this card copies another, use the copied card's
+        // definition for base characteristics
+        let baseDef = card.definition;
+        if (card.copyOf) {
+          const copiedCard = this.findCardById(state, card.copyOf);
+          if (copiedCard) {
+            baseDef = copiedCard.definition;
+          }
+        }
+
+        // Transform / DFC: if transformed, use backFace for base characteristics
+        if (card.isTransformed && baseDef.backFace) {
+          baseDef = baseDef.backFace;
+        }
+
+        // Morph / Face-down: override to 2/2 colorless creature with no name/abilities
+        if (card.faceDown && card.definition.morphCost) {
+          card.modifiedPower = 2;
+          card.modifiedToughness = 2;
+          card.modifiedKeywords = [];
+          card.modifiedAbilities = [];
+        } else {
+          card.modifiedPower = baseDef.power;
+          card.modifiedToughness = baseDef.toughness;
+          card.modifiedKeywords = [...baseDef.keywords];
+          card.modifiedAbilities = [...baseDef.abilities];
+        }
+
+        card.protectionFrom = baseDef.protectionFrom ? [...baseDef.protectionFrom] : undefined;
+        card.wardCost = baseDef.wardCost ? { ...baseDef.wardCost } : undefined;
+        card.cantBeTargetedByOpponents = false;
+        card.attackTaxes = [];
 
         // Apply counters to P/T (these are "physical" modifiers, not continuous effects)
-        if (card.definition.types.includes(CardType.CREATURE)) {
+        if ((card.faceDown && card.definition.morphCost) || baseDef.types.includes(CardType.CREATURE)) {
           const plusCounters = card.counters['+1/+1'] ?? 0;
           const minusCounters = card.counters['-1/-1'] ?? 0;
           if (card.modifiedPower !== undefined) {
@@ -66,6 +104,241 @@ export class ContinuousEffectsEngine {
         }
       }
     }
+  }
+
+  /** Find a card by objectId across all zones */
+  private findCardById(state: GameState, objectId: string): import('./types').CardInstance | undefined {
+    for (const pid of state.turnOrder) {
+      for (const zoneCards of Object.values(state.zones[pid])) {
+        const card = (zoneCards as import('./types').CardInstance[]).find(c => c.objectId === objectId);
+        if (card) return card;
+      }
+    }
+    return undefined;
+  }
+
+  private compileStaticContinuousEffects(state: GameState): ContinuousEffect[] {
+    const effects: ContinuousEffect[] = [];
+
+    for (const playerId of state.turnOrder) {
+      if (state.players[playerId].hasLost) continue;
+      for (const source of state.zones[playerId].BATTLEFIELD) {
+        if (source.phasedOut) continue;
+        const abilities = source.modifiedAbilities ?? source.definition.abilities;
+        for (const ability of abilities) {
+          if (ability.kind !== 'static') continue;
+          if (ability.condition && !ability.condition(state, source)) continue;
+
+          const compiled = this.compileStaticAbility(state, source, ability);
+          if (compiled) {
+            effects.push(compiled);
+          }
+        }
+      }
+    }
+
+    return effects;
+  }
+
+  private compileStaticReplacementEffects(state: GameState): ReplacementEffect[] {
+    const replacements: ReplacementEffect[] = [];
+
+    for (const playerId of state.turnOrder) {
+      if (state.players[playerId].hasLost) continue;
+      for (const source of state.zones[playerId].BATTLEFIELD) {
+        if (source.phasedOut) continue;
+        const abilities = source.modifiedAbilities ?? source.definition.abilities;
+        for (const ability of abilities) {
+          if (ability.kind !== 'static') continue;
+          if (ability.condition && !ability.condition(state, source)) continue;
+          const effect = ability.effect;
+
+          if (effect.type === 'replacement') {
+            replacements.push({
+              id: `${source.objectId}:${source.zoneChangeCounter}:replacement:${replacements.length}`,
+              sourceId: source.objectId,
+              isSelfReplacement: false,
+              appliesTo: (event, game) => this.matchesReplacementEvent(effect.replaces, event.type) && (!effect.replace || Boolean(source)) && source.zone === 'BATTLEFIELD',
+              replace: (event, game) => effect.replace(game, source, event),
+            });
+          }
+
+          if (effect.type === 'prevention') {
+            replacements.push({
+              id: `${source.objectId}:${source.zoneChangeCounter}:prevention:${replacements.length}`,
+              sourceId: source.objectId,
+              isSelfReplacement: false,
+              appliesTo: (event, game) => {
+                if (event.type !== GameEventType.DAMAGE_DEALT) return false;
+                if (effect.prevents === 'combat-damage' && !event.isCombatDamage) return false;
+                if (effect.prevents === 'damage' || event.isCombatDamage) {
+                  if (typeof event.targetId === 'string' && event.targetId.startsWith('player')) {
+                    return false;
+                  }
+                  const target = this.findCardById(game, event.targetId as string);
+                  if (!target) return false;
+                  return !effect.filter || this.matchesFilter(target, effect.filter, source, game);
+                }
+                return false;
+              },
+              replace: () => null,
+            });
+          }
+        }
+      }
+    }
+
+    return replacements;
+  }
+
+  private compileStaticAbility(
+    state: GameState,
+    source: CardInstance,
+    ability: StaticAbilityDef,
+  ): ContinuousEffect | null {
+    const effect = ability.effect;
+
+    switch (effect.type) {
+      case 'pump':
+        return {
+          id: `${source.objectId}:${source.zoneChangeCounter}:pump:${ability.description}`,
+          sourceId: source.objectId,
+          layer: Layer.PT_MODIFY,
+          timestamp: source.timestamp,
+          duration: { type: 'static', sourceId: source.objectId },
+          appliesTo: permanent => this.matchesFilter(permanent, effect.filter, source, state),
+          apply: permanent => {
+            permanent.modifiedPower = (permanent.modifiedPower ?? permanent.definition.power ?? 0) + effect.power;
+            permanent.modifiedToughness = (permanent.modifiedToughness ?? permanent.definition.toughness ?? 0) + effect.toughness;
+          },
+        };
+
+      case 'grant-keyword':
+        return {
+          id: `${source.objectId}:${source.zoneChangeCounter}:keyword:${effect.keyword}:${ability.description}`,
+          sourceId: source.objectId,
+          layer: Layer.ABILITY,
+          timestamp: source.timestamp,
+          duration: { type: 'static', sourceId: source.objectId },
+          appliesTo: permanent => this.matchesFilter(permanent, effect.filter, source, state),
+          apply: permanent => {
+            const keywords = permanent.modifiedKeywords ?? [...permanent.definition.keywords];
+            if (!keywords.includes(effect.keyword)) {
+              keywords.push(effect.keyword);
+            }
+            permanent.modifiedKeywords = keywords;
+          },
+        };
+
+      case 'cant-be-targeted':
+        return {
+          id: `${source.objectId}:${source.zoneChangeCounter}:cant-be-targeted:${ability.description}`,
+          sourceId: source.objectId,
+          layer: Layer.ABILITY,
+          timestamp: source.timestamp,
+          duration: { type: 'static', sourceId: source.objectId },
+          appliesTo: permanent => this.matchesFilter(permanent, effect.filter, source, state),
+          apply: permanent => {
+            if (effect.by === 'opponents') {
+              permanent.cantBeTargetedByOpponents = true;
+            }
+          },
+        };
+
+      case 'attack-tax':
+        return {
+          id: `${source.objectId}:${source.zoneChangeCounter}:attack-tax:${ability.description}`,
+          sourceId: source.objectId,
+          layer: Layer.ABILITY,
+          timestamp: source.timestamp,
+          duration: { type: 'static', sourceId: source.objectId },
+          appliesTo: permanent => this.matchesFilter(permanent, effect.filter, source, state),
+          apply: permanent => {
+            permanent.attackTaxes ??= [];
+            permanent.attackTaxes.push({
+              sourceId: source.objectId,
+              defender: effect.defender === 'source-controller' ? source.controller : source.controller,
+              cost: {
+                ...effect.cost,
+                mana: effect.cost.mana ? { ...effect.cost.mana } : undefined,
+              },
+            });
+          },
+        };
+
+      case 'custom':
+        return {
+          id: `${source.objectId}:${source.zoneChangeCounter}:custom:${ability.description}`,
+          sourceId: source.objectId,
+          layer: Layer.ABILITY,
+          timestamp: source.timestamp,
+          duration: { type: 'static', sourceId: source.objectId },
+          appliesTo: permanent => permanent.objectId === source.objectId && permanent.zoneChangeCounter === source.zoneChangeCounter,
+          apply: () => {
+            effect.apply(state, source);
+          },
+        };
+
+      default:
+        return null;
+    }
+  }
+
+  private matchesReplacementEvent(
+    replaces: import('./types').ReplacementEventType,
+    eventType: import('./types').GameEventType,
+  ): boolean {
+    switch (replaces) {
+      case 'deal-damage':
+        return eventType === GameEventType.DAMAGE_DEALT;
+      case 'create-token':
+        return eventType === GameEventType.TOKEN_CREATED;
+      case 'place-counters':
+        return eventType === GameEventType.COUNTER_ADDED;
+      case 'draw-card':
+        return eventType === GameEventType.DREW_CARD;
+      case 'discard':
+        return eventType === GameEventType.DISCARDED;
+      case 'dies':
+        return eventType === GameEventType.ZONE_CHANGE;
+      case 'enter-battlefield':
+        return eventType === GameEventType.ENTERS_BATTLEFIELD;
+    }
+  }
+
+  private matchesFilter(
+    card: CardInstance,
+    filter: CardFilter,
+    source: CardInstance,
+    state: GameState,
+  ): boolean {
+    if (card.zone === 'BATTLEFIELD' && card.phasedOut) return false;
+    if (filter.types && !filter.types.some(type => card.definition.types.includes(type))) return false;
+    if (filter.subtypes && !filter.subtypes.some(subtype => card.definition.subtypes.includes(subtype))) return false;
+    if (filter.supertypes && !filter.supertypes.some(supertype => card.definition.supertypes.includes(supertype))) return false;
+    if (filter.colors && !filter.colors.some(color => card.definition.colorIdentity.includes(color))) return false;
+    if (filter.keywords && !filter.keywords.some(keyword => (card.modifiedKeywords ?? card.definition.keywords).includes(keyword))) return false;
+    if (filter.controller === 'you' && card.controller !== source.controller) return false;
+    if (filter.controller === 'opponent' && card.controller === source.controller) return false;
+    if (filter.name && card.definition.name !== filter.name) return false;
+    if (filter.tapped === true && !card.tapped) return false;
+    if (filter.tapped === false && card.tapped) return false;
+    if (filter.isToken === true && !card.objectId.startsWith('token-')) return false;
+    if (filter.self && (card.objectId !== source.objectId || card.zoneChangeCounter !== source.zoneChangeCounter)) return false;
+    if (filter.power) {
+      const power = card.modifiedPower ?? card.definition.power ?? 0;
+      if (filter.power.op === 'lte' && power > filter.power.value) return false;
+      if (filter.power.op === 'gte' && power < filter.power.value) return false;
+      if (filter.power.op === 'eq' && power !== filter.power.value) return false;
+    }
+    if (filter.toughness) {
+      const toughness = card.modifiedToughness ?? card.definition.toughness ?? 0;
+      if (filter.toughness.op === 'lte' && toughness > filter.toughness.value) return false;
+      if (filter.toughness.op === 'gte' && toughness < filter.toughness.value) return false;
+      if (filter.toughness.op === 'eq' && toughness !== filter.toughness.value) return false;
+    }
+    if (filter.custom && !filter.custom(card, state)) return false;
+    return true;
   }
 
   private sortEffects(effects: ContinuousEffect[]): ContinuousEffect[] {

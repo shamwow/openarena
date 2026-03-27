@@ -1,11 +1,19 @@
 import { Phase, Step, Zone } from '../engine/types';
-import type { GameState } from '../engine/types';
+import type { CardInstance, GameState, PlayerId } from '../engine/types';
 import { createTestGameStateBuilder } from './testGameStateBuilder';
 
 export interface TestGameStateDefinition {
   id: string;
   description?: string;
   build: () => GameState;
+}
+
+function getCommanderCard(state: GameState, playerId: PlayerId): CardInstance {
+  const commander = state.zones[playerId].COMMAND[0];
+  if (!commander) {
+    throw new Error(`Missing commander in ${playerId}.COMMAND.`);
+  }
+  return commander;
 }
 
 function createPriorityResetDemoState(): GameState {
@@ -63,6 +71,105 @@ function createBigHandState(): GameState {
     .build();
 }
 
+function createCommanderLifecycleDemoState(): GameState {
+  return createTestGameStateBuilder()
+    .moveCard({ playerId: 'player2', name: 'Command Tower' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player2', name: 'Command Tower' }, { summoningSick: false })
+    .moveCard({ playerId: 'player2', name: 'Island', nth: 0 }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player2', name: 'Island', nth: 0 }, { summoningSick: false })
+    .moveCard({ playerId: 'player2', name: 'Island', nth: 1 }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player2', name: 'Island', nth: 1 }, { summoningSick: false })
+    .moveCard({ playerId: 'player2', name: 'Sol Ring' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player2', name: 'Sol Ring' }, { summoningSick: false })
+    .moveCard({ playerId: 'player2', name: 'Arcane Signet' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player2', name: 'Arcane Signet' }, { summoningSick: false })
+    .moveCard({ playerId: 'player2', name: 'Mind Stone' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player2', name: 'Mind Stone' }, { summoningSick: false })
+    .moveCard({ playerId: 'player2', name: 'Thought Vessel' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player2', name: 'Thought Vessel' }, { summoningSick: false })
+    .moveCard({ playerId: 'player2', name: 'Ponder' }, Zone.HAND)
+    .mutateState((state) => {
+      const commander = getCommanderCard(state, 'player2');
+      state.players.player1.commanderDamageReceived[commander.objectId] = 14;
+      state.players.player2.commanderTimesCast[commander.objectId] = 2;
+      state.players.player1.life = 26;
+      state.players.player2.life = 34;
+      state.players.player3.life = 31;
+      state.players.player4.life = 29;
+    })
+    .setTurn({
+      turnNumber: 9,
+      activePlayer: 'player2',
+      currentPhase: Phase.PRECOMBAT_MAIN,
+      currentStep: Step.MAIN,
+      priorityPlayer: 'player2',
+      passedPriority: [],
+    })
+    .build();
+}
+
+function createAttackTaxDemoState(): GameState {
+  return createTestGameStateBuilder()
+    .moveCard({ playerId: 'player1', name: 'Ghostly Prison' }, Zone.BATTLEFIELD)
+    .moveCard({ playerId: 'player2', name: 'Propaganda' }, Zone.BATTLEFIELD)
+    .moveCard({ playerId: 'player4', name: 'Krenko, Mob Boss' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player4', name: 'Krenko, Mob Boss' }, { summoningSick: false })
+    .moveCard({ playerId: 'player4', name: 'Goblin Guide' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player4', name: 'Goblin Guide' }, { summoningSick: false })
+    .moveCard({ playerId: 'player4', name: 'Shivan Dragon' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player4', name: 'Shivan Dragon' }, { summoningSick: false })
+    .moveCard({ playerId: 'player4', name: 'Command Tower' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player4', name: 'Command Tower' }, { summoningSick: false })
+    .moveCard({ playerId: 'player4', name: 'Sol Ring' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player4', name: 'Sol Ring' }, { summoningSick: false })
+    .setPlayer('player1', { life: 34 })
+    .setPlayer('player2', { life: 36 })
+    .setPlayer('player3', { life: 28 })
+    .setPlayer('player4', { life: 40 })
+    .setTurn({
+      turnNumber: 11,
+      activePlayer: 'player4',
+      currentPhase: Phase.COMBAT,
+      currentStep: Step.DECLARE_ATTACKERS,
+      priorityPlayer: 'player4',
+      passedPriority: [],
+    })
+    .build();
+}
+
+function createTriggerHeavyDemoState(): GameState {
+  return createTestGameStateBuilder()
+    .moveCard({ playerId: 'player1', name: 'Rhystic Study' }, Zone.BATTLEFIELD)
+    .moveCard({ playerId: 'player3', name: 'Blood Artist' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player3', name: 'Blood Artist' }, { summoningSick: false })
+    .moveCard({ playerId: 'player4', name: 'Smothering Tithe' }, Zone.BATTLEFIELD)
+    .moveCard({ playerId: 'player2', name: 'Talrand, Sky Summoner' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player2', name: 'Talrand, Sky Summoner' }, { summoningSick: false })
+    .moveCard({ playerId: 'player2', name: 'Command Tower' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player2', name: 'Command Tower' }, { summoningSick: false })
+    .moveCard({ playerId: 'player2', name: 'Sol Ring' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player2', name: 'Sol Ring' }, { summoningSick: false })
+    .moveCard({ playerId: 'player2', name: 'Arcane Signet' }, Zone.BATTLEFIELD)
+    .setBattlefieldCard({ playerId: 'player2', name: 'Arcane Signet' }, { summoningSick: false })
+    .moveCard({ playerId: 'player2', name: 'Ponder' }, Zone.HAND)
+    .moveCard({ playerId: 'player2', name: 'Brainstorm' }, Zone.HAND)
+    .moveCard({ playerId: 'player2', name: 'Counterspell' }, Zone.HAND)
+    .moveCard({ playerId: 'player3', name: 'Grave Titan' }, Zone.GRAVEYARD)
+    .setPlayer('player1', { life: 34 })
+    .setPlayer('player2', { life: 36 })
+    .setPlayer('player3', { life: 18 })
+    .setPlayer('player4', { life: 32 })
+    .setTurn({
+      turnNumber: 12,
+      activePlayer: 'player2',
+      currentPhase: Phase.PRECOMBAT_MAIN,
+      currentStep: Step.MAIN,
+      priorityPlayer: 'player2',
+      passedPriority: [],
+    })
+    .build();
+}
+
 export const testGameStateDefinitions: TestGameStateDefinition[] = [
   {
     id: 'priority-reset-demo',
@@ -73,6 +180,21 @@ export const testGameStateDefinitions: TestGameStateDefinition[] = [
     id: 'big-hand',
     description: 'Player 1 has ~100 cards in hand for testing hand rail overflow.',
     build: createBigHandState,
+  },
+  {
+    id: 'commander-lifecycle-demo',
+    description: 'Commander recast staging with command-zone tax, prior commander damage, and mana sources ready.',
+    build: createCommanderLifecycleDemoState,
+  },
+  {
+    id: 'attack-tax-demo',
+    description: 'Combat state with Propaganda and Ghostly Prison taxing attacks into the table.',
+    build: createAttackTaxDemoState,
+  },
+  {
+    id: 'trigger-heavy-demo',
+    description: 'Main-phase trigger board with Rhystic Study, Smothering Tithe, Blood Artist, and Talrand.',
+    build: createTriggerHeavyDemoState,
   },
 ];
 
