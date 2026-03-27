@@ -3,10 +3,14 @@ import { Zone } from '../../engine/types';
 import type { CardInstance } from '../../engine/types';
 import { CardView } from './CardView';
 
-interface ZoneDialogProps {
-  playerName: string;
+interface ZoneSection {
   zone: typeof Zone.GRAVEYARD | typeof Zone.EXILE;
   cards: CardInstance[];
+}
+
+interface ZoneDialogProps {
+  playerName: string;
+  sections: ZoneSection[];
   previewCardId: string | null;
   touchFriendly: boolean;
   onPreview: (card: CardInstance) => void;
@@ -20,15 +24,15 @@ function getZoneTitle(zone: typeof Zone.GRAVEYARD | typeof Zone.EXILE): string {
 
 export const ZoneDialog: React.FC<ZoneDialogProps> = ({
   playerName,
-  zone,
-  cards,
+  sections,
   previewCardId,
   touchFriendly,
   onPreview,
   onPreviewClear,
   onClose,
 }) => {
-  const orderedCards = zone === Zone.GRAVEYARD ? [...cards].reverse() : cards;
+  const totalCards = sections.reduce((sum, s) => sum + s.cards.length, 0);
+  const title = sections.map((s) => getZoneTitle(s.zone)).join(' & ');
 
   return (
     <div className="arena-zone-modal" onClick={onClose}>
@@ -37,15 +41,15 @@ export const ZoneDialog: React.FC<ZoneDialogProps> = ({
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label={`${playerName} ${getZoneTitle(zone)}`}
+        aria-label={`${playerName} ${title}`}
       >
         <div className="arena-zone-modal__header">
           <div>
             <div className="arena-zone-modal__title">
-              {playerName} {getZoneTitle(zone)}
+              {playerName} {title}
             </div>
             <div className="arena-preview__meta">
-              {orderedCards.length} card{orderedCards.length === 1 ? '' : 's'}
+              {totalCards} card{totalCards === 1 ? '' : 's'}
             </div>
           </div>
 
@@ -54,23 +58,36 @@ export const ZoneDialog: React.FC<ZoneDialogProps> = ({
           </button>
         </div>
 
-        {orderedCards.length === 0 ? (
-          <div className="arena-preview__meta">No cards in this zone.</div>
-        ) : (
-          <div className="arena-zone-modal__grid">
-            {orderedCards.map((card) => (
-              <CardView
-                key={card.objectId}
-                card={card}
-                variant="mini"
-                onPreview={onPreview}
-                onPreviewClear={onPreviewClear}
-                isPreviewed={previewCardId === card.objectId}
-                previewMode={touchFriendly ? 'tap' : 'hover'}
-              />
-            ))}
-          </div>
-        )}
+        {sections.map((section) => {
+          const orderedCards =
+            section.zone === Zone.GRAVEYARD ? [...section.cards].reverse() : section.cards;
+
+          return (
+            <div key={section.zone} className="arena-zone-modal__section">
+              <div className="arena-zone-modal__section-label">
+                {getZoneTitle(section.zone)} ({section.cards.length})
+              </div>
+
+              {orderedCards.length === 0 ? (
+                <div className="arena-preview__meta">No cards in this zone.</div>
+              ) : (
+                <div className="arena-zone-modal__grid">
+                  {orderedCards.map((card) => (
+                    <CardView
+                      key={card.objectId}
+                      card={card}
+                      variant="mini"
+                      onPreview={onPreview}
+                      onPreviewClear={onPreviewClear}
+                      isPreviewed={previewCardId === card.objectId}
+                      previewMode={touchFriendly ? 'tap' : 'hover'}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

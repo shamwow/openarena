@@ -241,7 +241,7 @@ select {
   min-height: 0;
   border-radius: 0;
   padding: 0;
-  overflow: visible;
+  overflow: clip;
   isolation: isolate;
   background:
     linear-gradient(180deg, rgba(23, 39, 56, 0.84), rgba(8, 15, 24, 0.92)),
@@ -438,17 +438,8 @@ select {
   pointer-events: auto;
 }
 
-.arena-seat__zone-piles {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-}
-
-.arena-seat__zone-piles[data-side="right"] {
-  justify-content: flex-end;
-}
-
 .arena-zone-pile {
+  --pile-peek-translate: 77px;
   position: relative;
   width: 84px;
   height: 110px;
@@ -459,6 +450,7 @@ select {
   align-items: flex-end;
   justify-content: center;
   cursor: pointer;
+  transform: translateY(var(--pile-peek-translate));
 }
 
 .arena-zone-pile[data-static="true"] {
@@ -528,62 +520,63 @@ select {
 }
 
 .arena-seat__hand-area {
-  --arena-hand-hover-clearance-top: 72px;
-  --arena-hand-hover-clearance-side: 18px;
+  --hand-card-width: 72px;
+  --hand-card-height: 96px;
+  --hand-card-overlap: -30px;
+  --hand-card-step: calc(var(--hand-card-width) + var(--hand-card-overlap));
+  --hand-pile-offset: 3px;
+  --hand-peek-translate: 77px;
   min-width: 0;
-  min-height: 122px;
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  overflow: visible;
-}
-
-.arena-seat__hand-scroll {
-  width: calc(100% + (var(--arena-hand-hover-clearance-side) * 2));
-  min-width: 0;
-  overflow: visible;
-  padding: var(--arena-hand-hover-clearance-top) 0 10px;
-  margin:
-    calc(var(--arena-hand-hover-clearance-top) * -1)
-    calc(var(--arena-hand-hover-clearance-side) * -1)
-    0;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  overscroll-behavior-x: contain;
-  scroll-padding-inline: var(--arena-hand-hover-clearance-side);
-}
-
-.arena-seat__hand-scroll::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
-
-.arena-seat__hand-rail {
-  width: max-content;
-  min-width: 100%;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  transform: translateY(var(--hand-peek-translate));
+  transition: transform var(--arena-motion);
 }
 
 .arena-seat__hand-cards {
-  display: flex;
-  align-items: flex-end;
-  gap: 0;
-  min-width: 0;
-  width: max-content;
-  flex: 0 0 auto;
+  position: relative;
+  overflow: visible;
+  flex-shrink: 0;
 }
 
 .arena-seat__hand-card {
-  position: relative;
-  z-index: calc(var(--hand-z-base, 0) + var(--hand-z-boost, 0) + var(--hand-z-hover-order, 0));
+  position: absolute;
+  bottom: 0;
+  transition: left 80ms ease-out;
 }
 
-.arena-seat__hand-cards > .arena-seat__hand-card:last-child .arena-card,
-.arena-seat__hand-cards > .arena-seat__hand-card:last-child .arena-card-back {
-  margin-right: 0;
+
+.arena-seat__hand-scrollbar {
+  position: relative;
+  width: 100%;
+  max-width: 120px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.arena-seat__hand-scrollbar-thumb {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  min-width: 16px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.22);
+  transition: background var(--arena-motion);
+  cursor: grab;
+}
+
+.arena-seat__hand-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.36);
+}
+
+.arena-seat__hand-scrollbar-thumb:active {
+  cursor: grabbing;
+  background: rgba(255, 255, 255, 0.44);
 }
 
 .arena-card[data-content-mode="bare"] {
@@ -595,12 +588,10 @@ select {
   background-position: center, center;
   background-repeat: no-repeat, no-repeat;
   background-size: cover, cover;
-  box-shadow: var(--arena-card-shadow);
+  box-shadow: none;
   transition:
     transform var(--arena-motion),
-    box-shadow var(--arena-motion),
-    border-color var(--arena-motion),
-    margin-right var(--arena-motion);
+    border-color var(--arena-motion);
 }
 
 .arena-card[data-content-mode="bare"][data-hidden-placeholder="true"] {
@@ -610,51 +601,27 @@ select {
 }
 
 .arena-card[data-content-mode="bare"][data-has-action="true"] {
-  box-shadow:
-    0 0 0 1px rgba(108, 217, 160, 0.24),
-    0 0 22px rgba(88, 192, 127, 0.22),
-    var(--arena-card-shadow);
+  box-shadow: none;
 }
 
 .arena-card[data-content-mode="bare"][data-previewed="true"] {
-  box-shadow:
-    0 0 0 1px rgba(245, 208, 126, 0.36),
-    0 0 28px rgba(245, 208, 126, 0.18),
-    var(--arena-card-shadow);
+  box-shadow: none;
 }
 
 @media (hover: hover) {
-  .arena-seat__hand-cards > .arena-seat__hand-card:hover {
-    --hand-z-boost: 400;
+  .arena-seat__hand-area:hover {
+    transform: translateY(calc(var(--hand-card-height, 96px) * 0.30));
   }
 
-  .arena-seat__hand-cards > .arena-seat__hand-card:hover .arena-card[data-variant="hand"] {
-    --card-scale: 1.24;
-    --card-lift: 24px;
+  .arena-seat__hand-card[data-placement="visible"]:hover,
+  .arena-seat__hand-card[data-placement="pile-right"][data-pile-top="true"]:hover {
+    z-index: 100 !important;
   }
 
-  .arena-seat__hand-cards > .arena-seat__hand-card:hover + .arena-seat__hand-card,
-  .arena-seat__hand-cards > .arena-seat__hand-card:has(+ .arena-seat__hand-card:hover) {
-    --hand-z-boost: 300;
+  .arena-seat__hand-card[data-placement="visible"]:hover .arena-card[data-variant="hand"],
+  .arena-seat__hand-card[data-placement="pile-right"][data-pile-top="true"]:hover .arena-card[data-variant="hand"] {
+    transform: translateY(-16px) scale(1.15);
   }
-
-  .arena-seat__hand-cards > .arena-seat__hand-card:hover + .arena-seat__hand-card .arena-card[data-variant="hand"],
-  .arena-seat__hand-cards > .arena-seat__hand-card:has(+ .arena-seat__hand-card:hover) .arena-card[data-variant="hand"] {
-    --card-scale: 1.12;
-    --card-lift: 14px;
-  }
-
-  .arena-seat__hand-cards > .arena-seat__hand-card:hover + .arena-seat__hand-card + .arena-seat__hand-card,
-  .arena-seat__hand-cards > .arena-seat__hand-card:has(+ .arena-seat__hand-card + .arena-seat__hand-card:hover) {
-    --hand-z-boost: 200;
-  }
-
-  .arena-seat__hand-cards > .arena-seat__hand-card:hover + .arena-seat__hand-card + .arena-seat__hand-card .arena-card[data-variant="hand"],
-  .arena-seat__hand-cards > .arena-seat__hand-card:has(+ .arena-seat__hand-card + .arena-seat__hand-card:hover) .arena-card[data-variant="hand"] {
-    --card-scale: 1.05;
-    --card-lift: 6px;
-  }
-
 }
 
 .arena-seat__rail-empty {
@@ -726,41 +693,40 @@ select {
 }
 
 .arena-card[data-variant="hand"] {
-  --card-width: 126px;
-  --card-height: 176px;
+  --card-width: var(--hand-card-width, 72px);
+  --card-height: var(--hand-card-height, 96px);
   --card-zone-accent: transparent;
-  --card-zone-glow: transparent;
+  --card-zone-glow: none;
   --card-zone-tint-top: transparent;
   --card-zone-tint-bottom: transparent;
-  margin-right: var(--hand-card-local-overlap, var(--hand-card-overlap, -43px));
   box-shadow: none;
   transform-origin: center bottom;
   transition:
     transform var(--arena-motion),
-    border-color var(--arena-motion),
-    margin-right var(--arena-motion);
+    border-color var(--arena-motion);
 }
 
 .arena-card[data-variant="hand"][data-source-zone="COMMAND"] {
   --card-zone-accent: rgba(233, 202, 130, 0.84);
-  --card-zone-glow: rgba(226, 185, 94, 0.24);
+  --card-zone-glow: none;
   --card-zone-tint-top: rgba(226, 185, 94, 0.2);
   --card-zone-tint-bottom: rgba(226, 185, 94, 0.08);
 }
 
 .arena-card[data-variant="hand"][data-source-zone="EXILE"] {
   --card-zone-accent: rgba(240, 135, 118, 0.54);
-  --card-zone-glow: rgba(225, 102, 78, 0.16);
+  --card-zone-glow: none;
   --card-zone-tint-top: rgba(225, 102, 78, 0.12);
   --card-zone-tint-bottom: rgba(225, 102, 78, 0.05);
 }
 
 .arena-card[data-variant="hand"][data-source-zone="GRAVEYARD"] {
   --card-zone-accent: rgba(144, 182, 204, 0.52);
-  --card-zone-glow: rgba(94, 152, 188, 0.14);
+  --card-zone-glow: none;
   --card-zone-tint-top: rgba(94, 152, 188, 0.1);
   --card-zone-tint-bottom: rgba(94, 152, 188, 0.04);
 }
+
 
 .arena-card[data-variant="battlefield"] {
   --card-width: 118px;
@@ -827,9 +793,7 @@ select {
       transparent 68%,
       var(--card-zone-tint-bottom, transparent)
     );
-  box-shadow:
-    inset 0 0 0 1px var(--card-zone-glow, transparent),
-    inset 0 0 28px var(--card-zone-glow, transparent);
+  box-shadow: none;
   opacity: 0;
   pointer-events: none;
   transition:
@@ -1264,6 +1228,21 @@ select {
   margin-bottom: 4px;
 }
 
+.arena-zone-modal__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.arena-zone-modal__section-label {
+  color: var(--arena-text-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 .arena-zone-modal__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
@@ -1438,19 +1417,14 @@ select {
   }
 
   .arena-seat__hand-area {
-    --arena-hand-hover-clearance-top: 56px;
-    --arena-hand-hover-clearance-side: 14px;
-    min-height: 112px;
-  }
-
-  .arena-seat__hand-scroll {
-    width: calc(100% + (var(--arena-hand-hover-clearance-side) * 2));
-    padding-top: var(--arena-hand-hover-clearance-top);
-    margin-top: calc(var(--arena-hand-hover-clearance-top) * -1);
-    margin-inline: calc(var(--arena-hand-hover-clearance-side) * -1);
+    --hand-card-width: 60px;
+    --hand-card-height: 82px;
+    --hand-card-overlap: -22px;
+    --hand-peek-translate: 67px;
   }
 
   .arena-zone-pile {
+    --pile-peek-translate: 67px;
     width: 72px;
     height: 96px;
   }
@@ -1463,12 +1437,6 @@ select {
   .arena-zone-pile__card {
     width: 60px;
     height: 82px;
-  }
-
-  .arena-card[data-variant="hand"] {
-    --card-width: 98px;
-    --card-height: 136px;
-    margin-right: var(--hand-card-local-overlap, var(--hand-card-overlap, -28px));
   }
 
   .arena-card[data-variant="battlefield"] {
@@ -1552,11 +1520,8 @@ select {
     grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
-  .arena-seat__zone-piles {
-    gap: 6px;
-  }
-
   .arena-zone-pile {
+    --pile-peek-translate: 55px;
     width: 56px;
     height: 78px;
   }
@@ -1583,24 +1548,10 @@ select {
   }
 
   .arena-seat__hand-area {
-    --arena-hand-hover-clearance-top: 50px;
-    --arena-hand-hover-clearance-side: 12px;
-    justify-content: flex-start;
-    min-height: 96px;
-  }
-
-  .arena-seat__hand-scroll {
-    width: calc(100% + (var(--arena-hand-hover-clearance-side) * 2));
-    padding-top: var(--arena-hand-hover-clearance-top);
-    margin-top: calc(var(--arena-hand-hover-clearance-top) * -1);
-    margin-inline: calc(var(--arena-hand-hover-clearance-side) * -1);
-  }
-
-  .arena-seat__hand-rail {
-    justify-content: flex-start;
-  }
-
-  .arena-card[data-variant="hand"] {
-    margin-right: var(--hand-card-local-overlap, var(--hand-card-overlap, -10px));
+    --hand-card-width: 48px;
+    --hand-card-height: 64px;
+    --hand-card-overlap: -16px;
+    --hand-peek-translate: 55px;
+    align-items: flex-start;
   }
 }

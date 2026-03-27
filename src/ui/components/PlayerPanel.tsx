@@ -35,7 +35,7 @@ interface PlayerPanelProps {
   registerZoneAnchor: (key: string, node: HTMLElement | null) => void;
 }
 
-type OpenZoneDialog = typeof Zone.GRAVEYARD | typeof Zone.EXILE | null;
+type OpenZoneDialog = 'GRAVEYARD_EXILE' | null;
 
 const MANA_COLORS: Record<keyof ManaPool, string> = {
   W: '#f9f5e3',
@@ -251,6 +251,52 @@ function ZonePile({
   );
 }
 
+function CombinedZonePile({
+  graveyardCount,
+  exileCount,
+  onClick,
+  registerGraveyardAnchor,
+  registerExileAnchor,
+}: {
+  graveyardCount: number;
+  exileCount: number;
+  onClick: () => void;
+  registerGraveyardAnchor: (node: HTMLElement | null) => void;
+  registerExileAnchor: (node: HTMLElement | null) => void;
+}) {
+  const totalCount = graveyardCount + exileCount;
+  const pileCount = Math.max(1, Math.min(4, totalCount));
+
+  return (
+    <button
+      type="button"
+      className="arena-zone-pile"
+      data-zone="GRAVEYARD_EXILE"
+      data-side="left"
+      disabled={totalCount === 0}
+      onClick={onClick}
+      ref={(node) => {
+        registerGraveyardAnchor(node);
+        registerExileAnchor(node);
+      }}
+    >
+      <div className="arena-zone-pile__stack" aria-hidden="true">
+        {Array.from({ length: pileCount }).map((_, index) => (
+          <span
+            key={`gy-ex-${index}`}
+            className="arena-zone-pile__card"
+            style={{ ['--pile-index' as string]: `${index}` } as React.CSSProperties}
+          />
+        ))}
+      </div>
+      <span className="arena-zone-pile__tag">GY/EX</span>
+      <span className="arena-zone-pile__label">
+        Graveyard {graveyardCount} / Exile {exileCount}
+      </span>
+    </button>
+  );
+}
+
 function playerPanelPropsEqual(prev: PlayerPanelProps, next: PlayerPanelProps): boolean {
   if (
     prev.seat !== next.seat ||
@@ -358,8 +404,13 @@ const PlayerPanelInner: React.FC<PlayerPanelProps> = ({
     onBattlefieldDragOver(player.id);
   };
 
-  const dialogCards =
-    openZoneDialog === Zone.GRAVEYARD ? graveyard : openZoneDialog === Zone.EXILE ? exile : [];
+  const dialogSections =
+    openZoneDialog === 'GRAVEYARD_EXILE'
+      ? [
+          { zone: Zone.GRAVEYARD as typeof Zone.GRAVEYARD, cards: graveyard },
+          { zone: Zone.EXILE as typeof Zone.EXILE, cards: exile },
+        ]
+      : [];
 
   return (
     <section
@@ -464,22 +515,13 @@ const PlayerPanelInner: React.FC<PlayerPanelProps> = ({
       </div>
 
       <div className="arena-seat__zone-rail">
-        <div className="arena-seat__zone-piles" data-side="left">
-          <ZonePile
-            zone={Zone.EXILE}
-            count={exile.length}
-            side="left"
-            onClick={() => setOpenZoneDialog(Zone.EXILE)}
-            registerZoneAnchor={(node) => registerZoneAnchor(`${player.id}:EXILE`, node)}
-          />
-          <ZonePile
-            zone={Zone.GRAVEYARD}
-            count={graveyard.length}
-            side="left"
-            onClick={() => setOpenZoneDialog(Zone.GRAVEYARD)}
-            registerZoneAnchor={(node) => registerZoneAnchor(`${player.id}:GRAVEYARD`, node)}
-          />
-        </div>
+        <CombinedZonePile
+          graveyardCount={graveyard.length}
+          exileCount={exile.length}
+          onClick={() => setOpenZoneDialog('GRAVEYARD_EXILE')}
+          registerGraveyardAnchor={(node) => registerZoneAnchor(`${player.id}:GRAVEYARD`, node)}
+          registerExileAnchor={(node) => registerZoneAnchor(`${player.id}:EXILE`, node)}
+        />
 
         <HandRail
           playerId={player.id}
@@ -502,21 +544,18 @@ const PlayerPanelInner: React.FC<PlayerPanelProps> = ({
           registerZoneAnchor={registerZoneAnchor}
         />
 
-        <div className="arena-seat__zone-piles" data-side="right">
-          <ZonePile
-            zone={Zone.LIBRARY}
-            count={library.length}
-            side="right"
-            registerZoneAnchor={(node) => registerZoneAnchor(`${player.id}:LIBRARY`, node)}
-          />
-        </div>
+        <ZonePile
+          zone={Zone.LIBRARY}
+          count={library.length}
+          side="right"
+          registerZoneAnchor={(node) => registerZoneAnchor(`${player.id}:LIBRARY`, node)}
+        />
       </div>
 
       {openZoneDialog && (
         <ZoneDialog
           playerName={player.name}
-          zone={openZoneDialog}
-          cards={dialogCards}
+          sections={dialogSections}
           previewCardId={previewCardId}
           touchFriendly={touchFriendly}
           onPreview={onPreview}

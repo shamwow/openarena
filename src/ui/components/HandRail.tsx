@@ -1,9 +1,12 @@
-import React, { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { CardInstance, PlayerAction, PlayerId } from '../../engine/types';
 import { ActionType, Zone } from '../../engine/types';
 import { useCardArt } from '../hooks/useCardArt';
 import type { DragCardPayload } from '../types';
 import { getPrimaryCardAction, isTokenCard } from '../utils/gameView';
+
+const MAX_VISIBLE = 15;
+const MAX_PILE_SHOW = 4;
 
 interface HandRailProps {
   playerId: PlayerId;
@@ -167,104 +170,69 @@ function buildHandRailItems(
   });
 }
 
-function distributeWeightedAmount(
-  weights: number[],
-  total: number,
-  capacities?: number[],
-): number[] {
-  const result = Array.from({ length: weights.length }, () => 0);
-  if (total <= 0 || weights.length === 0) {
-    return result;
+type CardPlacement = 'visible' | 'pile-left' | 'pile-right';
+
+function getCardPlacement(
+  railIndex: number,
+  scrollIndex: number,
+  totalCards: number,
+  needsScroll: boolean,
+): { placement: CardPlacement; visibleIndex: number; pileDistance: number } {
+  if (!needsScroll) {
+    return { placement: 'visible', visibleIndex: railIndex, pileDistance: 0 };
   }
 
-  let remaining = total;
-  let activeIndexes = weights
-    .map((weight, index) => ({ weight, index }))
-    .filter(
-      ({ weight, index }) =>
-        weight > 0 && (capacities == null || (capacities[index] ?? 0) > 0),
-    )
-    .map(({ index }) => index);
-
-  while (remaining > 0.001 && activeIndexes.length > 0) {
-    const activeWeightSum = activeIndexes.reduce((sum, index) => sum + weights[index], 0);
-    if (activeWeightSum <= 0) {
-      break;
-    }
-
-    let distributed = 0;
-    const nextActiveIndexes: number[] = [];
-
-    for (const index of activeIndexes) {
-      const share = remaining * (weights[index] / activeWeightSum);
-      const capacity = capacities?.[index] ?? Number.POSITIVE_INFINITY;
-      const available = capacity - result[index];
-      const nextAmount = Math.max(0, Math.min(share, available));
-      result[index] += nextAmount;
-      distributed += nextAmount;
-
-      if (result[index] + 0.001 < capacity) {
-        nextActiveIndexes.push(index);
-      }
-    }
-
-    if (distributed <= 0.001) {
-      break;
-    }
-
-    remaining -= distributed;
-    activeIndexes = nextActiveIndexes;
+  if (railIndex < scrollIndex) {
+    const distance = scrollIndex - railIndex;
+    return { placement: 'pile-left', visibleIndex: 0, pileDistance: distance };
   }
 
-  return result;
+  if (railIndex >= scrollIndex + MAX_VISIBLE) {
+    const distance = railIndex - scrollIndex - MAX_VISIBLE + 1;
+    return { placement: 'pile-right', visibleIndex: 0, pileDistance: distance };
+  }
+
+  return {
+    placement: 'visible',
+    visibleIndex: railIndex - scrollIndex,
+    pileDistance: 0,
+  };
 }
 
-function buildSideOverlapDeltas(
-  gapCount: number,
-  baseOverlap: number,
-  cardWidth: number,
-): number[] {
-  if (gapCount <= 1) {
-    return Array.from({ length: gapCount }, () => 0);
+function getCardPositionStyle(
+  placement: CardPlacement,
+  visibleIndex: number,
+  pileDistance: number,
+  visibleCount: number,
+): React.CSSProperties {
+  const pileOffset = 'var(--hand-pile-offset, 3px)';
+  const step = 'var(--hand-card-step)';
+
+  switch (placement) {
+    case 'visible':
+      return {
+        left: visibleIndex === 0
+          ? '0px'
+          : `calc(${visibleIndex} * ${step})`,
+        zIndex: visibleIndex + MAX_PILE_SHOW + 1,
+      };
+
+    case 'pile-left': {
+      const clamped = Math.min(pileDistance, MAX_PILE_SHOW);
+      return {
+        left: `calc(${-clamped} * ${pileOffset})`,
+        zIndex: Math.max(1, MAX_PILE_SHOW - clamped + 1),
+      };
+    }
+
+    case 'pile-right': {
+      const clamped = Math.min(pileDistance, MAX_PILE_SHOW);
+      return {
+        left: `calc(${visibleCount - 1} * ${step} + ${clamped - 1} * ${pileOffset})`,
+        zIndex: visibleCount + MAX_PILE_SHOW + clamped,
+      };
+    }
   }
-
-  const overlapMagnitude = Math.abs(baseOverlap);
-  const baseContribution = Math.max(1, cardWidth + baseOverlap);
-  const compressionCapacity = Math.max(0, baseContribution - 1);
-  const requestedNearExpansion = Math.min(
-    Math.max(4, overlapMagnitude * 0.24),
-    18,
-    Math.max(0, overlapMagnitude - 2),
-  );
-
-  if (compressionCapacity <= 0.001 || requestedNearExpansion <= 0.001) {
-    return Array.from({ length: gapCount }, () => 0);
-  }
-
-  const expandWeights = Array.from({ length: gapCount }, (_, index) => Math.pow(0.58, index));
-  const compressWeights = Array.from({ length: gapCount }, (_, index) =>
-    Math.pow(index / (gapCount - 1), 1.35),
-  );
-  const compressCapacities = compressWeights.map((weight) =>
-    weight > 0 ? compressionCapacity : 0,
-  );
-  const expandWeightSum = expandWeights.reduce((sum, weight) => sum + weight, 0);
-  const totalCompressionCapacity = compressCapacities.reduce((sum, value) => sum + value, 0);
-  const requestedTotalExpansion = requestedNearExpansion * expandWeightSum;
-  const totalExpansion = Math.min(requestedTotalExpansion, totalCompressionCapacity);
-
-  if (totalExpansion <= 0.001) {
-    return Array.from({ length: gapCount }, () => 0);
-  }
-
-  const expandDeltas = distributeWeightedAmount(expandWeights, totalExpansion);
-  const compressDeltas = distributeWeightedAmount(
-    compressWeights,
-    totalExpansion,
-    compressCapacities,
-  );
-
-  return expandDeltas.map((expandDelta, index) => expandDelta - compressDeltas[index]);
 }
 
 interface HandRailCardProps {
@@ -395,6 +363,75 @@ const HandRailCard = React.memo<HandRailCardProps>(
   handRailCardPropsEqual,
 );
 
+function HandScrollbar({
+  scrollIndex,
+  maxScrollIndex,
+  visibleCount,
+  totalCount,
+  onChange,
+}: {
+  scrollIndex: number;
+  maxScrollIndex: number;
+  visibleCount: number;
+  totalCount: number;
+  onChange: (index: number) => void;
+}) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const thumbRatio = visibleCount / totalCount;
+  const thumbLeft =
+    maxScrollIndex > 0 ? (scrollIndex / maxScrollIndex) * (1 - thumbRatio) * 100 : 0;
+
+  const handleTrackClick = (event: React.MouseEvent) => {
+    const track = trackRef.current;
+    if (!track) return;
+    const rect = track.getBoundingClientRect();
+    const ratio = (event.clientX - rect.left) / rect.width;
+    onChange(Math.max(0, Math.min(maxScrollIndex, Math.round(ratio * maxScrollIndex))));
+  };
+
+  const handleThumbMouseDown = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const track = trackRef.current;
+    if (!track) return;
+    const trackWidth = track.getBoundingClientRect().width;
+    const startX = event.clientX;
+    const startIndex = scrollIndex;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const dx = moveEvent.clientX - startX;
+      const dRatio = dx / trackWidth;
+      const dIndex = Math.round(dRatio * totalCount);
+      onChange(Math.max(0, Math.min(maxScrollIndex, startIndex + dIndex)));
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  return (
+    <div
+      className="arena-seat__hand-scrollbar"
+      ref={trackRef}
+      onClick={handleTrackClick}
+    >
+      <div
+        className="arena-seat__hand-scrollbar-thumb"
+        style={{
+          left: `${thumbLeft}%`,
+          width: `${thumbRatio * 100}%`,
+        }}
+        onMouseDown={handleThumbMouseDown}
+      />
+    </div>
+  );
+}
+
 const HandRailInner: React.FC<HandRailProps> = ({
   playerId,
   playerName,
@@ -415,78 +452,8 @@ const HandRailInner: React.FC<HandRailProps> = ({
   registerCardElement,
   registerZoneAnchor,
 }) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const handCardsRef = useRef<HTMLDivElement>(null);
-  const baseOverlapRef = useRef<number>(-43);
-
-  const clearHoverSpacing = useCallback(() => {
-    const handCardsEl = handCardsRef.current;
-    if (!handCardsEl) {
-      return;
-    }
-
-    for (const child of handCardsEl.children) {
-      if (!(child instanceof HTMLElement)) {
-        continue;
-      }
-
-      child.style.removeProperty('--hand-card-local-overlap');
-      child.style.removeProperty('--hand-z-hover-order');
-    }
-  }, []);
-
-  const applyHoverSpacing = useCallback((hoveredIndex: number) => {
-    const handCardsEl = handCardsRef.current;
-    if (!handCardsEl) {
-      return;
-    }
-
-    const children = Array.from(handCardsEl.children).filter(
-      (child): child is HTMLElement => child instanceof HTMLElement,
-    );
-    if (children.length <= 1) {
-      return;
-    }
-
-    const baseOverlap = baseOverlapRef.current;
-    const firstCardEl = handCardsEl.querySelector('[data-variant="hand"]') as HTMLElement | null;
-    if (!firstCardEl) {
-      return;
-    }
-
-    const cardWidth = firstCardEl.offsetWidth;
-
-    const leftGapCount = hoveredIndex;
-    const rightGapCount = children.length - hoveredIndex - 1;
-    const leftDeltas = buildSideOverlapDeltas(leftGapCount, baseOverlap, cardWidth);
-    const rightDeltas = buildSideOverlapDeltas(rightGapCount, baseOverlap, cardWidth);
-
-    for (const [index, child] of children.entries()) {
-      if (index === hoveredIndex) {
-        child.style.setProperty('--hand-z-hover-order', `${children.length * 3}`);
-      } else if (index > hoveredIndex) {
-        const rightDistance = index - hoveredIndex;
-        const rightStackOrder = (children.length - rightDistance) * 2;
-        child.style.setProperty('--hand-z-hover-order', `${rightStackOrder}`);
-      } else {
-        child.style.removeProperty('--hand-z-hover-order');
-      }
-
-      if (index === children.length - 1) {
-        child.style.removeProperty('--hand-card-local-overlap');
-        continue;
-      }
-
-      let delta = 0;
-      if (index < hoveredIndex) {
-        delta = leftDeltas[hoveredIndex - 1 - index] ?? 0;
-      } else if (index >= hoveredIndex) {
-        delta = rightDeltas[index - hoveredIndex] ?? 0;
-      }
-
-      child.style.setProperty('--hand-card-local-overlap', `${baseOverlap + delta}px`);
-    }
-  }, []);
+  const areaRef = useRef<HTMLDivElement>(null);
+  const [scrollIndex, setScrollIndex] = useState(0);
 
   const railItems = useMemo(
     () =>
@@ -502,51 +469,36 @@ const HandRailInner: React.FC<HandRailProps> = ({
     [playerId, handHidden, command, hand, exile, graveyard, legalActions],
   );
 
-  useLayoutEffect(() => {
-    const scrollEl = scrollRef.current;
-    const handCardsEl = handCardsRef.current;
-    if (!scrollEl || !handCardsEl) {
-      return;
-    }
+  const totalCards = railItems.length;
+  const needsScroll = totalCards > MAX_VISIBLE;
+  const maxScrollIndex = Math.max(0, totalCards - MAX_VISIBLE);
+  const visibleCount = Math.min(totalCards, MAX_VISIBLE);
 
-    const update = () => {
-      clearHoverSpacing();
+  // Clamp scroll index when card count changes
+  const clampedScrollIndex = Math.max(0, Math.min(scrollIndex, maxScrollIndex));
+  if (clampedScrollIndex !== scrollIndex) {
+    setScrollIndex(clampedScrollIndex);
+  }
 
-      const count = handCardsEl.children.length;
-      if (count <= 1) {
-        handCardsEl.style.removeProperty('--hand-card-overlap');
-        baseOverlapRef.current = 0;
-        return;
-      }
+  // Wheel scroll handler (needs passive: false for preventDefault)
+  useEffect(() => {
+    const el = areaRef.current;
+    if (!el || !needsScroll) return;
 
-      handCardsEl.style.removeProperty('--hand-card-overlap');
-
-      const firstCardEl = handCardsEl.querySelector('[data-variant="hand"]') as HTMLElement | null;
-      if (!firstCardEl) {
-        return;
-      }
-
-      const available = scrollEl.clientWidth;
-      const naturalWidth = handCardsEl.scrollWidth;
-      if (naturalWidth <= available) {
-        baseOverlapRef.current = Number.parseFloat(getComputedStyle(firstCardEl).marginRight);
-        return;
-      }
-
-      const cardWidth = firstCardEl.offsetWidth;
-      const neededOverlap = (cardWidth * count - available) / (count - 1);
-      const maxOverlap = cardWidth - 5;
-      const overlap = Math.min(Math.max(0, neededOverlap), maxOverlap);
-      handCardsEl.style.setProperty('--hand-card-overlap', `-${overlap}px`);
-      baseOverlapRef.current = -overlap;
+    const handler = (event: WheelEvent) => {
+      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY)
+        ? event.deltaX
+        : event.deltaY;
+      if (delta === 0) return;
+      event.preventDefault();
+      setScrollIndex((prev) =>
+        Math.max(0, Math.min(maxScrollIndex, prev + Math.sign(delta))),
+      );
     };
 
-    const observer = new ResizeObserver(update);
-    observer.observe(scrollEl);
-    update();
-
-    return () => observer.disconnect();
-  }, [clearHoverSpacing, railItems.length]);
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, [needsScroll, maxScrollIndex]);
 
   const anchorCardIds = useMemo(() => {
     const next = new Map<RailAnchorZone, string>();
@@ -564,11 +516,32 @@ const HandRailInner: React.FC<HandRailProps> = ({
     return next;
   }, [railItems]);
 
+  const containerWidthCalc =
+    visibleCount <= 0
+      ? '0px'
+      : visibleCount === 1
+        ? 'var(--hand-card-width, 72px)'
+        : `calc(${visibleCount - 1} * var(--hand-card-step) + var(--hand-card-width, 72px))`;
+
   const renderRailItem = (item: HandRailItem) => {
-    const baseZIndex = Math.max(1, item.railIndex + 1);
-    const railCardStyle = {
-      ['--hand-z-base' as string]: `${baseZIndex}`,
-    } as React.CSSProperties;
+    const { placement, visibleIndex, pileDistance } = getCardPlacement(
+      item.railIndex,
+      clampedScrollIndex,
+      totalCards,
+      needsScroll,
+    );
+
+    const positionStyle = getCardPositionStyle(
+      placement,
+      visibleIndex,
+      pileDistance,
+      visibleCount,
+    );
+
+    const railCardStyle: React.CSSProperties = {
+      ...positionStyle,
+    };
+    const isPileTop = placement === 'pile-right' && item.railIndex === totalCards - 1;
 
     if (item.kind === 'hidden-hand') {
       return (
@@ -576,8 +549,9 @@ const HandRailInner: React.FC<HandRailProps> = ({
           key={item.key}
           className="arena-seat__hand-card"
           data-hidden-placeholder="true"
+          data-placement={placement}
+          data-pile-top={isPileTop || undefined}
           style={railCardStyle}
-          onMouseEnter={previewMode === 'hover' ? () => applyHoverSpacing(item.railIndex) : undefined}
         >
           <div
             className="arena-card"
@@ -599,11 +573,12 @@ const HandRailInner: React.FC<HandRailProps> = ({
       <div
         key={item.card.objectId}
         className="arena-seat__hand-card"
+        data-placement={placement}
+        data-pile-top={isPileTop || undefined}
         ref={
           anchorZone ? (node) => registerZoneAnchor(`${playerId}:${anchorZone}`, node) : undefined
         }
         style={railCardStyle}
-        onMouseEnter={previewMode === 'hover' ? () => applyHoverSpacing(item.railIndex) : undefined}
       >
         <HandRailCard
           card={item.card}
@@ -626,20 +601,43 @@ const HandRailInner: React.FC<HandRailProps> = ({
   return (
     <div
       className="arena-seat__hand-area"
-      ref={(node) => registerZoneAnchor(`${playerId}:HAND`, node)}
+      ref={(node) => {
+        (areaRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+        registerZoneAnchor(`${playerId}:HAND`, node);
+      }}
       data-hidden={handHidden}
+      data-has-scroll={needsScroll}
       title={handHidden ? `${hand.length} cards in hand` : undefined}
       aria-label={handHidden ? `${playerName} has ${hand.length} cards in hand` : undefined}
-      onMouseLeave={previewMode === 'hover' ? clearHoverSpacing : undefined}
+      style={
+        !needsScroll && totalCards > 1
+          ? ({
+              ['--hand-card-overlap' as string]: `${Math.round(-30 * (totalCards / MAX_VISIBLE))}px`,
+            } as React.CSSProperties)
+          : undefined
+      }
     >
       {railItems.length > 0 ? (
-        <div className="arena-seat__hand-scroll" ref={scrollRef}>
-          <div className="arena-seat__hand-rail">
-            <div className="arena-seat__hand-cards" ref={handCardsRef}>
-              {railItems.map((item) => renderRailItem(item))}
-            </div>
+        <>
+          {needsScroll && (
+            <HandScrollbar
+              scrollIndex={clampedScrollIndex}
+              maxScrollIndex={maxScrollIndex}
+              visibleCount={visibleCount}
+              totalCount={totalCards}
+              onChange={setScrollIndex}
+            />
+          )}
+          <div
+            className="arena-seat__hand-cards"
+            style={{
+              width: containerWidthCalc,
+              height: 'var(--hand-card-height, 96px)',
+            }}
+          >
+            {railItems.map((item) => renderRailItem(item))}
           </div>
-        </div>
+        </>
       ) : (
         <div className="arena-seat__rail-empty">No cards ready</div>
       )}
