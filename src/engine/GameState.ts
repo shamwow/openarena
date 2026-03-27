@@ -1,7 +1,7 @@
 import { v4 as uuid } from 'uuid';
 import type {
   GameState, PlayerId, CardDefinition, CardInstance,
-  LastKnownInformation, ManaColor, Zone, PlayerState,
+  LastKnownInformation, ManaColor, Zone, PlayerState, CardType,
 } from './types';
 import { Phase, Step, emptyManaPool } from './types';
 
@@ -105,6 +105,7 @@ export function createBaseGameState(
     passedPriority: new Set(),
     pendingTriggers: [],
     delayedTriggers: [],
+    castPermissions: [],
     waitingForChoice: false,
     isGameOver: false,
     winner: null,
@@ -151,6 +152,9 @@ export function cloneCardInstance(card: CardInstance): CardInstance {
     ...card,
     counters: { ...card.counters },
     attachments: [...card.attachments],
+    modifiedTypes: card.modifiedTypes ? [...card.modifiedTypes] : undefined,
+    modifiedSubtypes: card.modifiedSubtypes ? [...card.modifiedSubtypes] : undefined,
+    modifiedSupertypes: card.modifiedSupertypes ? [...card.modifiedSupertypes] : undefined,
     modifiedKeywords: card.modifiedKeywords ? [...card.modifiedKeywords] : undefined,
     modifiedAbilities: card.modifiedAbilities ? [...card.modifiedAbilities] : undefined,
     protectionFrom: card.protectionFrom ? [...card.protectionFrom] : undefined,
@@ -167,6 +171,26 @@ export function cloneCardInstance(card: CardInstance): CardInstance {
 
 export function getObjectInstanceKey(objectId: string, zoneChangeCounter: number): string {
   return `${objectId}:${zoneChangeCounter}`;
+}
+
+export function getEffectiveTypes(card: CardInstance): CardType[] {
+  return card.modifiedTypes ?? card.definition.types;
+}
+
+export function getEffectiveSubtypes(card: CardInstance): string[] {
+  return card.modifiedSubtypes ?? card.definition.subtypes;
+}
+
+export function getEffectiveSupertypes(card: CardInstance): string[] {
+  return card.modifiedSupertypes ?? card.definition.supertypes;
+}
+
+export function hasType(card: CardInstance, type: CardType): boolean {
+  return getEffectiveTypes(card).includes(type);
+}
+
+export function hasSubtype(card: CardInstance, subtype: string): boolean {
+  return getEffectiveSubtypes(card).includes(subtype);
 }
 
 export function rememberLastKnownInformation(state: GameState, card: CardInstance): LastKnownInformation {

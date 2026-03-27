@@ -8,6 +8,9 @@ import { GameEventType, StackEntryType, CardType, Keyword } from './types';
 import {
   cloneCardInstance,
   findCard,
+  getEffectiveSubtypes,
+  getEffectiveSupertypes,
+  hasType,
   getNextTimestamp,
   rememberLastKnownInformation,
 } from './GameState';
@@ -301,6 +304,28 @@ export class StackManager {
     this.eventBus.emit(event);
   }
 
+  moveSpellFromStack(
+    state: GameState,
+    objectId: ObjectId,
+    toZone: import('./types').Zone,
+    toOwner?: PlayerId,
+  ): CardInstance | undefined {
+    const entryIndex = state.stack.findIndex((entry) => entry.cardInstance?.objectId === objectId);
+    if (entryIndex < 0) {
+      return undefined;
+    }
+
+    const entry = state.stack[entryIndex];
+    const card = entry.cardInstance;
+    if (!card) {
+      return undefined;
+    }
+
+    this.moveCardInstanceFromStack(state, entry, toZone, toOwner ?? card.owner);
+    state.stack.splice(entryIndex, 1);
+    return card;
+  }
+
   /** Check if a split second spell is on the stack */
   hasSplitSecond(): boolean {
     // We'll implement split second tracking later when cards need it
@@ -387,14 +412,14 @@ export class StackManager {
     if (spec.controller === 'opponent' && candidate.controller === controller) return false;
 
     const typeChecks: Record<TargetSpec['what'], boolean> = {
-      creature: candidate.definition.types.includes(CardType.CREATURE),
+      creature: hasType(candidate, CardType.CREATURE),
       player: false,
       permanent: candidate.zone === 'BATTLEFIELD',
       spell: candidate.zone === 'STACK',
       'card-in-graveyard': candidate.zone === (spec.zone ?? 'GRAVEYARD'),
-      'creature-or-player': candidate.definition.types.includes(CardType.CREATURE),
-      'creature-or-planeswalker': candidate.definition.types.includes(CardType.CREATURE) || candidate.definition.types.includes(CardType.PLANESWALKER),
-      planeswalker: candidate.definition.types.includes(CardType.PLANESWALKER),
+      'creature-or-player': hasType(candidate, CardType.CREATURE),
+      'creature-or-planeswalker': hasType(candidate, CardType.CREATURE) || hasType(candidate, CardType.PLANESWALKER),
+      planeswalker: hasType(candidate, CardType.PLANESWALKER),
       any: candidate.zone === 'BATTLEFIELD',
     };
 
@@ -410,9 +435,9 @@ export class StackManager {
     sourceController: PlayerId,
     state: GameState,
   ): boolean {
-    if (filter.types && !filter.types.some(type => card.definition.types.includes(type))) return false;
-    if (filter.subtypes && !filter.subtypes.some(subtype => card.definition.subtypes.includes(subtype))) return false;
-    if (filter.supertypes && !filter.supertypes.some(supertype => card.definition.supertypes.includes(supertype))) return false;
+    if (filter.types && !filter.types.some(type => hasType(card, type))) return false;
+    if (filter.subtypes && !filter.subtypes.some(subtype => getEffectiveSubtypes(card).includes(subtype))) return false;
+    if (filter.supertypes && !filter.supertypes.some(supertype => getEffectiveSupertypes(card).includes(supertype))) return false;
     if (filter.colors && !filter.colors.some(color => card.definition.colorIdentity.includes(color))) return false;
     if (filter.keywords && !filter.keywords.some(keyword => (card.modifiedKeywords ?? card.definition.keywords).includes(keyword))) return false;
     if (filter.controller === 'you' && card.controller !== sourceController) return false;
@@ -437,7 +462,7 @@ export class StackManager {
       if (protection.colors?.some(color => source.definition.colorIdentity.includes(color))) {
         return true;
       }
-      if (protection.types?.some(type => source.definition.types.includes(type))) {
+      if (protection.types?.some(type => hasType(source, type))) {
         return true;
       }
       return protection.custom?.(source) ?? false;
@@ -487,7 +512,7 @@ export class StackManager {
     if (toZone === 'BATTLEFIELD') {
       card.controller = toOwner;
       card.summoningSick = true;
-      if (card.definition.types.includes(CardType.PLANESWALKER) && card.definition.loyalty !== undefined) {
+      if (hasType(card, CardType.PLANESWALKER) && card.definition.loyalty !== undefined) {
         card.counters.loyalty = card.definition.loyalty;
       }
       state.zones[toOwner].BATTLEFIELD.push(card);

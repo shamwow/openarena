@@ -7,6 +7,7 @@ import type {
   StaticAbilityDef,
 } from './types';
 import { CardType, GameEventType, Layer } from './types';
+import { getEffectiveSubtypes, getEffectiveSupertypes, getEffectiveTypes, hasType } from './GameState';
 
 /**
  * Implements the MTG Layer System (rule 613) for applying continuous effects.
@@ -39,6 +40,8 @@ export class ContinuousEffectsEngine {
         effect.apply(permanent, state);
       }
     }
+
+    this.applyCounterAdjustments(state);
   }
 
   /** Add a new continuous effect */
@@ -75,11 +78,17 @@ export class ContinuousEffectsEngine {
 
         // Morph / Face-down: override to 2/2 colorless creature with no name/abilities
         if (card.faceDown && card.definition.morphCost) {
+          card.modifiedTypes = [CardType.CREATURE];
+          card.modifiedSubtypes = [];
+          card.modifiedSupertypes = [];
           card.modifiedPower = 2;
           card.modifiedToughness = 2;
           card.modifiedKeywords = [];
           card.modifiedAbilities = [];
         } else {
+          card.modifiedTypes = [...baseDef.types];
+          card.modifiedSubtypes = [...baseDef.subtypes];
+          card.modifiedSupertypes = [...baseDef.supertypes];
           card.modifiedPower = baseDef.power;
           card.modifiedToughness = baseDef.toughness;
           card.modifiedKeywords = [...baseDef.keywords];
@@ -90,17 +99,22 @@ export class ContinuousEffectsEngine {
         card.wardCost = baseDef.wardCost ? { ...baseDef.wardCost } : undefined;
         card.cantBeTargetedByOpponents = false;
         card.attackTaxes = [];
+      }
+    }
+  }
 
-        // Apply counters to P/T (these are "physical" modifiers, not continuous effects)
-        if ((card.faceDown && card.definition.morphCost) || baseDef.types.includes(CardType.CREATURE)) {
-          const plusCounters = card.counters['+1/+1'] ?? 0;
-          const minusCounters = card.counters['-1/-1'] ?? 0;
-          if (card.modifiedPower !== undefined) {
-            card.modifiedPower += plusCounters - minusCounters;
-          }
-          if (card.modifiedToughness !== undefined) {
-            card.modifiedToughness += plusCounters - minusCounters;
-          }
+  private applyCounterAdjustments(state: GameState): void {
+    for (const pid of state.turnOrder) {
+      for (const card of state.zones[pid].BATTLEFIELD) {
+        if (card.phasedOut) continue;
+        if (!hasType(card, CardType.CREATURE)) continue;
+        const plusCounters = card.counters['+1/+1'] ?? 0;
+        const minusCounters = card.counters['-1/-1'] ?? 0;
+        if (card.modifiedPower !== undefined) {
+          card.modifiedPower += plusCounters - minusCounters;
+        }
+        if (card.modifiedToughness !== undefined) {
+          card.modifiedToughness += plusCounters - minusCounters;
         }
       }
     }
@@ -213,6 +227,39 @@ export class ContinuousEffectsEngine {
           },
         };
 
+      case 'set-base-pt':
+        return {
+          id: `${source.objectId}:${source.zoneChangeCounter}:set-base-pt:${ability.description}`,
+          sourceId: source.objectId,
+          layer: Layer.PT_SET,
+          timestamp: source.timestamp,
+          duration: { type: 'static', sourceId: source.objectId },
+          appliesTo: permanent => this.matchesFilter(permanent, effect.filter, source, state),
+          apply: permanent => {
+            permanent.modifiedPower = effect.power;
+            permanent.modifiedToughness = effect.toughness;
+          },
+        };
+
+      case 'add-types':
+        return {
+          id: `${source.objectId}:${source.zoneChangeCounter}:add-types:${ability.description}`,
+          sourceId: source.objectId,
+          layer: Layer.TYPE,
+          timestamp: source.timestamp,
+          duration: { type: 'static', sourceId: source.objectId },
+          appliesTo: permanent => this.matchesFilter(permanent, effect.filter, source, state),
+          apply: permanent => {
+            const types = permanent.modifiedTypes ?? [...permanent.definition.types];
+            for (const type of effect.types) {
+              if (!types.includes(type)) {
+                types.push(type);
+              }
+            }
+            permanent.modifiedTypes = types;
+          },
+        };
+
       case 'grant-keyword':
         return {
           id: `${source.objectId}:${source.zoneChangeCounter}:keyword:${effect.keyword}:${ability.description}`,
@@ -313,9 +360,9 @@ export class ContinuousEffectsEngine {
     state: GameState,
   ): boolean {
     if (card.zone === 'BATTLEFIELD' && card.phasedOut) return false;
-    if (filter.types && !filter.types.some(type => card.definition.types.includes(type))) return false;
-    if (filter.subtypes && !filter.subtypes.some(subtype => card.definition.subtypes.includes(subtype))) return false;
-    if (filter.supertypes && !filter.supertypes.some(supertype => card.definition.supertypes.includes(supertype))) return false;
+    if (filter.types && !filter.types.some(type => getEffectiveTypes(card).includes(type))) return false;
+    if (filter.subtypes && !filter.subtypes.some(subtype => getEffectiveSubtypes(card).includes(subtype))) return false;
+    if (filter.supertypes && !filter.supertypes.some(supertype => getEffectiveSupertypes(card).includes(supertype))) return false;
     if (filter.colors && !filter.colors.some(color => card.definition.colorIdentity.includes(color))) return false;
     if (filter.keywords && !filter.keywords.some(keyword => (card.modifiedKeywords ?? card.definition.keywords).includes(keyword))) return false;
     if (filter.controller === 'you' && card.controller !== source.controller) return false;
@@ -323,7 +370,7 @@ export class ContinuousEffectsEngine {
     if (filter.name && card.definition.name !== filter.name) return false;
     if (filter.tapped === true && !card.tapped) return false;
     if (filter.tapped === false && card.tapped) return false;
-    if (filter.isToken === true && !card.objectId.startsWith('token-')) return false;
+    if (filter.isToken === true && !card.isToken) return false;
     if (filter.self && (card.objectId !== source.objectId || card.zoneChangeCounter !== source.zoneChangeCounter)) return false;
     if (filter.power) {
       const power = card.modifiedPower ?? card.definition.power ?? 0;

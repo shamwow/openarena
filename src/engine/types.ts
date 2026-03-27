@@ -269,6 +269,7 @@ export interface CardDefinition {
   wardCost?: Cost;
   attachmentType?: 'Equipment' | 'Aura';
   attachTarget?: TargetSpec;
+  waterbend?: number;
   alternativeCosts?: AlternativeCast[];
   additionalCosts?: AdditionalCost[];
   tags?: string[];
@@ -321,6 +322,9 @@ export interface CardInstance {
   isToken?: boolean;
 
   // Overrides from continuous effects (computed, not stored permanently)
+  modifiedTypes?: CardType[];
+  modifiedSubtypes?: string[];
+  modifiedSupertypes?: string[];
   modifiedPower?: number;
   modifiedToughness?: number;
   modifiedKeywords?: Keyword[];
@@ -396,12 +400,19 @@ export interface ModalAbilityDef {
 export interface Cost {
   mana?: ManaCost;
   tap?: boolean;
+  genericTapSubstitution?: GenericTapSubstitution;
   sacrifice?: CardFilter;
   discard?: CardFilter | number; // filter or "discard N cards"
   payLife?: number;
   exileFromGraveyard?: CardFilter | number;
   removeCounters?: { type: string; count: number };
   custom?: (game: GameState, source: CardInstance, player: PlayerId) => boolean;
+}
+
+export interface GenericTapSubstitution {
+  amount: number;
+  filter: CardFilter;
+  ignoreSummoningSickness?: boolean;
 }
 
 // --- Triggers ---
@@ -509,6 +520,8 @@ export interface SearchLibraryOptions {
 
 export type StaticEffectDef =
   | { type: 'pump'; power: number; toughness: number; filter: CardFilter; duration?: EffectDuration }
+  | { type: 'set-base-pt'; power: number; toughness: number; filter: CardFilter }
+  | { type: 'add-types'; types: CardType[]; filter: CardFilter }
   | { type: 'grant-keyword'; keyword: Keyword; filter: CardFilter }
   | { type: 'cost-modification'; costDelta: Partial<ManaCost>; filter: SpellFilter }
   | { type: 'attack-tax'; filter: CardFilter; cost: Cost; defender: 'source-controller' }
@@ -1015,6 +1028,18 @@ export interface DelayedTrigger {
   expiresAfterTrigger: boolean;
 }
 
+export interface CastPermission {
+  objectId: ObjectId;
+  zoneChangeCounter: number;
+  zone: Zone;
+  castBy: PlayerId;
+  owner: PlayerId;
+  alternativeCost: Cost;
+  reason: string;
+  timing: 'normal';
+  castOnly: true;
+}
+
 // --- Game State ---
 
 export interface GameState {
@@ -1037,6 +1062,7 @@ export interface GameState {
   passedPriority: Set<PlayerId>;
   pendingTriggers: PendingTrigger[];
   delayedTriggers: DelayedTrigger[];
+  castPermissions: CastPermission[];
   waitingForChoice: boolean;
   isGameOver: boolean;
   winner: PlayerId | null;
@@ -1113,6 +1139,8 @@ export interface GameEngine {
   becomeMonarch(player: PlayerId): void;
   becomeInitiativeHolder(player: PlayerId): void;
   registerDelayedTrigger(trigger: DelayedTrigger): void;
+  airbendObject(objectId: ObjectId, cost: Cost, actingPlayer: PlayerId): void;
+  earthbendLand(targetId: ObjectId, counterCount: number, returnController: PlayerId): void;
   unlessPlayerPays(player: PlayerId, sourceId: ObjectId, cost: Cost, prompt: string): Promise<boolean>;
   sacrificePermanents(player: PlayerId, filter: CardFilter, count: number, prompt?: string): Promise<CardInstance[]>;
   addPlayerCounters(player: PlayerId, counterType: 'experience' | 'energy', amount: number): void;

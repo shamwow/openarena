@@ -5,7 +5,7 @@ import type {
   ManaCost,
 } from './types';
 import { CardType, Keyword, GameEventType } from './types';
-import { findCard, getNextTimestamp } from './GameState';
+import { findCard, hasSubtype, hasType, getNextTimestamp } from './GameState';
 import type { EventBus } from './EventBus';
 import type { ZoneManager } from './ZoneManager';
 import type { ManaManager } from './ManaManager';
@@ -335,7 +335,7 @@ export class CombatManager {
   canAttack(card: CardInstance, state: GameState, defender?: AttackTarget, taxesPaid = false): boolean {
     if (card.zone !== 'BATTLEFIELD') return false;
     if (card.phasedOut) return false;
-    if (!card.definition.types.includes(CardType.CREATURE)) return false;
+    if (!hasType(card, CardType.CREATURE)) return false;
     if (card.tapped) return false;
     if (card.controller !== state.activePlayer) return false;
     if (this.hasKeyword(card, Keyword.DEFENDER)) return false;
@@ -356,7 +356,7 @@ export class CombatManager {
   canBlock(blocker: CardInstance, attacker: CardInstance, state?: GameState): boolean {
     if (blocker.zone !== 'BATTLEFIELD') return false;
     if (blocker.phasedOut || attacker.phasedOut) return false;
-    if (!blocker.definition.types.includes(CardType.CREATURE)) return false;
+    if (!hasType(blocker, CardType.CREATURE)) return false;
     if (blocker.tapped) return false;
 
     // Unblockable: creature with this keyword can't be blocked
@@ -465,7 +465,7 @@ export class CombatManager {
       const target = findCard(state, targetId);
       if (!target || target.zone !== 'BATTLEFIELD') return;
 
-      if (target.definition.types.includes(CardType.PLANESWALKER)) {
+      if (hasType(target, CardType.PLANESWALKER)) {
         // Damage to planeswalker removes loyalty counters
         target.counters['loyalty'] = (target.counters['loyalty'] ?? 0) - assignment.amount;
       } else {
@@ -537,7 +537,7 @@ export class CombatManager {
       }
       // Check type protection: source's types match a protected type
       if (prot.types && prot.types.length > 0) {
-        if (prot.types.some(t => source.definition.types.includes(t))) {
+        if (prot.types.some(t => hasType(source, t))) {
           return true;
         }
       }
@@ -575,8 +575,8 @@ export class CombatManager {
       if (keywords.includes(walkKeyword as Keyword)) {
         // Check if defending player controls a land with that subtype
         const hasMatchingLand = defenderBattlefield.some(card =>
-          card.definition.types.includes(CardType.LAND) &&
-          card.definition.subtypes.includes(landSubtype)
+          hasType(card, CardType.LAND) &&
+          hasSubtype(card, landSubtype)
         );
         if (hasMatchingLand) return true;
       }
@@ -588,7 +588,7 @@ export class CombatManager {
   private canAttackBase(card: CardInstance, state: GameState): boolean {
     if (card.zone !== 'BATTLEFIELD') return false;
     if (card.phasedOut) return false;
-    if (!card.definition.types.includes(CardType.CREATURE)) return false;
+    if (!hasType(card, CardType.CREATURE)) return false;
     if (card.tapped) return false;
     if (card.controller !== state.activePlayer) return false;
     if (this.hasKeyword(card, Keyword.DEFENDER)) return false;
@@ -609,7 +609,7 @@ export class CombatManager {
       }
 
       for (const permanent of state.zones[playerId].BATTLEFIELD) {
-        if (!permanent.definition.types.includes(CardType.PLANESWALKER)) continue;
+        if (!hasType(permanent, CardType.PLANESWALKER)) continue;
         if (permanent.phasedOut) continue;
 
         const planeswalkerTarget: AttackTarget = { type: 'planeswalker', id: permanent.objectId };

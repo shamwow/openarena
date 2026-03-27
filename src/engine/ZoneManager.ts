@@ -5,7 +5,9 @@ import { GameEventType, CardType } from './types';
 import {
   createCardInstance,
   findCard,
+  getEffectiveSubtypes,
   getNextTimestamp,
+  hasType,
   rememberLastKnownInformation,
 } from './GameState';
 import type { EventBus } from './EventBus';
@@ -56,6 +58,9 @@ export class ZoneManager {
       card.attachedTo = null;
       card.modifiedPower = undefined;
       card.modifiedToughness = undefined;
+      card.modifiedTypes = undefined;
+      card.modifiedSubtypes = undefined;
+      card.modifiedSupertypes = undefined;
       card.modifiedKeywords = undefined;
       card.modifiedAbilities = undefined;
 
@@ -78,6 +83,10 @@ export class ZoneManager {
       card.zoneChangeCounter += 1;
     }
 
+    if (fromZone === 'EXILE' || resolvedZone !== 'EXILE') {
+      state.castPermissions = state.castPermissions.filter(permission => permission.objectId !== objectId);
+    }
+
     // Update card zone info
     card.zone = resolvedZone;
     card.controller = targetOwner;
@@ -91,7 +100,7 @@ export class ZoneManager {
       card.controller = targetOwner;
 
       // Planeswalker ETB: set loyalty counters to definition.loyalty
-      if (card.definition.types.includes(CardType.PLANESWALKER) && card.definition.loyalty !== undefined) {
+      if (hasType(card, CardType.PLANESWALKER) && card.definition.loyalty !== undefined) {
         card.counters['loyalty'] = card.definition.loyalty;
       }
 
@@ -110,8 +119,10 @@ export class ZoneManager {
       }
     }
 
-    // Add to new zone
-    state.zones[targetOwner][resolvedZone].push(card);
+    // Tokens cease to exist after leaving the battlefield instead of persisting in other zones.
+    if (!(card.isToken && resolvedZone !== 'BATTLEFIELD')) {
+      state.zones[targetOwner][resolvedZone].push(card);
+    }
 
     // Emit zone change event
     const zoneEvent: GameEvent = {
@@ -446,12 +457,12 @@ export class ZoneManager {
     }
 
     if (attachment.definition.attachmentType === 'Equipment') {
-      return host.definition.types.includes(CardType.CREATURE);
+      return hasType(host, CardType.CREATURE);
     }
 
     if (attachment.definition.attachmentType === 'Aura' && attachment.definition.attachTarget) {
       const spec = attachment.definition.attachTarget;
-      if (spec.what === 'creature' && !host.definition.types.includes(CardType.CREATURE)) {
+      if (spec.what === 'creature' && !hasType(host, CardType.CREATURE)) {
         return false;
       }
       if (spec.what === 'permanent' && host.zone !== 'BATTLEFIELD') {
@@ -463,10 +474,10 @@ export class ZoneManager {
       if (spec.controller === 'opponent' && host.controller === attachment.controller) {
         return false;
       }
-      if (spec.filter?.types && !spec.filter.types.some(type => host.definition.types.includes(type))) {
+      if (spec.filter?.types && !spec.filter.types.some(type => hasType(host, type))) {
         return false;
       }
-      if (spec.filter?.subtypes && !spec.filter.subtypes.some(subtype => host.definition.subtypes.includes(subtype))) {
+      if (spec.filter?.subtypes && !spec.filter.subtypes.some(subtype => getEffectiveSubtypes(host).includes(subtype))) {
         return false;
       }
       if (spec.filter?.colors && !spec.filter.colors.some(color => host.definition.colorIdentity.includes(color))) {

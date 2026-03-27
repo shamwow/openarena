@@ -321,6 +321,21 @@ export class CardBuilder {
     return this;
   }
 
+  waterbend(amount: number): this {
+    this.def.waterbend = amount;
+    return this;
+  }
+
+  firebending(amount = 1): this {
+    return this.triggered(
+      { on: 'attacks', filter: { self: true } },
+      (ctx) => {
+        ctx.game.addMana(ctx.controller, 'R', amount);
+      },
+      { description: 'Firebending' },
+    );
+  }
+
   /** Add an equip activated ability (sorcery-speed, attaches to target creature). */
   equip(
     cost: Cost | string,
@@ -634,6 +649,7 @@ export class CardBuilder {
       wardCost: this.def.wardCost,
       attachmentType: this.def.attachmentType,
       attachTarget: this.def.attachTarget,
+      waterbend: this.def.waterbend,
       alternativeCosts: this.def.alternativeCosts,
       additionalCosts: this.def.additionalCosts,
       tags: this.def.tags,

@@ -3,7 +3,14 @@ import type {
   GameState, ReplacementEffect, PlayerId, CounterAddedEvent, LastKnownInformation,
 } from './types';
 import { CardType } from './types';
-import { cloneCardInstance, findCard, getLastKnownInformation } from './GameState';
+import {
+  cloneCardInstance,
+  findCard,
+  getEffectiveSubtypes,
+  getEffectiveSupertypes,
+  hasType,
+  getLastKnownInformation,
+} from './GameState';
 
 export type EventListener = (event: GameEvent) => void;
 
@@ -367,9 +374,9 @@ export class EventBus {
       return card.objectId === source.objectId && card.zoneChangeCounter === source.zoneChangeCounter;
     }
 
-    if (filter.types && !filter.types.some(t => card.definition.types.includes(t))) return false;
-    if (filter.subtypes && !filter.subtypes.some(t => card.definition.subtypes.includes(t))) return false;
-    if (filter.supertypes && !filter.supertypes.some(t => card.definition.supertypes.includes(t))) return false;
+    if (filter.types && !filter.types.some(t => hasType(card, t))) return false;
+    if (filter.subtypes && !filter.subtypes.some(t => getEffectiveSubtypes(card).includes(t))) return false;
+    if (filter.supertypes && !filter.supertypes.some(t => getEffectiveSupertypes(card).includes(t))) return false;
 
     if (filter.controller === 'you' && card.controller !== source.controller) return false;
     if (filter.controller === 'opponent' && card.controller === source.controller) return false;

@@ -1,6 +1,6 @@
 import type { GameState, PlayerId, ObjectId, CardInstance, GameEvent } from './types';
 import { CardType, GameEventType, Keyword } from './types';
-import { findCard, getNextTimestamp } from './GameState';
+import { findCard, getEffectiveSubtypes, getEffectiveSupertypes, hasType, getNextTimestamp } from './GameState';
 import type { ZoneManager } from './ZoneManager';
 import type { EventBus } from './EventBus';
 
@@ -74,8 +74,8 @@ export class StateBasedActions {
       for (const card of battlefield) {
         if (card.phasedOut) continue;
         const def = card.definition;
-        const isCreature = def.types.includes(CardType.CREATURE);
-        const isPlaneswalker = def.types.includes(CardType.PLANESWALKER);
+        const isCreature = hasType(card, CardType.CREATURE);
+        const isPlaneswalker = hasType(card, CardType.PLANESWALKER);
 
         if (isCreature) {
           const toughness = card.modifiedToughness ?? def.toughness ?? 0;
@@ -174,7 +174,7 @@ export class StateBasedActions {
     const legendaryByName = new Map<string, CardInstance[]>();
 
     for (const card of battlefield) {
-      if (card.definition.supertypes.includes('Legendary')) {
+      if (getEffectiveSupertypes(card).includes('Legendary')) {
         const name = card.definition.name;
         if (!legendaryByName.has(name)) {
           legendaryByName.set(name, []);
@@ -322,19 +322,19 @@ export class StateBasedActions {
 
   private isLegalAttachment(attachment: CardInstance, host: CardInstance): boolean {
     const attachmentType = attachment.definition.attachmentType;
-    if (attachmentType === 'Equipment' && !host.definition.types.includes(CardType.CREATURE)) {
+    if (attachmentType === 'Equipment' && !hasType(host, CardType.CREATURE)) {
       return false;
     }
     if (attachmentType === 'Aura' && attachment.definition.attachTarget) {
       const targetSpec = attachment.definition.attachTarget;
-      if (targetSpec.what === 'creature' && !host.definition.types.includes(CardType.CREATURE)) {
+      if (targetSpec.what === 'creature' && !hasType(host, CardType.CREATURE)) {
         return false;
       }
       if (targetSpec.filter) {
-        if (targetSpec.filter.types && !targetSpec.filter.types.some(type => host.definition.types.includes(type))) {
+        if (targetSpec.filter.types && !targetSpec.filter.types.some(type => hasType(host, type))) {
           return false;
         }
-        if (targetSpec.filter.subtypes && !targetSpec.filter.subtypes.some(subtype => host.definition.subtypes.includes(subtype))) {
+        if (targetSpec.filter.subtypes && !targetSpec.filter.subtypes.some(subtype => getEffectiveSubtypes(host).includes(subtype))) {
           return false;
         }
         if (targetSpec.filter.colors && !targetSpec.filter.colors.some(color => host.definition.colorIdentity.includes(color))) {

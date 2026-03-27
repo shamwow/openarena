@@ -10,7 +10,7 @@ import type {
   PlayerId,
 } from './types';
 import { GameEventType, Keyword, emptyManaPool } from './types';
-import { getNextTimestamp } from './GameState';
+import { getEffectiveSubtypes, getNextTimestamp, hasType } from './GameState';
 import type { EventBus } from './EventBus';
 
 export interface AutoTapPlanEntry {
@@ -100,9 +100,10 @@ export class ManaManager {
     state: GameState,
     player: PlayerId,
     cost: ManaCost,
+    battlefield: CardInstance[] = state.zones[player].BATTLEFIELD,
   ): boolean {
     const effectiveCost: ManaCost = cost.X > 0 ? { ...cost, X: 0 } : cost;
-    const sources = this.getManaSources(state, player, state.zones[player].BATTLEFIELD);
+    const sources = this.getManaSources(state, player, battlefield);
     return this.findSourcePaymentPlan(
       { ...state.players[player].manaPool },
       effectiveCost,
@@ -172,13 +173,13 @@ export class ManaManager {
     if (!ability.cost.tap) {
       return true;
     }
-    if (!card.definition.types.includes('Creature' as import('./types').CardType)) {
+    if (!hasType(card, 'Creature' as import('./types').CardType)) {
       return true;
     }
     if (!card.summoningSick) {
       return true;
     }
-    return card.definition.keywords.includes(Keyword.HASTE);
+    return (card.modifiedKeywords ?? card.definition.keywords).includes(Keyword.HASTE);
   }
 
   private getManaProductions(
@@ -190,7 +191,7 @@ export class ManaManager {
       return ability.manaProduction;
     }
 
-    const subtypes = card.definition.subtypes;
+    const subtypes = getEffectiveSubtypes(card);
     if (subtypes.includes('Plains')) return [{ amount: 1, colors: ['W'] }];
     if (subtypes.includes('Island')) return [{ amount: 1, colors: ['U'] }];
     if (subtypes.includes('Swamp')) return [{ amount: 1, colors: ['B'] }];
