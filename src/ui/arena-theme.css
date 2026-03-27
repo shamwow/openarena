@@ -278,6 +278,71 @@ select {
   border-bottom-right-radius: 26px;
 }
 
+/* Opponent seats: flip zone-rail to top, battlefield padding, overlay to bottom */
+.arena-seat[data-position="top-left"] .arena-seat__zone-rail,
+.arena-seat[data-position="top-right"] .arena-seat__zone-rail {
+  bottom: auto;
+  top: 10px;
+}
+
+.arena-seat[data-position="top-left"] .arena-seat__battlefield,
+.arena-seat[data-position="top-right"] .arena-seat__battlefield {
+  padding: 128px 10px 104px;
+}
+
+.arena-seat[data-position="top-left"] .arena-seat__overlay,
+.arena-seat[data-position="top-right"] .arena-seat__overlay {
+  top: auto;
+  bottom: 10px;
+}
+
+.arena-seat[data-position="top-left"] .arena-seat__zone-rail,
+.arena-seat[data-position="top-right"] .arena-seat__zone-rail {
+  align-items: flex-start;
+}
+
+.arena-seat[data-position="top-left"] .arena-zone-pile,
+.arena-seat[data-position="top-right"] .arena-zone-pile {
+  --pile-peek-translate: -77px;
+}
+
+.arena-seat[data-position="top-left"] .arena-seat__hand-area,
+.arena-seat[data-position="top-right"] .arena-seat__hand-area {
+  --hand-peek-translate: -77px;
+}
+
+.arena-seat[data-position="top-left"] .arena-seat__hand-card,
+.arena-seat[data-position="top-right"] .arena-seat__hand-card {
+  bottom: auto;
+  top: 0;
+}
+
+.arena-seat[data-position="top-left"] .arena-card[data-variant="hand"],
+.arena-seat[data-position="top-right"] .arena-card[data-variant="hand"] {
+  transform-origin: center center;
+  transform: scaleY(-1);
+}
+
+.arena-seat[data-position="top-left"] .arena-zone-pile__tag,
+.arena-seat[data-position="top-right"] .arena-zone-pile__tag {
+  top: auto;
+  bottom: 10px;
+}
+
+.arena-seat[data-position="top-left"] .arena-zone-pile__label,
+.arena-seat[data-position="top-right"] .arena-zone-pile__label {
+  bottom: auto;
+  top: calc(100% + 8px);
+  transform: translateX(-50%) translateY(-6px);
+}
+
+.arena-seat[data-position="top-left"] .arena-zone-pile:hover .arena-zone-pile__label,
+.arena-seat[data-position="top-left"] .arena-zone-pile:focus-visible .arena-zone-pile__label,
+.arena-seat[data-position="top-right"] .arena-zone-pile:hover .arena-zone-pile__label,
+.arena-seat[data-position="top-right"] .arena-zone-pile:focus-visible .arena-zone-pile__label {
+  transform: translateX(-50%) translateY(0);
+}
+
 .arena-seat[data-active="true"] {
   border-color: rgba(72, 170, 219, 0.52);
   box-shadow:
@@ -447,10 +512,15 @@ select {
   background: transparent;
   padding: 0;
   display: inline-flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: center;
   cursor: pointer;
   transform: translateY(var(--pile-peek-translate));
+}
+
+.arena-seat[data-position="top-left"] .arena-zone-pile,
+.arena-seat[data-position="top-right"] .arena-zone-pile {
+  align-items: flex-end;
 }
 
 .arena-zone-pile[data-static="true"] {
@@ -486,7 +556,7 @@ select {
 
 .arena-zone-pile__tag {
   position: absolute;
-  bottom: 8px;
+  top: 10px;
   padding: 4px 8px;
   border-radius: 999px;
   background: rgba(7, 13, 21, 0.84);
@@ -616,7 +686,12 @@ select {
 
 @media (hover: hover) {
   .arena-seat__hand-area:hover {
-    transform: translateY(calc(var(--hand-card-height, 96px) * 0.30));
+    transform: translateY(calc(var(--hand-card-height, 96px) * 0.1));
+  }
+
+  .arena-seat[data-position="top-left"] .arena-seat__hand-area:hover,
+  .arena-seat[data-position="top-right"] .arena-seat__hand-area:hover {
+    transform: translateY(calc(var(--hand-card-height, 96px) * -0.1));
   }
 
   .arena-seat__hand-card[data-placement="visible"]:hover,
@@ -627,6 +702,13 @@ select {
   .arena-seat__hand-card[data-placement="visible"]:hover .arena-card[data-variant="hand"],
   .arena-seat__hand-card[data-placement="pile-right"][data-pile-top="true"]:hover .arena-card[data-variant="hand"] {
     transform: translateY(-16px) scale(1.15);
+  }
+
+  .arena-seat[data-position="top-left"] .arena-seat__hand-card[data-placement="visible"]:hover .arena-card[data-variant="hand"],
+  .arena-seat[data-position="top-left"] .arena-seat__hand-card[data-placement="pile-right"][data-pile-top="true"]:hover .arena-card[data-variant="hand"],
+  .arena-seat[data-position="top-right"] .arena-seat__hand-card[data-placement="visible"]:hover .arena-card[data-variant="hand"],
+  .arena-seat[data-position="top-right"] .arena-seat__hand-card[data-placement="pile-right"][data-pile-top="true"]:hover .arena-card[data-variant="hand"] {
+    transform: translateY(16px) scale(1.15) scaleY(-1);
   }
 }
 
@@ -1401,6 +1483,11 @@ select {
     padding: 98px 8px 120px;
   }
 
+  .arena-seat[data-position="top-left"] .arena-seat__battlefield,
+  .arena-seat[data-position="top-right"] .arena-seat__battlefield {
+    padding: 120px 8px 98px;
+  }
+
   .arena-seat__zone-rail {
     left: 8px;
     right: 8px;
@@ -1408,11 +1495,27 @@ select {
     gap: 10px;
   }
 
+  .arena-seat[data-position="top-left"] .arena-seat__zone-rail,
+  .arena-seat[data-position="top-right"] .arena-seat__zone-rail {
+    bottom: auto;
+    top: 8px;
+  }
+
   .arena-seat__hand-area {
     --hand-card-width: 60px;
     --hand-card-height: 84px;
     --hand-card-overlap: -22px;
     --hand-peek-translate: 67px;
+  }
+
+  .arena-seat[data-position="top-left"] .arena-seat__hand-area,
+  .arena-seat[data-position="top-right"] .arena-seat__hand-area {
+    --hand-peek-translate: -67px;
+  }
+
+  .arena-seat[data-position="top-left"] .arena-zone-pile,
+  .arena-seat[data-position="top-right"] .arena-zone-pile {
+    --pile-peek-translate: -67px;
   }
 
   .arena-zone-pile {
@@ -1504,12 +1607,23 @@ select {
     padding: 96px 6px 118px;
   }
 
+  .arena-seat[data-position="top-left"] .arena-seat__battlefield,
+  .arena-seat[data-position="top-right"] .arena-seat__battlefield {
+    padding: 118px 6px 96px;
+  }
+
   .arena-seat__zone-rail {
     left: 6px;
     right: 6px;
     bottom: 6px;
     gap: 8px;
     grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .arena-seat[data-position="top-left"] .arena-seat__zone-rail,
+  .arena-seat[data-position="top-right"] .arena-seat__zone-rail {
+    bottom: auto;
+    top: 6px;
   }
 
   .arena-zone-pile {
@@ -1530,7 +1644,7 @@ select {
   }
 
   .arena-zone-pile__tag {
-    bottom: 4px;
+    top: 10px;
     font-size: 0.56rem;
     padding: 3px 6px;
   }
@@ -1545,5 +1659,15 @@ select {
     --hand-card-overlap: -16px;
     --hand-peek-translate: 55px;
     align-items: flex-start;
+  }
+
+  .arena-seat[data-position="top-left"] .arena-seat__hand-area,
+  .arena-seat[data-position="top-right"] .arena-seat__hand-area {
+    --hand-peek-translate: -55px;
+  }
+
+  .arena-seat[data-position="top-left"] .arena-zone-pile,
+  .arena-seat[data-position="top-right"] .arena-zone-pile {
+    --pile-peek-translate: -55px;
   }
 }
