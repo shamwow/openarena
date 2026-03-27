@@ -15,7 +15,7 @@
   --arena-gold: #d7ae69;
   --arena-shadow: 0 22px 44px rgba(0, 0, 0, 0.45);
   --arena-card-shadow: 0 18px 34px rgba(4, 9, 14, 0.48);
-  --arena-card-radius: 16px;
+  --arena-card-radius: 3px;
   --arena-motion: 260ms cubic-bezier(0.2, 0.9, 0.2, 1);
   --arena-motion-slow: 440ms cubic-bezier(0.18, 0.88, 0.2, 1);
   --arena-font: "Avenir Next", "Segoe UI", sans-serif;
@@ -474,7 +474,7 @@ select {
   bottom: calc(var(--pile-index) * 2px);
   width: 72px;
   height: 96px;
-  border-radius: 12px;
+  border-radius: 0;
   border: 1px solid rgba(255, 248, 229, 0.14);
   background:
     radial-gradient(circle at 30% 24%, rgba(222, 192, 139, 0.15), transparent 20%),
@@ -521,7 +521,7 @@ select {
 
 .arena-seat__hand-area {
   --hand-card-width: 72px;
-  --hand-card-height: 96px;
+  --hand-card-height: 101px;
   --hand-card-overlap: -30px;
   --hand-card-step: calc(var(--hand-card-width) + var(--hand-card-overlap));
   --hand-pile-offset: 3px;
@@ -579,32 +579,38 @@ select {
   background: rgba(255, 255, 255, 0.44);
 }
 
-.arena-card[data-content-mode="bare"] {
-  border: 1px solid rgba(222, 230, 236, 0.28);
-  background-color: rgba(53, 70, 84, 0.96);
+.arena-card[data-variant="hand"] {
+  --card-width: var(--hand-card-width, 72px);
+  --card-height: var(--hand-card-height, 96px);
+  --card-zone-accent: transparent;
+  --card-zone-glow: none;
+  --card-zone-tint-top: transparent;
+  --card-zone-tint-bottom: transparent;
+  border: 1px solid transparent;
   background-image:
-    var(--bare-card-image, none),
-    linear-gradient(180deg, rgba(121, 145, 164, 0.9), rgba(53, 70, 84, 0.96));
+    var(--bare-card-image, none);
   background-position: center, center;
   background-repeat: no-repeat, no-repeat;
-  background-size: cover, cover;
+  background-size: contain;
   box-shadow: none;
+  transform-origin: center bottom;
   transition:
     transform var(--arena-motion),
     border-color var(--arena-motion);
 }
 
-.arena-card[data-content-mode="bare"][data-hidden-placeholder="true"] {
+.arena-card[data-variant="hand"][data-hidden-placeholder="true"] {
   background-color: rgba(31, 40, 48, 0.96);
   background-image:
     linear-gradient(180deg, rgba(65, 79, 92, 0.9), rgba(31, 40, 48, 0.96));
 }
 
-.arena-card[data-content-mode="bare"][data-has-action="true"] {
+.arena-card[data-variant="hand"][data-has-action="true"] {
   box-shadow: none;
+  border-color: rgba(88, 192, 127, 1);
 }
 
-.arena-card[data-content-mode="bare"][data-previewed="true"] {
+.arena-card[data-variant="hand"][data-previewed="true"] {
   box-shadow: none;
 }
 
@@ -689,20 +695,6 @@ select {
   transition:
     transform var(--arena-motion),
     box-shadow var(--arena-motion),
-    border-color var(--arena-motion);
-}
-
-.arena-card[data-variant="hand"] {
-  --card-width: var(--hand-card-width, 72px);
-  --card-height: var(--hand-card-height, 96px);
-  --card-zone-accent: transparent;
-  --card-zone-glow: none;
-  --card-zone-tint-top: transparent;
-  --card-zone-tint-bottom: transparent;
-  box-shadow: none;
-  transform-origin: center bottom;
-  transition:
-    transform var(--arena-motion),
     border-color var(--arena-motion);
 }
 
@@ -1418,7 +1410,7 @@ select {
 
   .arena-seat__hand-area {
     --hand-card-width: 60px;
-    --hand-card-height: 82px;
+    --hand-card-height: 84px;
     --hand-card-overlap: -22px;
     --hand-peek-translate: 67px;
   }
@@ -1534,7 +1526,7 @@ select {
   .arena-zone-pile__card {
     width: 48px;
     height: 64px;
-    border-radius: 10px;
+    border-radius: 0;
   }
 
   .arena-zone-pile__tag {
@@ -1549,7 +1541,7 @@ select {
 
   .arena-seat__hand-area {
     --hand-card-width: 48px;
-    --hand-card-height: 64px;
+    --hand-card-height: 67px;
     --hand-card-overlap: -16px;
     --hand-peek-translate: 55px;
     align-items: flex-start;

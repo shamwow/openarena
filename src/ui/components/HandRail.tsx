@@ -336,7 +336,7 @@ const HandRailCard = React.memo<HandRailCardProps>(
         ref={mountRef}
         className="arena-card"
         data-variant="hand"
-        data-content-mode="bare"
+
         data-previewed={isPreviewed}
         data-selected={previewMode === 'tap' && isPreviewed}
         data-has-action={interactionAction != null}
@@ -556,7 +556,7 @@ const HandRailInner: React.FC<HandRailProps> = ({
           <div
             className="arena-card"
             data-variant="hand"
-            data-content-mode="bare"
+    
             data-hidden-placeholder="true"
             aria-hidden="true"
           />
