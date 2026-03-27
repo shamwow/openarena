@@ -39,6 +39,9 @@ export interface PlayerStatePatch {
   landPlaysAvailable?: PlayerState['landPlaysAvailable'];
   manaPool?: Partial<ManaPool>;
   hasLost?: PlayerState['hasLost'];
+  spellsCastThisTurn?: PlayerState['spellsCastThisTurn'];
+  commanderTimesCast?: PlayerState['commanderTimesCast'];
+  commanderDamageReceived?: PlayerState['commanderDamageReceived'];
 }
 
 export interface TurnStatePatch {
@@ -163,6 +166,9 @@ export class TestGameStateBuilder {
     if (patch.landPlaysAvailable !== undefined) player.landPlaysAvailable = patch.landPlaysAvailable;
     if (patch.manaPool !== undefined) player.manaPool = { ...player.manaPool, ...patch.manaPool };
     if (patch.hasLost !== undefined) player.hasLost = patch.hasLost;
+    if (patch.spellsCastThisTurn !== undefined) player.spellsCastThisTurn = patch.spellsCastThisTurn;
+    if (patch.commanderTimesCast !== undefined) player.commanderTimesCast = { ...patch.commanderTimesCast };
+    if (patch.commanderDamageReceived !== undefined) player.commanderDamageReceived = { ...patch.commanderDamageReceived };
 
     return this;
   }

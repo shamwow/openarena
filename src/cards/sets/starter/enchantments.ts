@@ -1,5 +1,5 @@
 import { CardBuilder } from '../../CardBuilder';
-import { CardType } from '../../../engine/types';
+import { CardType, parseManaCost } from '../../../engine/types';
 
 export const RhysticStudy = CardBuilder.create('Rhystic Study')
   .cost('{2}{U}')
@@ -60,7 +60,7 @@ export const Propaganda = CardBuilder.create('Propaganda')
   .cost('{2}{U}')
   .types(CardType.ENCHANTMENT)
   .staticAbility(
-    { type: 'cant-attack', filter: { controller: 'opponent' } },
+    { type: 'attack-tax', filter: { controller: 'opponent' }, cost: { mana: parseManaCost('{2}') }, defender: 'source-controller' },
     { description: 'Creatures can\'t attack you unless their controller pays {2} for each creature they control that\'s attacking you.' }
   )
   .oracleText('Creatures can\'t attack you unless their controller pays {2} for each creature they control that\'s attacking you.')
@@ -70,7 +70,7 @@ export const GhostlyPrison = CardBuilder.create('Ghostly Prison')
   .cost('{2}{W}')
   .types(CardType.ENCHANTMENT)
   .staticAbility(
-    { type: 'cant-attack', filter: { controller: 'opponent' } },
+    { type: 'attack-tax', filter: { controller: 'opponent' }, cost: { mana: parseManaCost('{2}') }, defender: 'source-controller' },
     { description: 'Creatures can\'t attack you unless their controller pays {2} for each creature they control that\'s attacking you.' }
   )
   .oracleText('Creatures can\'t attack you unless their controller pays {2} for each creature they control that\'s attacking you.')

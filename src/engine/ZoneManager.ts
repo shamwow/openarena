@@ -1,15 +1,24 @@
 import type {
   GameState, CardInstance, PlayerId, Zone, ObjectId, GameEvent,
 } from './types';
-import { GameEventType } from './types';
-import { findCard, getNextTimestamp, createCardInstance } from './GameState';
+import { GameEventType, CardType } from './types';
+import {
+  createCardInstance,
+  findCard,
+  getNextTimestamp,
+  rememberLastKnownInformation,
+} from './GameState';
 import type { EventBus } from './EventBus';
+
+type CommanderReplacementResolver = (state: GameState, card: CardInstance, toZone: Zone) => boolean;
 
 export class ZoneManager {
   private eventBus: EventBus;
+  private commanderReplacementResolver?: CommanderReplacementResolver;
 
-  constructor(eventBus: EventBus) {
+  constructor(eventBus: EventBus, commanderReplacementResolver?: CommanderReplacementResolver) {
     this.eventBus = eventBus;
+    this.commanderReplacementResolver = commanderReplacementResolver;
   }
 
   moveCard(
@@ -17,20 +26,29 @@ export class ZoneManager {
     objectId: ObjectId,
     toZone: Zone,
     toOwner?: PlayerId,
-    options?: { tapped?: boolean; faceDown?: boolean }
+    options?: { tapped?: boolean; faceDown?: boolean; commanderReplacementDecision?: boolean }
   ): void {
     const card = findCard(state, objectId);
     if (!card) return;
 
     const fromZone = card.zone;
     const fromController = card.controller;
-    const targetOwner = toOwner ?? card.owner;
+    const replacementDecision = this.resolveCommanderReplacementDecision(state, card, toZone, options?.commanderReplacementDecision);
+    const resolvedZone = replacementDecision ? 'COMMAND' : toZone;
+    const targetOwner = replacementDecision ? card.owner : (toOwner ?? card.owner);
+    const leavingSnapshot = rememberLastKnownInformation(state, card);
 
     // Remove from old zone
     this.removeFromZone(state, card);
 
     // Reset state when leaving the battlefield
     if (fromZone === 'BATTLEFIELD') {
+      if (card.attachedTo) {
+        const previousHost = findCard(state, card.attachedTo);
+        if (previousHost) {
+          previousHost.attachments = previousHost.attachments.filter(id => id !== card.objectId);
+        }
+      }
       card.tapped = false;
       card.markedDamage = 0;
       card.counters = {};
@@ -56,30 +74,57 @@ export class ZoneManager {
       );
     }
 
+    if (fromZone !== toZone) {
+      card.zoneChangeCounter += 1;
+    }
+
     // Update card zone info
-    card.zone = toZone;
+    card.zone = resolvedZone;
     card.controller = targetOwner;
     card.timestamp = getNextTimestamp(state);
 
     if (options?.tapped) card.tapped = true;
     if (options?.faceDown) card.faceDown = true;
 
-    if (toZone === 'BATTLEFIELD') {
+    if (resolvedZone === 'BATTLEFIELD') {
       card.summoningSick = true;
       card.controller = targetOwner;
+
+      // Planeswalker ETB: set loyalty counters to definition.loyalty
+      if (card.definition.types.includes(CardType.PLANESWALKER) && card.definition.loyalty !== undefined) {
+        card.counters['loyalty'] = card.definition.loyalty;
+      }
+
+      // Sagas enter with their first lore counter.
+      if (card.definition.sagaChapters && card.definition.sagaChapters.length > 0) {
+        card.counters.lore = Math.max(card.counters.lore ?? 0, 1);
+      }
+
+      if (card.definition.attachmentType === 'Aura' && card.attachedTo) {
+        const host = findCard(state, card.attachedTo);
+        if (!host || !this.isLegalAttachment(state, card, host)) {
+          card.attachedTo = null;
+        } else if (!host.attachments.includes(card.objectId)) {
+          host.attachments.push(card.objectId);
+        }
+      }
     }
 
     // Add to new zone
-    state.zones[targetOwner][toZone].push(card);
+    state.zones[targetOwner][resolvedZone].push(card);
 
     // Emit zone change event
     const zoneEvent: GameEvent = {
       type: GameEventType.ZONE_CHANGE,
       timestamp: getNextTimestamp(state),
       objectId,
+      cardId: card.cardId,
       fromZone,
-      toZone,
+      toZone: resolvedZone,
       controller: targetOwner,
+      objectZoneChangeCounter: leavingSnapshot.zoneChangeCounter,
+      newObjectZoneChangeCounter: card.zoneChangeCounter,
+      lastKnownInfo: leavingSnapshot,
     };
     state.eventLog.push(zoneEvent);
     this.eventBus.emit(zoneEvent);
@@ -91,12 +136,14 @@ export class ZoneManager {
     }
 
     // ETB event
-    if (toZone === 'BATTLEFIELD') {
+    if (resolvedZone === 'BATTLEFIELD') {
       const etbEvent: GameEvent = {
         type: GameEventType.ENTERS_BATTLEFIELD,
         timestamp: getNextTimestamp(state),
         objectId,
+        cardId: card.cardId,
         controller: targetOwner,
+        objectZoneChangeCounter: card.zoneChangeCounter,
       };
       state.eventLog.push(etbEvent);
       this.eventBus.emit(etbEvent);
@@ -104,6 +151,25 @@ export class ZoneManager {
       const etbTriggers = this.eventBus.checkTriggers(etbEvent, state);
       for (const t of etbTriggers) {
         state.pendingTriggers.push(t);
+      }
+
+      if (card.definition.sagaChapters && card.definition.sagaChapters.length > 0) {
+        const counterEvent: GameEvent = {
+          type: GameEventType.COUNTER_ADDED,
+          timestamp: getNextTimestamp(state),
+          objectId,
+          cardId: card.cardId,
+          objectZoneChangeCounter: card.zoneChangeCounter,
+          counterType: 'lore',
+          amount: 1,
+        };
+        state.eventLog.push(counterEvent);
+        this.eventBus.emit(counterEvent);
+
+        const counterTriggers = this.eventBus.checkTriggers(counterEvent, state);
+        for (const t of counterTriggers) {
+          state.pendingTriggers.push(t);
+        }
       }
     }
 
@@ -113,8 +179,12 @@ export class ZoneManager {
         type: GameEventType.LEAVES_BATTLEFIELD,
         timestamp: getNextTimestamp(state),
         objectId,
+        cardId: card.cardId,
         controller: fromController,
-        destination: toZone,
+        destination: resolvedZone,
+        objectZoneChangeCounter: leavingSnapshot.zoneChangeCounter,
+        newObjectZoneChangeCounter: card.zoneChangeCounter,
+        lastKnownInfo: leavingSnapshot,
       };
       state.eventLog.push(ltbEvent);
       this.eventBus.emit(ltbEvent);
@@ -125,14 +195,18 @@ export class ZoneManager {
       }
 
       // "Dies" is a specific battlefield→graveyard transition
-      if (toZone === 'GRAVEYARD') {
+      if (resolvedZone === 'GRAVEYARD') {
         const diesEvent: GameEvent = {
           type: GameEventType.ZONE_CHANGE,
           timestamp: getNextTimestamp(state),
           objectId,
+          cardId: card.cardId,
           fromZone: 'BATTLEFIELD',
           toZone: 'GRAVEYARD',
           controller: fromController,
+          objectZoneChangeCounter: leavingSnapshot.zoneChangeCounter,
+          newObjectZoneChangeCounter: card.zoneChangeCounter,
+          lastKnownInfo: leavingSnapshot,
         };
         // Check dies triggers specifically
         const diesTriggers = this.eventBus.checkTriggers(diesEvent, state);
@@ -157,8 +231,9 @@ export class ZoneManager {
     }
 
     const card = library.pop()!;
-    this.removeFromZone(state, card);
+    rememberLastKnownInformation(state, card);
     card.zone = 'HAND';
+    card.zoneChangeCounter += 1;
     card.timestamp = getNextTimestamp(state);
     state.zones[player].HAND.push(card);
 
@@ -167,6 +242,8 @@ export class ZoneManager {
       timestamp: getNextTimestamp(state),
       player,
       objectId: card.objectId,
+      cardId: card.cardId,
+      objectZoneChangeCounter: card.zoneChangeCounter,
     };
     state.eventLog.push(event);
     this.eventBus.emit(event);
@@ -196,6 +273,8 @@ export class ZoneManager {
       timestamp: getNextTimestamp(state),
       player,
       objectId,
+      cardId: findCard(state, objectId)?.cardId,
+      objectZoneChangeCounter: findCard(state, objectId)?.zoneChangeCounter,
     };
     state.eventLog.push(event);
     this.eventBus.emit(event);
@@ -220,11 +299,11 @@ export class ZoneManager {
 
   getBattlefield(state: GameState, controller?: PlayerId): CardInstance[] {
     if (controller) {
-      return state.zones[controller].BATTLEFIELD;
+      return state.zones[controller].BATTLEFIELD.filter(card => !card.phasedOut);
     }
     const all: CardInstance[] = [];
     for (const pid of state.turnOrder) {
-      all.push(...state.zones[pid].BATTLEFIELD);
+      all.push(...state.zones[pid].BATTLEFIELD.filter(card => !card.phasedOut));
     }
     return all;
   }
@@ -238,6 +317,8 @@ export class ZoneManager {
       type: GameEventType.TAPPED,
       timestamp: getNextTimestamp(state),
       objectId,
+      cardId: card.cardId,
+      objectZoneChangeCounter: card.zoneChangeCounter,
     };
     state.eventLog.push(event);
     this.eventBus.emit(event);
@@ -257,6 +338,8 @@ export class ZoneManager {
       type: GameEventType.UNTAPPED,
       timestamp: getNextTimestamp(state),
       objectId,
+      cardId: card.cardId,
+      objectZoneChangeCounter: card.zoneChangeCounter,
     };
     state.eventLog.push(event);
     this.eventBus.emit(event);
@@ -279,17 +362,31 @@ export class ZoneManager {
       toughness: definition.toughness,
       abilities: definition.abilities ?? [],
       keywords: definition.keywords ?? [],
+      protectionFrom: definition.protectionFrom,
+      wardCost: definition.wardCost,
     };
 
     const instance = createCardInstance(fullDef, controller, 'BATTLEFIELD', getNextTimestamp(state));
     instance.controller = controller;
+    instance.isToken = true;
     state.zones[controller].BATTLEFIELD.push(instance);
+
+    const tokenEvent: GameEvent = {
+      type: GameEventType.TOKEN_CREATED,
+      timestamp: getNextTimestamp(state),
+      player: controller,
+      objectId: instance.objectId,
+    };
+    state.eventLog.push(tokenEvent);
+    this.eventBus.emit(tokenEvent);
 
     const event: GameEvent = {
       type: GameEventType.ENTERS_BATTLEFIELD,
       timestamp: getNextTimestamp(state),
       objectId: instance.objectId,
+      cardId: instance.cardId,
       controller,
+      objectZoneChangeCounter: instance.zoneChangeCounter,
     };
     state.eventLog.push(event);
     this.eventBus.emit(event);
@@ -300,6 +397,13 @@ export class ZoneManager {
     }
 
     return instance;
+  }
+
+  peekTop(state: GameState, player: PlayerId, count: number): CardInstance[] {
+    const library = state.zones[player].LIBRARY;
+    const n = Math.min(count, library.length);
+    // Library is stored with last element = top, so slice from the end
+    return library.slice(-n).reverse();
   }
 
   private removeFromZone(state: GameState, card: CardInstance): void {
@@ -313,5 +417,72 @@ export class ZoneManager {
         }
       }
     }
+  }
+
+  private resolveCommanderReplacementDecision(
+    state: GameState,
+    card: CardInstance,
+    toZone: Zone,
+    explicitDecision?: boolean,
+  ): boolean {
+    if (!this.isCommanderCard(state, card)) return false;
+    if (!this.isCommanderReplacementZone(toZone)) return false;
+    if (card.zone === 'COMMAND' && toZone === 'COMMAND') return false;
+    if (explicitDecision !== undefined) return explicitDecision;
+    return this.commanderReplacementResolver?.(state, card, toZone) ?? true;
+  }
+
+  private isCommanderCard(state: GameState, card: CardInstance): boolean {
+    return state.players[card.owner].commanderIds.includes(card.cardId);
+  }
+
+  private isCommanderReplacementZone(zone: Zone): boolean {
+    return zone === 'GRAVEYARD' || zone === 'EXILE' || zone === 'HAND' || zone === 'LIBRARY';
+  }
+
+  private isLegalAttachment(state: GameState, attachment: CardInstance, host: CardInstance): boolean {
+    if (host.zone !== 'BATTLEFIELD' || host.phasedOut) {
+      return false;
+    }
+
+    if (attachment.definition.attachmentType === 'Equipment') {
+      return host.definition.types.includes(CardType.CREATURE);
+    }
+
+    if (attachment.definition.attachmentType === 'Aura' && attachment.definition.attachTarget) {
+      const spec = attachment.definition.attachTarget;
+      if (spec.what === 'creature' && !host.definition.types.includes(CardType.CREATURE)) {
+        return false;
+      }
+      if (spec.what === 'permanent' && host.zone !== 'BATTLEFIELD') {
+        return false;
+      }
+      if (spec.controller === 'you' && host.controller !== attachment.controller) {
+        return false;
+      }
+      if (spec.controller === 'opponent' && host.controller === attachment.controller) {
+        return false;
+      }
+      if (spec.filter?.types && !spec.filter.types.some(type => host.definition.types.includes(type))) {
+        return false;
+      }
+      if (spec.filter?.subtypes && !spec.filter.subtypes.some(subtype => host.definition.subtypes.includes(subtype))) {
+        return false;
+      }
+      if (spec.filter?.colors && !spec.filter.colors.some(color => host.definition.colorIdentity.includes(color))) {
+        return false;
+      }
+      if (spec.filter?.controller === 'you' && host.controller !== attachment.controller) {
+        return false;
+      }
+      if (spec.filter?.controller === 'opponent' && host.controller === attachment.controller) {
+        return false;
+      }
+      if (spec.filter?.custom && !spec.filter.custom(host, state)) {
+        return false;
+      }
+    }
+
+    return true;
   }
 }

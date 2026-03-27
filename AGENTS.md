@@ -27,24 +27,24 @@ and use it for all subsequent requests and Playwright navigation.
 
 ## Unit tests
 
-This repo does not currently have a unit test runner configured. There is no `test`
-or `test:unit` script in `package.json`, and no Vitest or Jest setup checked in.
+Unit tests use the built-in Node test runner with a custom TypeScript loader.
 
-If unit tests are added later, prefer exposing them through a dedicated script in
-`package.json`, for example:
+Run all unit tests from the repo root with:
 
-```json
-{
-  "scripts": {
-    "test:unit": "vitest run"
-  }
-}
+```bash
+npm run test
 ```
 
-Then run unit tests from the repo root with:
+Equivalent explicit unit command:
 
 ```bash
 npm run test:unit
+```
+
+Engine-focused unit tests live under `test/unit/engine` and can be run in isolation with:
+
+```bash
+npm run test:engine
 ```
 
 ## Open the app with Playwright

@@ -45,8 +45,9 @@ export const LightningGreaves = CardBuilder.create('Lightning Greaves')
   .cost('{2}')
   .types(CardType.ARTIFACT)
   .subtypes('Equipment')
-  .keyword(Keyword.SHROUD)
-  .keyword(Keyword.HASTE)
+  .grantToAttached({ type: 'grant-keyword', keyword: Keyword.SHROUD, filter: { self: true } })
+  .grantToAttached({ type: 'grant-keyword', keyword: Keyword.HASTE, filter: { self: true } })
+  .equip('{0}')
   .oracleText('Equipped creature has haste and shroud.\nEquip {0}')
   .build();
 
@@ -54,8 +55,9 @@ export const SwiftfootBoots = CardBuilder.create('Swiftfoot Boots')
   .cost('{2}')
   .types(CardType.ARTIFACT)
   .subtypes('Equipment')
-  .keyword(Keyword.HEXPROOF)
-  .keyword(Keyword.HASTE)
+  .grantToAttached({ type: 'grant-keyword', keyword: Keyword.HEXPROOF, filter: { self: true } })
+  .grantToAttached({ type: 'grant-keyword', keyword: Keyword.HASTE, filter: { self: true } })
+  .equip('{1}')
   .oracleText('Equipped creature has hexproof and haste.\nEquip {1}')
   .build();
 
@@ -76,6 +78,7 @@ export const CommandersSphere = CardBuilder.create("Commander's Sphere")
 export const ThoughtVessel = CardBuilder.create('Thought Vessel')
   .cost('{2}')
   .types(CardType.ARTIFACT)
+  .tag('no-max-hand-size')
   .activated(
     { tap: true },
     (ctx) => {

@@ -87,6 +87,12 @@ export const Keyword = {
   PROTECTION: 'Protection',
   WARD: 'Ward',
   UNBLOCKABLE: 'Unblockable',
+  PHASING: 'Phasing',
+  PLAINSWALK: 'Plainswalk',
+  ISLANDWALK: 'Islandwalk',
+  SWAMPWALK: 'Swampwalk',
+  MOUNTAINWALK: 'Mountainwalk',
+  FORESTWALK: 'Forestwalk',
 } as const;
 export type Keyword = (typeof Keyword)[keyof typeof Keyword];
 
@@ -101,10 +107,23 @@ export interface ManaCost {
   G: number;
   C: number; // colorless-only (e.g. {C} from Kozilek)
   X: number; // number of X symbols
+  hybrid?: string[];
+  phyrexian?: ManaColor[];
 }
 
 export function emptyManaCost(): ManaCost {
-  return { generic: 0, W: 0, U: 0, B: 0, R: 0, G: 0, C: 0, X: 0 };
+  return {
+    generic: 0,
+    W: 0,
+    U: 0,
+    B: 0,
+    R: 0,
+    G: 0,
+    C: 0,
+    X: 0,
+    hybrid: [],
+    phyrexian: [],
+  };
 }
 
 /** Parse "{2}{G}{G}" style mana cost strings */
@@ -120,6 +139,14 @@ export function parseManaCost(str: string): ManaCost {
     else if (inner === 'G') cost.G++;
     else if (inner === 'C') cost.C++;
     else if (inner === 'X') cost.X++;
+    else if (inner.endsWith('/P')) {
+      const color = inner[0] as ManaColor;
+      if (color === 'W' || color === 'U' || color === 'B' || color === 'R' || color === 'G') {
+        cost.phyrexian!.push(color);
+      }
+    } else if (inner.includes('/')) {
+      cost.hybrid!.push(inner);
+    }
     else {
       const n = parseInt(inner, 10);
       if (!isNaN(n)) cost.generic += n;
@@ -129,7 +156,13 @@ export function parseManaCost(str: string): ManaCost {
 }
 
 export function manaCostTotal(cost: ManaCost): number {
-  return cost.generic + cost.W + cost.U + cost.B + cost.R + cost.G + cost.C;
+  const hybridTotal = (cost.hybrid ?? []).reduce((total, symbol) => {
+    if (symbol.startsWith('2/')) {
+      return total + 2;
+    }
+    return total + 1;
+  }, 0);
+  return cost.generic + cost.W + cost.U + cost.B + cost.R + cost.G + cost.C + hybridTotal + (cost.phyrexian?.length ?? 0);
 }
 
 export function manaCostToString(cost: ManaCost): string {
@@ -142,6 +175,8 @@ export function manaCostToString(cost: ManaCost): string {
   for (let i = 0; i < cost.R; i++) s += '{R}';
   for (let i = 0; i < cost.G; i++) s += '{G}';
   for (let i = 0; i < cost.C; i++) s += '{C}';
+  for (const symbol of cost.hybrid ?? []) s += `{${symbol}}`;
+  for (const color of cost.phyrexian ?? []) s += `{${color}/P}`;
   if (s === '') s = '{0}';
   return s;
 }
@@ -159,6 +194,62 @@ export function emptyManaPool(): ManaPool {
   return { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
 }
 
+export type ManaSymbol = keyof ManaPool;
+
+export interface ManaProduction {
+  amount: number;
+  colors: ManaSymbol[];
+  restrictToColorIdentity?: boolean;
+}
+
+export function manaCostColorIdentity(cost: ManaCost): ManaColor[] {
+  const colors = new Set<ManaColor>();
+  if (cost.W > 0) colors.add(ManaColor.WHITE);
+  if (cost.U > 0) colors.add(ManaColor.BLUE);
+  if (cost.B > 0) colors.add(ManaColor.BLACK);
+  if (cost.R > 0) colors.add(ManaColor.RED);
+  if (cost.G > 0) colors.add(ManaColor.GREEN);
+
+  for (const symbol of cost.hybrid ?? []) {
+    for (const part of symbol.split('/')) {
+      if (part === 'W' || part === 'U' || part === 'B' || part === 'R' || part === 'G') {
+        colors.add(part as ManaColor);
+      }
+    }
+  }
+
+  for (const color of cost.phyrexian ?? []) {
+    colors.add(color);
+  }
+
+  return [...colors];
+}
+
+// --- Protection ---
+
+export interface ProtectionFrom {
+  colors?: ManaColor[];
+  types?: CardType[];
+  custom?: (source: CardInstance) => boolean;
+}
+
+// --- Alternative/Additional Costs ---
+
+export interface AlternativeCast {
+  id: string;
+  cost: Cost;
+  zone?: Zone;
+  afterResolution?: Zone;
+  description: string;
+}
+
+export interface AdditionalCost {
+  id: string;
+  cost: Cost;
+  optional: boolean;
+  description: string;
+}
+
 // --- Card Definition (immutable template) ---
 
 export interface CardDefinition {
@@ -174,12 +265,31 @@ export interface CardDefinition {
   loyalty?: number;
   abilities: AbilityDefinition[];
   keywords: Keyword[];
+  protectionFrom?: ProtectionFrom[];
+  wardCost?: Cost;
+  attachmentType?: 'Equipment' | 'Aura';
+  attachTarget?: TargetSpec;
+  alternativeCosts?: AlternativeCast[];
+  additionalCosts?: AdditionalCost[];
+  tags?: string[];
+  backFace?: CardDefinition;
+  isMDFC?: boolean;
+  sagaChapters?: Array<{ chapter: number; effect: EffectFn }>;
+  totalChapters?: number;
+  adventure?: { name: string; manaCost: ManaCost; types: CardType[]; effect: EffectFn };
+  splitHalf?: CardDefinition;
+  hasFuse?: boolean;
+  morphCost?: Cost;
+  suspendCost?: Cost;
+  suspendTimeCounters?: number;
 }
 
 // --- Card Instance (live game object) ---
 
 export interface CardInstance {
+  cardId: ObjectId;
   objectId: ObjectId;
+  zoneChangeCounter: number;
   definitionId: string;
   definition: CardDefinition;
   owner: PlayerId;
@@ -196,11 +306,37 @@ export interface CardInstance {
   attachedTo: ObjectId | null;
   attachments: ObjectId[];
 
+  // Copy effect (Layer 1): if set, this card copies another card's definition
+  copyOf?: ObjectId;
+
+  // Transform / DFC state
+  isTransformed?: boolean;
+
+  // Phasing state
+  phasedOut?: boolean;
+
+  // Adventure: set when cast as adventure and exiled
+  castAsAdventure?: boolean;
+
+  isToken?: boolean;
+
   // Overrides from continuous effects (computed, not stored permanently)
   modifiedPower?: number;
   modifiedToughness?: number;
   modifiedKeywords?: Keyword[];
   modifiedAbilities?: AbilityDefinition[];
+  protectionFrom?: ProtectionFrom[];
+  wardCost?: Cost;
+  cantBeTargetedByOpponents?: boolean;
+  attackTaxes?: AttackTaxRequirement[];
+}
+
+export type LastKnownInformation = CardInstance;
+
+export interface AttackTaxRequirement {
+  sourceId: ObjectId;
+  defender: PlayerId;
+  cost: Cost;
 }
 
 // --- Abilities ---
@@ -209,7 +345,8 @@ export type AbilityDefinition =
   | ActivatedAbilityDef
   | TriggeredAbilityDef
   | StaticAbilityDef
-  | SpellAbilityDef;
+  | SpellAbilityDef
+  | ModalAbilityDef;
 
 export interface ActivatedAbilityDef {
   kind: 'activated';
@@ -218,6 +355,8 @@ export interface ActivatedAbilityDef {
   targets?: TargetSpec[];
   timing: 'instant' | 'sorcery';
   isManaAbility: boolean;
+  activationZone?: Zone;
+  manaProduction?: ManaProduction[];
   description: string;
 }
 
@@ -242,6 +381,13 @@ export interface SpellAbilityDef {
   kind: 'spell';
   effect: EffectFn;
   targets?: TargetSpec[];
+  description: string;
+}
+
+export interface ModalAbilityDef {
+  kind: 'modal';
+  modes: Array<{ label: string; effect: EffectFn; targets?: TargetSpec[] }>;
+  chooseCount: number;
   description: string;
 }
 
@@ -278,6 +424,7 @@ export type TriggerCondition =
   | { on: 'lose-life'; whose?: 'yours' | 'opponents' | 'any' }
   | { on: 'counter-placed'; counterType?: string; filter?: CardFilter }
   | { on: 'discard'; whose?: 'yours' | 'opponents' | 'any' }
+  | { on: 'landfall'; whose?: 'yours' | 'opponents' | 'any' }
   | { on: 'phase'; phase: Phase }
   | { on: 'step'; step: Step }
   | { on: 'custom'; match: (event: GameEvent, source: CardInstance, game: GameState) => boolean };
@@ -326,6 +473,13 @@ export interface EffectContext {
   event?: GameEvent;
   choices: ChoiceHelper;
   xValue?: number;
+  castMethod?: string;
+  additionalCostsPaid?: string[];
+
+  /** Choose a single target matching the spec. Returns null if no legal targets exist. */
+  chooseTarget(spec: Omit<TargetSpec, 'count'>): Promise<CardInstance | PlayerId | null>;
+  /** Choose multiple targets matching the spec. Returns empty array if no legal targets exist. */
+  chooseTargets(spec: TargetSpec): Promise<(CardInstance | PlayerId)[]>;
 }
 
 export interface ChoiceHelper {
@@ -338,12 +492,26 @@ export interface ChoiceHelper {
   choosePlayer(prompt: string, options: PlayerId[]): Promise<PlayerId>;
 }
 
+export type PredefinedTokenType = 'Treasure' | 'Clue' | 'Food' | 'Blood';
+
+export interface SearchLibraryOptions {
+  player: PlayerId;
+  chooser?: PlayerId;
+  filter: CardFilter;
+  destination: Zone;
+  count: number;
+  optional?: boolean;
+  shuffle?: boolean;
+  reveal?: boolean;
+}
+
 // --- Static Effects ---
 
 export type StaticEffectDef =
   | { type: 'pump'; power: number; toughness: number; filter: CardFilter; duration?: EffectDuration }
   | { type: 'grant-keyword'; keyword: Keyword; filter: CardFilter }
   | { type: 'cost-modification'; costDelta: Partial<ManaCost>; filter: SpellFilter }
+  | { type: 'attack-tax'; filter: CardFilter; cost: Cost; defender: 'source-controller' }
   | { type: 'cant-attack'; filter: CardFilter }
   | { type: 'cant-block'; filter: CardFilter }
   | { type: 'cant-be-targeted'; by: 'opponents'; filter: CardFilter }
@@ -436,6 +604,9 @@ export const GameEventType = {
   COUNTER_ADDED: 'COUNTER_ADDED',
   COUNTER_REMOVED: 'COUNTER_REMOVED',
   TOKEN_CREATED: 'TOKEN_CREATED',
+  SEARCHED_LIBRARY: 'SEARCHED_LIBRARY',
+  SCRY: 'SCRY',
+  MILLED: 'MILLED',
 } as const;
 export type GameEventType = (typeof GameEventType)[keyof typeof GameEventType];
 
@@ -443,6 +614,12 @@ export interface BaseGameEvent {
   type: GameEventType;
   timestamp: Timestamp;
   sourceId?: ObjectId;
+  sourceCardId?: ObjectId;
+  sourceZoneChangeCounter?: number;
+  cardId?: ObjectId;
+  objectZoneChangeCounter?: number;
+  newObjectZoneChangeCounter?: number;
+  lastKnownInfo?: LastKnownInformation;
 }
 
 export interface ZoneChangeEvent extends BaseGameEvent {
@@ -471,6 +648,7 @@ export interface SpellCastEvent extends BaseGameEvent {
   objectId: ObjectId;
   castBy: PlayerId;
   spellTypes: CardType[];
+  castMethod?: string;
 }
 
 export interface DamageDealtEvent extends BaseGameEvent {
@@ -543,7 +721,8 @@ export interface TurnStartEvent extends BaseGameEvent {
 export interface AttacksEvent extends BaseGameEvent {
   type: typeof GameEventType.ATTACKS;
   attackerId: ObjectId;
-  defendingPlayer: PlayerId;
+  defendingPlayer?: PlayerId;
+  defender: AttackTarget;
 }
 
 export interface BlocksEvent extends BaseGameEvent {
@@ -563,6 +742,11 @@ export interface PlayerLostEvent extends BaseGameEvent {
   type: typeof GameEventType.PLAYER_LOST;
   player: PlayerId;
   reason: string;
+}
+
+export interface PlayerWonEvent extends BaseGameEvent {
+  type: typeof GameEventType.PLAYER_WON;
+  player: PlayerId;
 }
 
 export interface ManaProducedEvent extends BaseGameEvent {
@@ -587,6 +771,33 @@ export interface SpellCounteredEvent extends BaseGameEvent {
   objectId: ObjectId;
 }
 
+export interface SearchedLibraryEvent extends BaseGameEvent {
+  type: typeof GameEventType.SEARCHED_LIBRARY;
+  player: PlayerId;
+  foundIds: ObjectId[];
+  destination: Zone;
+}
+
+export interface TokenCreatedEvent extends BaseGameEvent {
+  type: typeof GameEventType.TOKEN_CREATED;
+  player: PlayerId;
+  objectId: ObjectId;
+  tokenType?: PredefinedTokenType;
+}
+
+export interface ScryEvent extends BaseGameEvent {
+  type: typeof GameEventType.SCRY;
+  player: PlayerId;
+  count: number;
+}
+
+export interface MilledEvent extends BaseGameEvent {
+  type: typeof GameEventType.MILLED;
+  player: PlayerId;
+  objectIds: ObjectId[];
+  count: number;
+}
+
 export type GameEvent =
   | ZoneChangeEvent
   | EntersBattlefieldEvent
@@ -607,10 +818,15 @@ export type GameEvent =
   | BlocksEvent
   | CounterAddedEvent
   | PlayerLostEvent
+  | PlayerWonEvent
   | ManaProducedEvent
   | AbilityActivatedEvent
   | SpellResolvedEvent
-  | SpellCounteredEvent;
+  | SpellCounteredEvent
+  | TokenCreatedEvent
+  | SearchedLibraryEvent
+  | ScryEvent
+  | MilledEvent;
 
 // --- Player Actions ---
 
@@ -635,7 +851,12 @@ export interface CastSpellAction {
   playerId: PlayerId;
   cardId: ObjectId;
   targets?: (ObjectId | PlayerId)[];
+  modeChoices?: number[];
   xValue?: number;
+  chosenFace?: 'front' | 'back';
+  chosenHalf?: 'left' | 'right' | 'fused';
+  castMethod?: string;
+  castAsAdventure?: boolean;
 }
 
 export interface ActivateAbilityAction {
@@ -650,12 +871,17 @@ export interface PlayLandAction {
   type: typeof ActionType.PLAY_LAND;
   playerId: PlayerId;
   cardId: ObjectId;
+  chosenFace?: 'front' | 'back';
 }
 
 export interface DeclareAttackersAction {
   type: typeof ActionType.DECLARE_ATTACKERS;
   playerId: PlayerId;
-  attackers: Array<{ attackerId: ObjectId; defendingPlayer: PlayerId }>;
+  attackers: Array<{
+    attackerId: ObjectId;
+    defendingPlayer?: PlayerId;
+    defender?: AttackTarget;
+  }>;
 }
 
 export interface DeclareBlockersAction {
@@ -666,6 +892,16 @@ export interface DeclareBlockersAction {
 
 export interface PassPriorityAction {
   type: typeof ActionType.PASS_PRIORITY;
+  playerId: PlayerId;
+}
+
+export interface MulliganKeepAction {
+  type: typeof ActionType.MULLIGAN_KEEP;
+  playerId: PlayerId;
+}
+
+export interface MulliganTakeAction {
+  type: typeof ActionType.MULLIGAN_TAKE;
   playerId: PlayerId;
 }
 
@@ -687,6 +923,8 @@ export type PlayerAction =
   | DeclareAttackersAction
   | DeclareBlockersAction
   | PassPriorityAction
+  | MulliganKeepAction
+  | MulliganTakeAction
   | ConcedeAction
   | CommanderToCommandZoneAction;
 
@@ -703,12 +941,24 @@ export interface StackEntry {
   id: ObjectId;
   entryType: StackEntryType;
   sourceId: ObjectId;
+  sourceCardId?: ObjectId;
+  sourceZoneChangeCounter: number;
+  sourceSnapshot?: LastKnownInformation;
   controller: PlayerId;
   timestamp: Timestamp;
   targets: (ObjectId | PlayerId)[];
+  targetZoneChangeCounters?: Array<number | null>;
+  targetSpecs?: TargetSpec[];
   cardInstance?: CardInstance;
   ability?: AbilityDefinition;
   xValue?: number;
+  spellDefinition?: CardDefinition;
+  modeChoices?: number[];
+  castMethod?: string;
+  additionalCostsPaid?: string[];
+  castAsAdventure?: boolean;
+  chosenFace?: 'front' | 'back';
+  chosenHalf?: 'left' | 'right' | 'fused';
   resolve: (ctx: EffectContext) => void | Promise<void>;
 }
 
@@ -752,6 +1002,17 @@ export interface PlayerState {
   commanderIds: ObjectId[];
   colorIdentity: ManaColor[];
   drewFromEmptyLibrary: boolean;
+  spellsCastThisTurn?: number;
+  experienceCounters?: number;
+  energyCounters?: number;
+}
+
+export interface DelayedTrigger {
+  id: ObjectId;
+  ability: TriggeredAbilityDef;
+  source: CardInstance;
+  controller: PlayerId;
+  expiresAfterTrigger: boolean;
 }
 
 // --- Game State ---
@@ -768,15 +1029,30 @@ export interface GameState {
   combat: CombatState | null;
   continuousEffects: ContinuousEffect[];
   replacementEffects: ReplacementEffect[];
+  lastKnownInformation: Record<string, LastKnownInformation>;
   timestampCounter: number;
   objectIdCounter: number;
   eventLog: GameEvent[];
   priorityPlayer: PlayerId | null;
   passedPriority: Set<PlayerId>;
   pendingTriggers: PendingTrigger[];
+  delayedTriggers: DelayedTrigger[];
   waitingForChoice: boolean;
   isGameOver: boolean;
   winner: PlayerId | null;
+  loyaltyAbilitiesUsedThisTurn?: string[];
+  dayNight?: 'day' | 'night';
+  monarch?: PlayerId;
+  initiativeHolder?: PlayerId;
+  spellsCastLastTurn?: Record<PlayerId, number>;
+  lastCompletedTurnPlayer?: PlayerId;
+  pendingFreeCasts?: Array<{ objectId: ObjectId; playerId: PlayerId; reason: 'suspend' }>;
+  pendingExtraTurns?: PlayerId[];
+  mulliganState?: {
+    activePlayer: PlayerId;
+    taken: Partial<Record<PlayerId, number>>;
+    kept: Partial<Record<PlayerId, boolean>>;
+  };
 }
 
 export interface PendingTrigger {
@@ -784,6 +1060,7 @@ export interface PendingTrigger {
   source: CardInstance;
   event: GameEvent;
   controller: PlayerId;
+  delayedTriggerId?: ObjectId;
 }
 
 // --- Forward reference: GameEngine interface (for EffectContext) ---
@@ -802,6 +1079,7 @@ export interface GameEngine {
   exilePermanent(objectId: ObjectId): void;
   moveCard(objectId: ObjectId, toZone: Zone, toOwner?: PlayerId): void;
   createToken(controller: PlayerId, definition: Partial<CardDefinition>): CardInstance;
+  createPredefinedToken(controller: PlayerId, tokenType: PredefinedTokenType): CardInstance;
   addCounters(objectId: ObjectId, counterType: string, amount: number): void;
   removeCounters(objectId: ObjectId, counterType: string, amount: number): void;
   tapPermanent(objectId: ObjectId): void;
@@ -817,4 +1095,28 @@ export interface GameEngine {
   emitEvent(event: GameEvent): void;
   getOpponents(player: PlayerId): PlayerId[];
   getActivePlayers(): PlayerId[];
+  searchLibrary(player: PlayerId, filter: CardFilter, destination: Zone, count: number): Promise<CardInstance[]>;
+  searchLibraryWithOptions(options: SearchLibraryOptions): Promise<CardInstance[]>;
+  scry(player: PlayerId, count: number): Promise<void>;
+  mill(player: PlayerId, count: number): void;
+  fight(creatureAId: ObjectId, creatureBId: ObjectId): void;
+  returnToHand(objectId: ObjectId): void;
+  attachPermanent(attachmentId: ObjectId, hostId: ObjectId): void;
+  detachPermanent(attachmentId: ObjectId): void;
+  proliferate(player: PlayerId): Promise<void>;
+  copyPermanent(objectId: ObjectId, controller: PlayerId): CardInstance | undefined;
+  copySpellOnStack(stackEntryId: ObjectId, newController: PlayerId): void;
+  changeControl(objectId: ObjectId, newController: PlayerId, duration?: EffectDuration): void;
+  castWithoutPayingManaCost(cardId: ObjectId, controller: PlayerId): Promise<void>;
+  createEmblem(controller: PlayerId, abilities: AbilityDefinition[], description: string): CardInstance;
+  transformPermanent(objectId: ObjectId): void;
+  becomeMonarch(player: PlayerId): void;
+  becomeInitiativeHolder(player: PlayerId): void;
+  registerDelayedTrigger(trigger: DelayedTrigger): void;
+  unlessPlayerPays(player: PlayerId, sourceId: ObjectId, cost: Cost, prompt: string): Promise<boolean>;
+  sacrificePermanents(player: PlayerId, filter: CardFilter, count: number, prompt?: string): Promise<CardInstance[]>;
+  addPlayerCounters(player: PlayerId, counterType: 'experience' | 'energy', amount: number): void;
+  removePlayerCounters(player: PlayerId, counterType: 'experience' | 'energy', amount: number): boolean;
+  grantExtraTurn(player: PlayerId): void;
+  endTurn(): void;
 }
