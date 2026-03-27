@@ -124,10 +124,6 @@ const CardViewInner: React.FC<CardViewProps> = ({
     });
   };
 
-  const oracleSnippet = card.definition.oracleText
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)[0];
 
   return (
     <div
@@ -202,9 +198,6 @@ const CardViewInner: React.FC<CardViewProps> = ({
         <div className="arena-card__footer">
           <div style={{ display: 'grid', gap: 6, minWidth: 0 }}>
             <div className="arena-card__type">{getTypeLine(card)}</div>
-            {variant !== 'mini' && oracleSnippet ? (
-              <div className="arena-card__text-chip">{oracleSnippet}</div>
-            ) : null}
           </div>
           {stats ? <div className="arena-card__stats">{stats}</div> : null}
         </div>

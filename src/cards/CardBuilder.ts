@@ -25,7 +25,6 @@ export class CardBuilder {
       types: [],
       supertypes: [],
       subtypes: [],
-      oracleText: '',
       abilities: [],
       keywords: [],
     };
@@ -77,8 +76,7 @@ export class CardBuilder {
     return this;
   }
 
-  oracleText(text: string): this {
-    this.def.oracleText = text;
+  oracleText(_text: string): this {
     return this;
   }
 
@@ -282,7 +280,6 @@ export class CardBuilder {
       power: this.def.power,
       toughness: this.def.toughness,
       loyalty: this.def.loyalty,
-      oracleText: this.def.oracleText ?? '',
       abilities: this.def.abilities,
       keywords: this.def.keywords,
     };

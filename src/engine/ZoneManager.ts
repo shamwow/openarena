@@ -277,7 +277,6 @@ export class ZoneManager {
       subtypes: definition.subtypes ?? [],
       power: definition.power,
       toughness: definition.toughness,
-      oracleText: definition.oracleText ?? '',
       abilities: definition.abilities ?? [],
       keywords: definition.keywords ?? [],
     };
