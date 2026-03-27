@@ -592,7 +592,8 @@ select {
 .arena-seat__hand-area {
   --hand-card-width: 72px;
   --hand-card-height: 101px;
-  --hand-card-overlap: -30px;
+  --hand-card-overlap-base: clamp(-50px, calc(-50px + (100vw - 1200px) / 30), -30px);
+  --hand-card-overlap: var(--hand-card-overlap-base);
   --hand-card-step: calc(var(--hand-card-width) + var(--hand-card-overlap));
   --hand-pile-offset: 3px;
   --hand-peek-translate: 77px;

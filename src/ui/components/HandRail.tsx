@@ -612,7 +612,7 @@ const HandRailInner: React.FC<HandRailProps> = ({
       style={
         !needsScroll && totalCards > 1
           ? ({
-              ['--hand-card-overlap' as string]: `${Math.round(-30 * (totalCards / MAX_VISIBLE))}px`,
+              ['--hand-card-overlap' as string]: `calc(var(--hand-card-overlap-base) * ${(totalCards / MAX_VISIBLE).toFixed(4)})`,
             } as React.CSSProperties)
           : undefined
       }
