@@ -56,7 +56,6 @@ select {
   position: relative;
   width: 100vw;
   height: 100vh;
-  isolation: isolate;
   background:
     radial-gradient(circle at center, rgba(28, 69, 78, 0.28), transparent 38%),
     radial-gradient(circle at 50% 48%, rgba(196, 126, 58, 0.09), transparent 18%),
@@ -141,7 +140,7 @@ select {
     linear-gradient(180deg, rgba(18, 30, 42, 0.92), rgba(8, 15, 24, 0.92)),
     rgba(9, 18, 28, 0.84);
   box-shadow: var(--arena-shadow);
-  z-index: 42;
+  z-index: 101;
   backdrop-filter: blur(18px);
 }
 
@@ -1372,6 +1371,84 @@ select {
   grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
   gap: 12px;
   align-items: start;
+}
+
+/* Card Explorer */
+
+.arena-card-explorer__overlay {
+  z-index: 100;
+}
+
+.arena-card-explorer {
+  display: flex;
+  flex-direction: column;
+}
+
+.arena-card-explorer__grid {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 10px;
+  align-items: start;
+  align-content: start;
+}
+
+.arena-card-explorer__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.arena-card-explorer__search {
+  width: 180px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(215, 174, 105, 0.24);
+  background: rgba(4, 11, 19, 0.78);
+  color: var(--arena-text);
+  font-size: inherit;
+  outline: none;
+  transition: border-color var(--arena-motion);
+}
+
+.arena-card-explorer__search:focus {
+  border-color: rgba(215, 174, 105, 0.52);
+}
+
+.arena-card-explorer__search::placeholder {
+  color: var(--arena-text-muted);
+}
+
+.arena-card-explorer__card {
+  border-radius: var(--arena-card-radius);
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition: outline-color var(--arena-motion);
+}
+
+.arena-card-explorer__card[data-selectable="true"] {
+  cursor: pointer;
+}
+
+.arena-card-explorer__card[data-selected="true"] {
+  outline-color: rgba(88, 192, 127, 0.7);
+}
+
+.arena-card-explorer__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 14px;
+  margin-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.arena-card-explorer__footer .arena-ghost-button:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .arena-combat-banner {

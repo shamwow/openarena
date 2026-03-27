@@ -1,13 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import type {
   CardInstance,
-  ManaPool,
   PlayerAction,
   PlayerId,
   PlayerState,
 } from '../../engine/types';
 import { CardType, Zone } from '../../engine/types';
 import type { DragCardPayload, SeatMeta } from '../types';
+import { CardExplorer } from './CardExplorer';
 import { CardView } from './CardView';
 import { HandRail } from './HandRail';
 import { ZoneDialog } from './ZoneDialog';
@@ -35,38 +35,7 @@ interface PlayerPanelProps {
   registerZoneAnchor: (key: string, node: HTMLElement | null) => void;
 }
 
-type OpenZoneDialog = 'GRAVEYARD_EXILE' | null;
-
-const MANA_COLORS: Record<keyof ManaPool, string> = {
-  W: '#f9f5e3',
-  U: '#0e68ab',
-  B: '#45373a',
-  R: '#d3202a',
-  G: '#00733e',
-  C: '#beb9b2',
-};
-
-function ManaPoolDisplay({ pool }: { pool: ManaPool }) {
-  const entries = (Object.keys(pool) as (keyof ManaPool)[]).filter((color) => pool[color] > 0);
-
-  if (entries.length === 0) {
-    return <div className="arena-pill">Mana pool empty</div>;
-  }
-
-  return (
-    <div className="arena-seat__mana">
-      {entries.map((color) => (
-        <span key={color} className="arena-mana-pill">
-          <span
-            className="arena-mana-pill__dot"
-            style={{ backgroundColor: MANA_COLORS[color] }}
-          />
-          <strong>{pool[color]}</strong>
-        </span>
-      ))}
-    </div>
-  );
-}
+type OpenZoneDialog = 'GRAVEYARD_EXILE' | 'LIBRARY_EXPLORER' | null;
 
 function getLifeDanger(player: PlayerState): { danger: boolean; critical: boolean } {
   return {
@@ -538,11 +507,16 @@ const PlayerPanelInner: React.FC<PlayerPanelProps> = ({
           zone={Zone.LIBRARY}
           count={library.length}
           side="right"
+          onClick={
+            seat.position === 'bottom-left'
+              ? () => setOpenZoneDialog('LIBRARY_EXPLORER')
+              : undefined
+          }
           registerZoneAnchor={(node) => registerZoneAnchor(`${player.id}:LIBRARY`, node)}
         />
       </div>
 
-      {openZoneDialog && (
+      {openZoneDialog === 'GRAVEYARD_EXILE' && (
         <ZoneDialog
           playerName={player.name}
           sections={dialogSections}
@@ -551,6 +525,19 @@ const PlayerPanelInner: React.FC<PlayerPanelProps> = ({
           onPreview={onPreview}
           onPreviewClear={onPreviewClear}
           onClose={() => setOpenZoneDialog(null)}
+        />
+      )}
+
+      {openZoneDialog === 'LIBRARY_EXPLORER' && (
+        <CardExplorer
+          title={`${player.name} Library`}
+          cards={library}
+          selectionMode="none"
+          dismissable={true}
+          onClose={() => setOpenZoneDialog(null)}
+          previewCardId={previewCardId}
+          onPreview={onPreview}
+          onPreviewClear={onPreviewClear}
         />
       )}
     </section>
