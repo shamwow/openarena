@@ -76,6 +76,7 @@ export class StateBasedActions {
         const def = card.definition;
         const isCreature = def.types.includes(CardType.CREATURE);
         const isPlaneswalker = def.types.includes(CardType.PLANESWALKER);
+        const isBattle = def.types.includes(CardType.BATTLE);
 
         if (isCreature) {
           const toughness = card.modifiedToughness ?? def.toughness ?? 0;
@@ -106,6 +107,13 @@ export class StateBasedActions {
           // 704.5i: Planeswalker with 0 or less loyalty
           const loyalty = card.counters['loyalty'] ?? def.loyalty ?? 0;
           if (loyalty <= 0) {
+            actions.push({ type: 'graveyard', objectId: card.objectId });
+          }
+        }
+
+        if (isBattle) {
+          const defense = card.counters.defense ?? def.defense ?? 0;
+          if (defense <= 0) {
             actions.push({ type: 'graveyard', objectId: card.objectId });
           }
         }

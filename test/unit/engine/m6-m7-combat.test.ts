@@ -21,6 +21,14 @@ function createPlaneswalker(name: string, loyalty: number) {
     .build();
 }
 
+function createBattle(name: string, defense: number) {
+  return CardBuilder.create(name)
+    .cost('{3}')
+    .types(CardType.BATTLE)
+    .defense(defense)
+    .build();
+}
+
 function createCreature(name: string, power: number, toughness: number) {
   return CardBuilder.create(name)
     .cost('{2}')
@@ -131,6 +139,262 @@ test('declare attackers accepts planeswalker defenders and combat damage hits lo
     event.type === 'DAMAGE_DEALT' &&
     event.targetId === walkerCard.objectId
   ));
+});
+
+test('battle targets are legal only when defended by an opponent and combat damage removes defense counters', () => {
+  const attacker = createCreature('Battle Scout', 3, 3);
+  const battle = createBattle('Training Siege', 5);
+  const decks = [
+    { commander: makeCommander('Attack Commander', '{R}'), cards: [attacker], playerName: 'Attacker' },
+    { commander: makeCommander('Battle Commander', '{W}'), cards: [battle], playerName: 'Battle Owner' },
+    { commander: makeCommander('Protector Commander', '{G}'), cards: [], playerName: 'Protector' },
+    prebuiltDecks[3],
+  ];
+
+  const { state, engine } = createHarness({
+    decks,
+    setup: (builder) => {
+      builder
+        .moveCard({ playerId: 'player1', name: 'Battle Scout' }, Zone.BATTLEFIELD)
+        .setBattlefieldCard({ playerId: 'player1', name: 'Battle Scout' }, { summoningSick: false })
+        .moveCard({ playerId: 'player2', name: 'Training Siege' }, Zone.BATTLEFIELD)
+        .setBattlefieldCard({ playerId: 'player2', name: 'Training Siege' }, {
+          counters: { defense: 5 },
+          battleProtector: 'player3',
+        })
+        .setTurn({
+          activePlayer: 'player1',
+          currentPhase: Phase.COMBAT,
+          currentStep: Step.DECLARE_ATTACKERS,
+          priorityPlayer: 'player1',
+          passedPriority: [],
+        })
+        .mutateState((game) => {
+          game.combat = {
+            attackingPlayer: 'player1',
+            attackers: new Map(),
+            blockers: new Map(),
+            blockerOrder: new Map(),
+            damageAssignments: [],
+            firstStrikeDamageDealt: false,
+          };
+        });
+    },
+  });
+
+  const internalEngine = engine as unknown as {
+    combatManager: {
+      getLegalAttackTargets: (card: ReturnType<typeof getCard>, game: typeof state) => Array<{ type: string; id: string }>;
+      declareAttackers: (
+        game: typeof state,
+        declarations: Array<{ attackerId: string; defender: { type: 'battle'; id: string } }>,
+        taxesPaid?: boolean,
+      ) => boolean;
+      dealCombatDamage: (game: typeof state, isFirstStrike: boolean) => void;
+    };
+  };
+  const attackerCard = getCard(state, 'player1', Zone.BATTLEFIELD, 'Battle Scout');
+  const battleCard = getCard(state, 'player2', Zone.BATTLEFIELD, 'Training Siege');
+
+  const legalTargets = internalEngine.combatManager.getLegalAttackTargets(attackerCard, state);
+  assert.ok(legalTargets.some((target) => target.type === 'battle' && target.id === battleCard.objectId));
+
+  battleCard.battleProtector = 'player1';
+  const selfProtectedTargets = internalEngine.combatManager.getLegalAttackTargets(attackerCard, state);
+  assert.equal(selfProtectedTargets.some((target) => target.type === 'battle' && target.id === battleCard.objectId), false);
+
+  battleCard.battleProtector = 'player3';
+  assert.equal(internalEngine.combatManager.declareAttackers(state, [{
+    attackerId: attackerCard.objectId,
+    defender: { type: 'battle', id: battleCard.objectId },
+  }], false), true);
+
+  state.currentStep = Step.COMBAT_DAMAGE;
+  internalEngine.combatManager.dealCombatDamage(state, false);
+
+  assert.equal(battleCard.counters.defense, 2);
+  assert.deepEqual(state.combat?.attackers.get(attackerCard.objectId), { type: 'battle', id: battleCard.objectId });
+});
+
+test('only the battle protector can block creatures attacking that battle', () => {
+  const attacker = createCreature('Battle Intruder', 3, 3);
+  const controllerBlocker = createCreature('Battle Owner Guard', 2, 2);
+  const protectorBlocker = createCreature('Battle Protector Guard', 2, 2);
+  const battle = createBattle('Protected Siege', 4);
+  const decks = [
+    { commander: makeCommander('Attack Commander', '{R}'), cards: [attacker], playerName: 'Attacker' },
+    { commander: makeCommander('Battle Commander', '{W}'), cards: [battle, controllerBlocker], playerName: 'Battle Owner' },
+    { commander: makeCommander('Protector Commander', '{G}'), cards: [protectorBlocker], playerName: 'Protector' },
+    prebuiltDecks[3],
+  ];
+
+  const { state, engine } = createHarness({
+    decks,
+    setup: (builder) => {
+      builder
+        .moveCard({ playerId: 'player1', name: 'Battle Intruder' }, Zone.BATTLEFIELD)
+        .setBattlefieldCard({ playerId: 'player1', name: 'Battle Intruder' }, { summoningSick: false })
+        .moveCard({ playerId: 'player2', name: 'Protected Siege' }, Zone.BATTLEFIELD)
+        .setBattlefieldCard({ playerId: 'player2', name: 'Protected Siege' }, {
+          counters: { defense: 4 },
+          battleProtector: 'player3',
+        })
+        .moveCard({ playerId: 'player2', name: 'Battle Owner Guard' }, Zone.BATTLEFIELD)
+        .setBattlefieldCard({ playerId: 'player2', name: 'Battle Owner Guard' }, { summoningSick: false })
+        .moveCard({ playerId: 'player3', name: 'Battle Protector Guard' }, Zone.BATTLEFIELD)
+        .setBattlefieldCard({ playerId: 'player3', name: 'Battle Protector Guard' }, { summoningSick: false })
+        .setTurn({
+          activePlayer: 'player1',
+          currentPhase: Phase.COMBAT,
+          currentStep: Step.DECLARE_BLOCKERS,
+          priorityPlayer: 'player3',
+          passedPriority: [],
+        })
+        .mutateState((game) => {
+          const attackingCreature = game.zones.player1.BATTLEFIELD.find((card) => card.definition.name === 'Battle Intruder');
+          const battleCard = game.zones.player2.BATTLEFIELD.find((card) => card.definition.name === 'Protected Siege');
+          assert.ok(attackingCreature);
+          assert.ok(battleCard);
+          game.combat = {
+            attackingPlayer: 'player1',
+            attackers: new Map([[attackingCreature.objectId, { type: 'battle', id: battleCard.objectId }]]),
+            blockers: new Map(),
+            blockerOrder: new Map(),
+            damageAssignments: [],
+            firstStrikeDamageDealt: false,
+          };
+        });
+    },
+  });
+
+  const internalEngine = engine as unknown as {
+    combatManager: {
+      declareBlockers: (
+        game: typeof state,
+        declarations: Array<{ blockerId: string; attackerId: string }>,
+      ) => boolean;
+    };
+  };
+  const attackerCard = getCard(state, 'player1', Zone.BATTLEFIELD, 'Battle Intruder');
+  const ownerBlocker = getCard(state, 'player2', Zone.BATTLEFIELD, 'Battle Owner Guard');
+  const protectorBlockerCard = getCard(state, 'player3', Zone.BATTLEFIELD, 'Battle Protector Guard');
+
+  assert.equal(internalEngine.combatManager.declareBlockers(state, [
+    { blockerId: ownerBlocker.objectId, attackerId: attackerCard.objectId },
+    { blockerId: protectorBlockerCard.objectId, attackerId: attackerCard.objectId },
+  ]), true);
+
+  assert.equal(state.combat?.blockers.get(ownerBlocker.objectId), undefined);
+  assert.equal(state.combat?.blockers.get(protectorBlockerCard.objectId), attackerCard.objectId);
+});
+
+test('trample can assign excess combat damage to a battle', () => {
+  const attacker = CardBuilder.create('Battle Mammoth')
+    .cost('{4}')
+    .types(CardType.CREATURE)
+    .stats(4, 4)
+    .trample()
+    .build();
+  const blocker = createCreature('Battle Chump', 2, 2);
+  const battle = createBattle('Trample Siege', 5);
+  const decks = [
+    { commander: makeCommander('Attack Commander', '{R}'), cards: [attacker], playerName: 'Attacker' },
+    { commander: makeCommander('Battle Commander', '{W}'), cards: [battle], playerName: 'Battle Owner' },
+    { commander: makeCommander('Protector Commander', '{G}'), cards: [blocker], playerName: 'Protector' },
+    prebuiltDecks[3],
+  ];
+
+  const { state, engine } = createHarness({
+    decks,
+    setup: (builder) => {
+      builder
+        .moveCard({ playerId: 'player1', name: 'Battle Mammoth' }, Zone.BATTLEFIELD)
+        .setBattlefieldCard({ playerId: 'player1', name: 'Battle Mammoth' }, { summoningSick: false })
+        .moveCard({ playerId: 'player2', name: 'Trample Siege' }, Zone.BATTLEFIELD)
+        .setBattlefieldCard({ playerId: 'player2', name: 'Trample Siege' }, {
+          counters: { defense: 5 },
+          battleProtector: 'player3',
+        })
+        .moveCard({ playerId: 'player3', name: 'Battle Chump' }, Zone.BATTLEFIELD)
+        .setBattlefieldCard({ playerId: 'player3', name: 'Battle Chump' }, { summoningSick: false })
+        .setTurn({
+          activePlayer: 'player1',
+          currentPhase: Phase.COMBAT,
+          currentStep: Step.COMBAT_DAMAGE,
+          priorityPlayer: 'player1',
+          passedPriority: [],
+        })
+        .mutateState((game) => {
+          const attackingCreature = game.zones.player1.BATTLEFIELD.find((card) => card.definition.name === 'Battle Mammoth');
+          const blockingCreature = game.zones.player3.BATTLEFIELD.find((card) => card.definition.name === 'Battle Chump');
+          const battleCard = game.zones.player2.BATTLEFIELD.find((card) => card.definition.name === 'Trample Siege');
+          assert.ok(attackingCreature);
+          assert.ok(blockingCreature);
+          assert.ok(battleCard);
+          game.combat = {
+            attackingPlayer: 'player1',
+            attackers: new Map([[attackingCreature.objectId, { type: 'battle', id: battleCard.objectId }]]),
+            blockers: new Map([[blockingCreature.objectId, attackingCreature.objectId]]),
+            blockerOrder: new Map([[attackingCreature.objectId, [blockingCreature.objectId]]]),
+            damageAssignments: [],
+            firstStrikeDamageDealt: false,
+          };
+        });
+    },
+  });
+
+  const internalEngine = engine as unknown as {
+    combatManager: { dealCombatDamage: (game: typeof state, isFirstStrike: boolean) => void };
+  };
+  const blockerCard = getCard(state, 'player3', Zone.BATTLEFIELD, 'Battle Chump');
+  const battleCard = getCard(state, 'player2', Zone.BATTLEFIELD, 'Trample Siege');
+
+  internalEngine.combatManager.dealCombatDamage(state, false);
+
+  assert.equal(blockerCard.markedDamage, 2);
+  assert.equal(battleCard.counters.defense, 3);
+});
+
+test('battles with no defense counters are put into the graveyard by state-based actions', async () => {
+  const attacker = createCreature('Battle Finisher', 1, 1);
+  const battle = createBattle('Fragile Siege', 1);
+  const decks = [
+    { commander: makeCommander('Attack Commander', '{R}'), cards: [attacker], playerName: 'Attacker' },
+    { commander: makeCommander('Battle Commander', '{W}'), cards: [battle], playerName: 'Battle Owner' },
+    { commander: makeCommander('Protector Commander', '{G}'), cards: [], playerName: 'Protector' },
+    prebuiltDecks[3],
+  ];
+
+  const { state, engine } = createHarness({
+    decks,
+    setup: (builder) => {
+      builder
+        .moveCard({ playerId: 'player1', name: 'Battle Finisher' }, Zone.BATTLEFIELD)
+        .setBattlefieldCard({ playerId: 'player1', name: 'Battle Finisher' }, { summoningSick: false })
+        .moveCard({ playerId: 'player2', name: 'Fragile Siege' }, Zone.BATTLEFIELD)
+        .setBattlefieldCard({ playerId: 'player2', name: 'Fragile Siege' }, {
+          counters: { defense: 1 },
+          battleProtector: 'player3',
+        })
+        .setTurn({
+          activePlayer: 'player1',
+          currentPhase: Phase.PRECOMBAT_MAIN,
+          currentStep: Step.MAIN,
+          priorityPlayer: null,
+          passedPriority: [],
+        });
+    },
+  });
+
+  const internalEngine = engine as unknown as { runGameLoop: () => Promise<void> };
+  const attackerCard = getCard(state, 'player1', Zone.BATTLEFIELD, 'Battle Finisher');
+  const battleCard = getCard(state, 'player2', Zone.BATTLEFIELD, 'Fragile Siege');
+
+  engine.dealDamage(attackerCard.objectId, battleCard.objectId, 1, false);
+  await internalEngine.runGameLoop();
+
+  assert.ok(graveyardNames(state, 'player2').includes('Fragile Siege'));
+  assert.equal(battlefieldNames(state, 'player2').includes('Fragile Siege'), false);
 });
 
 test('Propaganda taxes attacks at declaration time', () => {

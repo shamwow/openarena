@@ -238,7 +238,7 @@ export class StackManager {
           : card.definition);
       const isPermanent = effectiveDef.types.some(t =>
         t === CardType.CREATURE || t === CardType.ENCHANTMENT ||
-        t === CardType.ARTIFACT || t === CardType.PLANESWALKER
+        t === CardType.ARTIFACT || t === CardType.PLANESWALKER || t === CardType.BATTLE
       );
 
       // Check if the cast method has an afterResolution zone override (e.g. flashback -> EXILE)
@@ -255,7 +255,7 @@ export class StackManager {
         this.moveCardInstanceFromStack(state, entry, altCost.afterResolution, card.owner);
       } else if (isPermanent) {
         // Permanents enter the battlefield
-        this.moveCardInstanceFromStack(state, entry, 'BATTLEFIELD', entry.controller);
+        this.moveCardInstanceFromStack(state, entry, 'BATTLEFIELD', entry.controller, entry.battlefieldEntry);
       } else {
         // Instants and sorceries go to graveyard
         this.moveCardInstanceFromStack(state, entry, 'GRAVEYARD', card.owner);
@@ -395,7 +395,9 @@ export class StackManager {
       'creature-or-player': candidate.definition.types.includes(CardType.CREATURE),
       'creature-or-planeswalker': candidate.definition.types.includes(CardType.CREATURE) || candidate.definition.types.includes(CardType.PLANESWALKER),
       planeswalker: candidate.definition.types.includes(CardType.PLANESWALKER),
-      any: candidate.zone === 'BATTLEFIELD',
+      any: candidate.definition.types.includes(CardType.CREATURE)
+        || candidate.definition.types.includes(CardType.PLANESWALKER)
+        || candidate.definition.types.includes(CardType.BATTLE),
     };
 
     if (!typeChecks[spec.what]) return false;
@@ -474,6 +476,7 @@ export class StackManager {
     entry: StackEntry,
     toZone: import('./types').Zone,
     toOwner: PlayerId,
+    battlefieldEntry?: StackEntry['battlefieldEntry'],
   ): void {
     const card = entry.cardInstance;
     if (!card) return;
@@ -487,10 +490,20 @@ export class StackManager {
     if (toZone === 'BATTLEFIELD') {
       card.controller = toOwner;
       card.summoningSick = true;
+      if (battlefieldEntry?.tapped) {
+        card.tapped = true;
+      }
       if (card.definition.types.includes(CardType.PLANESWALKER) && card.definition.loyalty !== undefined) {
         card.counters.loyalty = card.definition.loyalty;
       }
+      if (card.definition.types.includes(CardType.BATTLE)) {
+        card.counters.defense = card.definition.defense ?? card.counters.defense ?? 0;
+        card.battleProtector = this.chooseDefaultBattleProtector(state, toOwner);
+      }
       state.zones[toOwner].BATTLEFIELD.push(card);
+      if (battlefieldEntry?.attacking && state.combat) {
+        state.combat.attackers.set(card.objectId, battlefieldEntry.attacking);
+      }
       if (card.definition.attachmentType === 'Aura' && card.attachedTo) {
         const host = findCard(state, card.attachedTo);
         if (!host || host.zone !== 'BATTLEFIELD' || host.phasedOut) {
@@ -578,5 +591,11 @@ export class StackManager {
       ? card.definition.alternativeCosts.find(ac => ac.id === entry.castMethod)
       : undefined;
     return altCost?.afterResolution ?? defaultZone;
+  }
+
+  private chooseDefaultBattleProtector(state: GameState, controller: PlayerId): PlayerId | null {
+    return state.turnOrder.find((playerId) =>
+      playerId !== controller && !state.players[playerId].hasLost
+    ) ?? null;
   }
 }

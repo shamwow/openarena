@@ -5,6 +5,30 @@ import { CardBuilder } from '../../../src/cards/CardBuilder.ts';
 import { ActionType, CardType, Phase, Step, Zone } from '../../../src/engine/types.ts';
 import { createHarness, getCard, getLegalAction, graveyardNames, handNames, makeCommander } from './helpers.ts';
 
+function createCreature(name: string, power: number, toughness: number) {
+  return CardBuilder.create(name)
+    .cost('{2}')
+    .types(CardType.CREATURE)
+    .stats(power, toughness)
+    .build();
+}
+
+function createPlaneswalker(name: string, loyalty: number) {
+  return CardBuilder.create(name)
+    .cost('{3}')
+    .types(CardType.PLANESWALKER)
+    .loyalty(loyalty)
+    .build();
+}
+
+function createBattle(name: string, defense: number) {
+  return CardBuilder.create(name)
+    .cost('{3}')
+    .types(CardType.BATTLE)
+    .defense(defense)
+    .build();
+}
+
 test('kicked and non-kicked spells branch on the shared additional-cost state', async () => {
   const kickerSpell = CardBuilder.create('Kicker Burst')
     .cost('{U}')
@@ -271,6 +295,383 @@ test('Cyclonic Rift style spells branch on overload status', async () => {
     battlefield: [],
     hand: ['Bounce Target A', 'Bounce Target B'],
   });
+});
+
+test('sneak is only offered during your declare blockers step with an unblocked attacker', () => {
+  const attacker = createCreature('Sneak Scout', 2, 2);
+  const blocker = createCreature('Sneak Wall', 1, 4);
+  const sneakCreature = CardBuilder.create('Sewer Ambusher')
+    .cost('{4}{R}')
+    .types(CardType.CREATURE)
+    .stats(4, 4)
+    .sneak('{1}{R}')
+    .build();
+
+  const canSneak = (step: Step, activePlayer: 'player1' | 'player2', blocked: boolean) => {
+    const { state, engine } = createHarness({
+      decks: [
+        { commander: makeCommander('Sneak Commander', '{R}'), cards: [attacker, sneakCreature], playerName: 'Sneak Player' },
+        { commander: makeCommander('Defense Commander', '{W}'), cards: [blocker], playerName: 'Defender' },
+        { commander: makeCommander('P3 Commander', '{2}'), cards: [], playerName: 'P3' },
+        { commander: makeCommander('P4 Commander', '{2}'), cards: [], playerName: 'P4' },
+      ],
+      setup: (builder) => {
+        builder
+          .moveCard({ playerId: 'player1', name: 'Sneak Scout' }, Zone.BATTLEFIELD)
+          .setBattlefieldCard({ playerId: 'player1', name: 'Sneak Scout' }, { summoningSick: false })
+          .moveCard({ playerId: 'player1', name: 'Sewer Ambusher' }, Zone.HAND)
+          .moveCard({ playerId: 'player2', name: 'Sneak Wall' }, Zone.BATTLEFIELD)
+          .setBattlefieldCard({ playerId: 'player2', name: 'Sneak Wall' }, { summoningSick: false })
+          .setTurn({
+            activePlayer,
+            currentPhase: step === Step.MAIN ? Phase.PRECOMBAT_MAIN : Phase.COMBAT,
+            currentStep: step,
+            priorityPlayer: 'player1',
+            passedPriority: [],
+          })
+          .mutateState((game) => {
+            const attackingCreature = game.zones.player1.BATTLEFIELD.find((card) => card.definition.name === 'Sneak Scout');
+            const blockingCreature = game.zones.player2.BATTLEFIELD.find((card) => card.definition.name === 'Sneak Wall');
+            assert.ok(attackingCreature);
+            assert.ok(blockingCreature);
+
+            game.combat = {
+              attackingPlayer: activePlayer,
+              attackers: new Map([[attackingCreature.objectId, { type: 'player', id: 'player2' }]]),
+              blockers: blocked ? new Map([[blockingCreature.objectId, attackingCreature.objectId]]) : new Map(),
+              blockerOrder: blocked ? new Map([[attackingCreature.objectId, [blockingCreature.objectId]]]) : new Map(),
+              damageAssignments: [],
+              firstStrikeDamageDealt: false,
+            };
+          });
+      },
+    });
+
+    engine.addMana('player1', 'R', 1);
+    engine.addMana('player1', 'C', 1);
+    const sneakId = getCard(state, 'player1', Zone.HAND, 'Sewer Ambusher').objectId;
+    return engine.getLegalActions('player1').some((action) =>
+      action.type === ActionType.CAST_SPELL &&
+      action.cardId === sneakId &&
+      action.castMethod === 'sneak'
+    );
+  };
+
+  assert.equal(canSneak(Step.DECLARE_BLOCKERS, 'player1', false), true);
+  assert.equal(canSneak(Step.MAIN, 'player1', false), false);
+  assert.equal(canSneak(Step.DECLARE_BLOCKERS, 'player2', false), false);
+  assert.equal(canSneak(Step.DECLARE_BLOCKERS, 'player1', true), false);
+});
+
+test('illegal sneak submissions outside the declare blockers window are rejected', async () => {
+  const attacker = createCreature('Rejected Sneak Attacker', 2, 2);
+  const sneakCreature = CardBuilder.create('Rejected Sneak Spell')
+    .cost('{4}{R}')
+    .types(CardType.CREATURE)
+    .stats(4, 4)
+    .sneak('{1}{R}')
+    .build();
+
+  const { state, engine } = createHarness({
+    decks: [
+      { commander: makeCommander('Sneak Commander', '{R}'), cards: [attacker, sneakCreature], playerName: 'Sneak Player' },
+      { commander: makeCommander('Defense Commander', '{W}'), cards: [], playerName: 'Defender' },
+      { commander: makeCommander('P3 Commander', '{2}'), cards: [], playerName: 'P3' },
+      { commander: makeCommander('P4 Commander', '{2}'), cards: [], playerName: 'P4' },
+    ],
+    setup: (builder) => {
+      builder
+        .moveCard({ playerId: 'player1', name: 'Rejected Sneak Attacker' }, Zone.BATTLEFIELD)
+        .setBattlefieldCard({ playerId: 'player1', name: 'Rejected Sneak Attacker' }, { summoningSick: false })
+        .moveCard({ playerId: 'player1', name: 'Rejected Sneak Spell' }, Zone.HAND)
+        .setTurn({
+          activePlayer: 'player1',
+          currentPhase: Phase.PRECOMBAT_MAIN,
+          currentStep: Step.MAIN,
+          priorityPlayer: 'player1',
+          passedPriority: [],
+        })
+        .mutateState((game) => {
+          const attackingCreature = game.zones.player1.BATTLEFIELD.find((card) => card.definition.name === 'Rejected Sneak Attacker');
+          assert.ok(attackingCreature);
+          game.combat = {
+            attackingPlayer: 'player1',
+            attackers: new Map([[attackingCreature.objectId, { type: 'player', id: 'player2' }]]),
+            blockers: new Map(),
+            blockerOrder: new Map(),
+            damageAssignments: [],
+            firstStrikeDamageDealt: false,
+          };
+        });
+    },
+  });
+
+  engine.addMana('player1', 'R', 1);
+  engine.addMana('player1', 'C', 1);
+  const sneakCardId = getCard(state, 'player1', Zone.HAND, 'Rejected Sneak Spell').objectId;
+
+  await engine.submitAction({
+    type: ActionType.CAST_SPELL,
+    playerId: 'player1',
+    cardId: sneakCardId,
+    castMethod: 'sneak',
+  });
+
+  assert.equal(state.stack.length, 0);
+  assert.ok(handNames(state, 'player1').includes('Rejected Sneak Spell'));
+  assert.ok(!handNames(state, 'player1').includes('Rejected Sneak Attacker'));
+});
+
+test('sneaked creatures enter tapped and attacking the returned attacker defender', async () => {
+  const attacker = createCreature('Sneak Carrier', 2, 2);
+  const sneakCreature = CardBuilder.create('Ninja Reinforcement')
+    .cost('{4}{R}')
+    .types(CardType.CREATURE)
+    .stats(4, 4)
+    .sneak('{1}{R}')
+    .build();
+  const walker = createPlaneswalker('Sneak Walker', 5);
+  const battle = createBattle('Sneak Siege', 4);
+
+  const runCase = async (targetType: 'player' | 'planeswalker' | 'battle') => {
+    const { state, engine } = createHarness({
+      decks: [
+        { commander: makeCommander('Sneak Commander', '{R}'), cards: [attacker, sneakCreature], playerName: 'Sneak Player' },
+        { commander: makeCommander('Defense Commander', '{W}'), cards: [walker, battle], playerName: 'Defender' },
+        { commander: makeCommander('Protector Commander', '{G}'), cards: [], playerName: 'Protector' },
+        { commander: makeCommander('P4 Commander', '{2}'), cards: [], playerName: 'P4' },
+      ],
+      setup: (builder) => {
+        builder
+          .moveCard({ playerId: 'player1', name: 'Sneak Carrier' }, Zone.BATTLEFIELD)
+          .setBattlefieldCard({ playerId: 'player1', name: 'Sneak Carrier' }, { summoningSick: false })
+          .moveCard({ playerId: 'player1', name: 'Ninja Reinforcement' }, Zone.HAND)
+          .setTurn({
+            activePlayer: 'player1',
+            currentPhase: Phase.COMBAT,
+            currentStep: Step.DECLARE_BLOCKERS,
+            priorityPlayer: 'player1',
+            passedPriority: [],
+          });
+
+        if (targetType === 'planeswalker') {
+          builder
+            .moveCard({ playerId: 'player2', name: 'Sneak Walker' }, Zone.BATTLEFIELD)
+            .setBattlefieldCard({ playerId: 'player2', name: 'Sneak Walker' }, { counters: { loyalty: 5 } });
+        }
+
+        if (targetType === 'battle') {
+          builder
+            .moveCard({ playerId: 'player2', name: 'Sneak Siege' }, Zone.BATTLEFIELD)
+            .setBattlefieldCard({ playerId: 'player2', name: 'Sneak Siege' }, {
+              counters: { defense: 4 },
+              battleProtector: 'player3',
+            });
+        }
+
+        builder.mutateState((game) => {
+          const attackingCreature = game.zones.player1.BATTLEFIELD.find((card) => card.definition.name === 'Sneak Carrier');
+          assert.ok(attackingCreature);
+
+          const defender = targetType === 'player'
+            ? { type: 'player' as const, id: 'player2' }
+            : targetType === 'planeswalker'
+              ? {
+                type: 'planeswalker' as const,
+                id: game.zones.player2.BATTLEFIELD.find((card) => card.definition.name === 'Sneak Walker')!.objectId,
+              }
+              : {
+                type: 'battle' as const,
+                id: game.zones.player2.BATTLEFIELD.find((card) => card.definition.name === 'Sneak Siege')!.objectId,
+              };
+
+          game.combat = {
+            attackingPlayer: 'player1',
+            attackers: new Map([[attackingCreature.objectId, defender]]),
+            blockers: new Map(),
+            blockerOrder: new Map(),
+            damageAssignments: [],
+            firstStrikeDamageDealt: false,
+          };
+        });
+      },
+    });
+
+    const internalEngine = engine as unknown as {
+      handleCastSpell: (
+        playerId: 'player1',
+        cardId: string,
+        targets?: (string | 'player1' | 'player2' | 'player3' | 'player4')[],
+        requestedModeChoices?: number[],
+        xValue?: number,
+        chosenFace?: 'front' | 'back',
+        chosenHalf?: 'left' | 'right' | 'fused',
+        requestedCastMethod?: string,
+      ) => Promise<void>;
+      resolveTopOfStack: () => Promise<void>;
+    };
+
+    engine.addMana('player1', 'R', 1);
+    engine.addMana('player1', 'C', 1);
+    const sneakCardId = getCard(state, 'player1', Zone.HAND, 'Ninja Reinforcement').objectId;
+    const returnedAttackerId = getCard(state, 'player1', Zone.BATTLEFIELD, 'Sneak Carrier').objectId;
+    const expectedDefender = state.combat!.attackers.get(returnedAttackerId);
+
+    await internalEngine.handleCastSpell('player1', sneakCardId, [], undefined, undefined, undefined, undefined, 'sneak');
+    await internalEngine.resolveTopOfStack();
+
+    const sneakedCreature = getCard(state, 'player1', Zone.BATTLEFIELD, 'Ninja Reinforcement');
+    assert.equal(sneakedCreature.tapped, true);
+    assert.ok(handNames(state, 'player1').includes('Sneak Carrier'));
+    assert.equal(state.combat?.attackers.has(returnedAttackerId), false);
+    assert.deepEqual(state.combat?.attackers.get(sneakedCreature.objectId), expectedDefender);
+    assert.equal(
+      state.eventLog.some((event) => event.type === 'ATTACKS' && event.attackerId === sneakedCreature.objectId),
+      false,
+    );
+  };
+
+  await runCase('player');
+  await runCase('planeswalker');
+  await runCase('battle');
+});
+
+test('noncreature spells can branch on sneak cast method', async () => {
+  const attacker = createCreature('Sneak Spell Carrier', 2, 2);
+  const sneakSpell = CardBuilder.create('Pocket Sand')
+    .cost('{3}{R}')
+    .types(CardType.SORCERY)
+    .sneak('{1}{R}')
+    .spellEffect((ctx) => {
+      ctx.game.loseLife('player2', ctx.castMethod === 'sneak' ? 3 : 1);
+    })
+    .build();
+
+  const { state, engine } = createHarness({
+    decks: [
+      { commander: makeCommander('Sneak Commander', '{R}'), cards: [attacker, sneakSpell], playerName: 'Sneak Player' },
+      { commander: makeCommander('Defense Commander', '{W}'), cards: [], playerName: 'Defender' },
+      { commander: makeCommander('P3 Commander', '{2}'), cards: [], playerName: 'P3' },
+      { commander: makeCommander('P4 Commander', '{2}'), cards: [], playerName: 'P4' },
+    ],
+    setup: (builder) => {
+      builder
+        .moveCard({ playerId: 'player1', name: 'Sneak Spell Carrier' }, Zone.BATTLEFIELD)
+        .setBattlefieldCard({ playerId: 'player1', name: 'Sneak Spell Carrier' }, { summoningSick: false })
+        .moveCard({ playerId: 'player1', name: 'Pocket Sand' }, Zone.HAND)
+        .setTurn({
+          activePlayer: 'player1',
+          currentPhase: Phase.COMBAT,
+          currentStep: Step.DECLARE_BLOCKERS,
+          priorityPlayer: 'player1',
+          passedPriority: [],
+        })
+        .mutateState((game) => {
+          const attackingCreature = game.zones.player1.BATTLEFIELD.find((card) => card.definition.name === 'Sneak Spell Carrier');
+          assert.ok(attackingCreature);
+          game.combat = {
+            attackingPlayer: 'player1',
+            attackers: new Map([[attackingCreature.objectId, { type: 'player', id: 'player2' }]]),
+            blockers: new Map(),
+            blockerOrder: new Map(),
+            damageAssignments: [],
+            firstStrikeDamageDealt: false,
+          };
+        });
+    },
+  });
+
+  const internalEngine = engine as unknown as {
+    handleCastSpell: (
+      playerId: 'player1',
+      cardId: string,
+      targets?: (string | 'player1' | 'player2' | 'player3' | 'player4')[],
+      requestedModeChoices?: number[],
+      xValue?: number,
+      chosenFace?: 'front' | 'back',
+      chosenHalf?: 'left' | 'right' | 'fused',
+      requestedCastMethod?: string,
+    ) => Promise<void>;
+    resolveTopOfStack: () => Promise<void>;
+  };
+
+  engine.addMana('player1', 'R', 1);
+  engine.addMana('player1', 'C', 1);
+  await internalEngine.handleCastSpell(
+    'player1',
+    getCard(state, 'player1', Zone.HAND, 'Pocket Sand').objectId,
+    [],
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    'sneak',
+  );
+  await internalEngine.resolveTopOfStack();
+
+  assert.equal(state.players.player2.life, 37);
+  assert.ok(graveyardNames(state, 'player1').includes('Pocket Sand'));
+  assert.ok(handNames(state, 'player1').includes('Sneak Spell Carrier'));
+});
+
+test('declare blockers starts a fresh priority round with the active player', async () => {
+  const attacker = createCreature('Priority Attacker', 2, 2);
+  const blocker = createCreature('Priority Blocker', 2, 2);
+  const responseSpell = CardBuilder.create('Priority Trick')
+    .cost('{W}')
+    .types(CardType.INSTANT)
+    .build();
+
+  const { state, engine } = createHarness({
+    decks: [
+      { commander: makeCommander('Attack Commander', '{R}'), cards: [attacker, responseSpell], playerName: 'Attacker' },
+      { commander: makeCommander('Defense Commander', '{W}'), cards: [blocker], playerName: 'Defender' },
+      { commander: makeCommander('P3 Commander', '{2}'), cards: [], playerName: 'P3' },
+      { commander: makeCommander('P4 Commander', '{2}'), cards: [], playerName: 'P4' },
+    ],
+    setup: (builder) => {
+      builder
+        .moveCard({ playerId: 'player1', name: 'Priority Attacker' }, Zone.BATTLEFIELD)
+        .setBattlefieldCard({ playerId: 'player1', name: 'Priority Attacker' }, { summoningSick: false })
+        .moveCard({ playerId: 'player1', name: 'Priority Trick' }, Zone.HAND)
+        .moveCard({ playerId: 'player2', name: 'Priority Blocker' }, Zone.BATTLEFIELD)
+        .setBattlefieldCard({ playerId: 'player2', name: 'Priority Blocker' }, { summoningSick: false })
+        .setPlayer('player1', { manaPool: { W: 1 } })
+        .setTurn({
+          activePlayer: 'player1',
+          currentPhase: Phase.COMBAT,
+          currentStep: Step.DECLARE_BLOCKERS,
+          priorityPlayer: 'player2',
+          passedPriority: ['player1'],
+        })
+        .mutateState((game) => {
+          const attackingCreature = game.zones.player1.BATTLEFIELD.find((card) => card.definition.name === 'Priority Attacker');
+          const blockingCreature = game.zones.player2.BATTLEFIELD.find((card) => card.definition.name === 'Priority Blocker');
+          assert.ok(attackingCreature);
+          assert.ok(blockingCreature);
+          game.combat = {
+            attackingPlayer: 'player1',
+            attackers: new Map([[attackingCreature.objectId, { type: 'player', id: 'player2' }]]),
+            blockers: new Map(),
+            blockerOrder: new Map(),
+            damageAssignments: [],
+            firstStrikeDamageDealt: false,
+          };
+        });
+    },
+  });
+
+  await engine.submitAction({
+    type: ActionType.DECLARE_BLOCKERS,
+    playerId: 'player2',
+    blockers: [{
+      blockerId: getCard(state, 'player2', Zone.BATTLEFIELD, 'Priority Blocker').objectId,
+      attackerId: getCard(state, 'player1', Zone.BATTLEFIELD, 'Priority Attacker').objectId,
+    }],
+  });
+
+  assert.equal(state.priorityPlayer, 'player1');
+  assert.deepEqual([...state.passedPriority], []);
 });
 
 test('storm creates one copy for each spell cast before it this turn', async () => {

@@ -143,6 +143,7 @@ export function createCardInstance(
     attachedTo: null,
     attachments: [],
     isToken: false,
+    battleProtector: null,
   };
 }
 
@@ -154,6 +155,7 @@ export function cloneCardInstance(card: CardInstance): CardInstance {
     modifiedKeywords: card.modifiedKeywords ? [...card.modifiedKeywords] : undefined,
     modifiedAbilities: card.modifiedAbilities ? [...card.modifiedAbilities] : undefined,
     protectionFrom: card.protectionFrom ? [...card.protectionFrom] : undefined,
+    battleProtector: card.battleProtector ?? null,
     attackTaxes: card.attackTaxes ? card.attackTaxes.map(tax => ({
       sourceId: tax.sourceId,
       defender: tax.defender,

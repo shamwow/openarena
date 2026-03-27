@@ -240,6 +240,11 @@ export interface AlternativeCast {
   cost: Cost;
   zone?: Zone;
   afterResolution?: Zone;
+  available?: (game: GameState, source: CardInstance, player: PlayerId) => boolean;
+  permanentResolution?: {
+    tapped?: boolean;
+    attacking?: 'returned-attacker-target';
+  };
   description: string;
 }
 
@@ -263,6 +268,7 @@ export interface CardDefinition {
   power?: number;
   toughness?: number;
   loyalty?: number;
+  defense?: number;
   abilities: AbilityDefinition[];
   keywords: Keyword[];
   protectionFrom?: ProtectionFrom[];
@@ -319,6 +325,7 @@ export interface CardInstance {
   castAsAdventure?: boolean;
 
   isToken?: boolean;
+  battleProtector?: PlayerId | null;
 
   // Overrides from continuous effects (computed, not stored permanently)
   modifiedPower?: number;
@@ -397,6 +404,12 @@ export interface Cost {
   mana?: ManaCost;
   tap?: boolean;
   sacrifice?: CardFilter;
+  returnToHand?: {
+    count: number;
+    filter: CardFilter;
+    controller?: 'you' | 'opponent' | 'any';
+    mustBeUnblockedAttacker?: boolean;
+  };
   discard?: CardFilter | number; // filter or "discard N cards"
   payLife?: number;
   exileFromGraveyard?: CardFilter | number;
@@ -959,13 +972,17 @@ export interface StackEntry {
   castAsAdventure?: boolean;
   chosenFace?: 'front' | 'back';
   chosenHalf?: 'left' | 'right' | 'fused';
+  battlefieldEntry?: {
+    tapped?: boolean;
+    attacking?: AttackTarget;
+  };
   resolve: (ctx: EffectContext) => void | Promise<void>;
 }
 
 // --- Combat ---
 
 export interface AttackTarget {
-  type: 'player' | 'planeswalker';
+  type: 'player' | 'planeswalker' | 'battle';
   id: ObjectId | PlayerId;
 }
 

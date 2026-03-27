@@ -39,6 +39,12 @@ export class PriorityManager {
     state.priorityPlayer = playerId;
   }
 
+  /** Start a fresh priority round with the specified player */
+  startPriorityRound(state: GameState, playerId: PlayerId): void {
+    state.passedPriority.clear();
+    state.priorityPlayer = playerId;
+  }
+
   getActivePlayers(state: GameState): PlayerId[] {
     return state.turnOrder.filter(pid => !state.players[pid].hasLost);
   }

@@ -10,6 +10,7 @@ import {
   emptyManaCost,
   manaCostColorIdentity,
   CardType as CardTypeConst,
+  Step,
 } from '../engine/types';
 
 export class CardBuilder {
@@ -79,6 +80,11 @@ export class CardBuilder {
 
   loyalty(n: number): this {
     this.def.loyalty = n;
+    return this;
+  }
+
+  defense(n: number): this {
+    this.def.defense = n;
     return this;
   }
 
@@ -461,6 +467,52 @@ export class CardBuilder {
     return this.tag('overload');
   }
 
+  sneak(cost: Cost | string): this {
+    const parsed = this.parseCostParam(cost);
+    const altCost: AlternativeCast = {
+      id: 'sneak',
+      cost: {
+        ...parsed,
+        returnToHand: {
+          count: 1,
+          controller: 'you',
+          filter: {
+            types: [CardTypeConst.CREATURE as CardType],
+            controller: 'you',
+          },
+          mustBeUnblockedAttacker: true,
+        },
+      },
+      zone: 'HAND' as Zone,
+      available: (game, _source, player) => {
+        if (game.activePlayer !== player || game.currentStep !== Step.DECLARE_BLOCKERS) {
+          return false;
+        }
+        if (!game.combat) {
+          return false;
+        }
+
+        const blockedAttackers = new Set(game.combat.blockers.values());
+        return game.zones[player].BATTLEFIELD.some((card) =>
+          !card.phasedOut &&
+          card.definition.types.includes(CardTypeConst.CREATURE as CardType) &&
+          game.combat!.attackers.has(card.objectId) &&
+          !blockedAttackers.has(card.objectId)
+        );
+      },
+      permanentResolution: {
+        tapped: true,
+        attacking: 'returned-attacker-target',
+      },
+      description: 'Sneak',
+    };
+    if (!this.def.alternativeCosts) {
+      this.def.alternativeCosts = [];
+    }
+    this.def.alternativeCosts.push(altCost);
+    return this;
+  }
+
   cascade(): this {
     return this.tag('cascade');
   }
@@ -628,6 +680,7 @@ export class CardBuilder {
       power: this.def.power,
       toughness: this.def.toughness,
       loyalty: this.def.loyalty,
+      defense: this.def.defense,
       abilities: this.def.abilities,
       keywords: this.def.keywords,
       protectionFrom: this.def.protectionFrom,

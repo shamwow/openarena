@@ -43,6 +43,10 @@ export class ZoneManager {
 
     // Reset state when leaving the battlefield
     if (fromZone === 'BATTLEFIELD') {
+      this.removeFromCombatState(state, card.objectId);
+      if (card.definition.types.includes(CardType.PLANESWALKER) || card.definition.types.includes(CardType.BATTLE)) {
+        this.removeAttackersDefendingTarget(state, card.objectId);
+      }
       if (card.attachedTo) {
         const previousHost = findCard(state, card.attachedTo);
         if (previousHost) {
@@ -58,6 +62,7 @@ export class ZoneManager {
       card.modifiedToughness = undefined;
       card.modifiedKeywords = undefined;
       card.modifiedAbilities = undefined;
+      card.battleProtector = null;
 
       // Detach any attachments
       for (const attachId of card.attachments) {
@@ -93,6 +98,10 @@ export class ZoneManager {
       // Planeswalker ETB: set loyalty counters to definition.loyalty
       if (card.definition.types.includes(CardType.PLANESWALKER) && card.definition.loyalty !== undefined) {
         card.counters['loyalty'] = card.definition.loyalty;
+      }
+      if (card.definition.types.includes(CardType.BATTLE)) {
+        card.counters.defense = card.definition.defense ?? card.counters.defense ?? 0;
+        card.battleProtector = this.chooseDefaultBattleProtector(state, targetOwner);
       }
 
       // Sagas enter with their first lore counter.
@@ -364,11 +373,16 @@ export class ZoneManager {
       keywords: definition.keywords ?? [],
       protectionFrom: definition.protectionFrom,
       wardCost: definition.wardCost,
+      defense: definition.defense,
     };
 
     const instance = createCardInstance(fullDef, controller, 'BATTLEFIELD', getNextTimestamp(state));
     instance.controller = controller;
     instance.isToken = true;
+    if (fullDef.types.includes(CardType.BATTLE)) {
+      instance.counters.defense = fullDef.defense ?? 0;
+      instance.battleProtector = this.chooseDefaultBattleProtector(state, controller);
+    }
     state.zones[controller].BATTLEFIELD.push(instance);
 
     const tokenEvent: GameEvent = {
@@ -484,5 +498,52 @@ export class ZoneManager {
     }
 
     return true;
+  }
+
+  private chooseDefaultBattleProtector(state: GameState, controller: PlayerId): PlayerId | null {
+    return state.turnOrder.find((playerId) =>
+      playerId !== controller && !state.players[playerId].hasLost
+    ) ?? null;
+  }
+
+  private removeFromCombatState(state: GameState, objectId: ObjectId): void {
+    if (!state.combat) return;
+
+    state.combat.attackers.delete(objectId);
+    state.combat.blockers.delete(objectId);
+    state.combat.blockerOrder.delete(objectId);
+
+    for (const [attackerId, blockerIds] of [...state.combat.blockerOrder.entries()]) {
+      const nextBlockers = blockerIds.filter((blockerId) => blockerId !== objectId);
+      if (nextBlockers.length === 0) {
+        state.combat.blockerOrder.delete(attackerId);
+      } else {
+        state.combat.blockerOrder.set(attackerId, nextBlockers);
+      }
+    }
+
+    for (const [blockerId, attackerId] of [...state.combat.blockers.entries()]) {
+      if (blockerId === objectId || attackerId === objectId) {
+        state.combat.blockers.delete(blockerId);
+      }
+    }
+  }
+
+  private removeAttackersDefendingTarget(state: GameState, targetId: ObjectId): void {
+    if (!state.combat) return;
+
+    const removedAttackers = new Set<ObjectId>();
+    for (const [attackerId, target] of [...state.combat.attackers.entries()]) {
+      if (target.id !== targetId) continue;
+      state.combat.attackers.delete(attackerId);
+      state.combat.blockerOrder.delete(attackerId);
+      removedAttackers.add(attackerId);
+    }
+
+    for (const [blockerId, attackerId] of [...state.combat.blockers.entries()]) {
+      if (removedAttackers.has(attackerId)) {
+        state.combat.blockers.delete(blockerId);
+      }
+    }
   }
 }

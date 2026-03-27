@@ -201,7 +201,7 @@ export class CombatManager {
       const blockerIds = state.combat.blockerOrder.get(attackerId);
 
       if (!blockerIds || blockerIds.length === 0) {
-        // Unblocked — damage goes to defending player
+        // Unblocked — damage goes to the defending player, planeswalker, or battle.
         assignments.push({
           sourceId: attackerId,
           targetId: target.id,
@@ -231,7 +231,7 @@ export class CombatManager {
           }
         }
 
-        // Trample: remaining damage goes to defending player
+        // Trample: remaining damage goes to the original attack target.
         if (hasTrample && remainingDamage > 0) {
           assignments.push({
             sourceId: attackerId,
@@ -359,6 +359,14 @@ export class CombatManager {
     if (!blocker.definition.types.includes(CardType.CREATURE)) return false;
     if (blocker.tapped) return false;
 
+    if (state?.combat) {
+      const defendedTarget = state.combat.attackers.get(attacker.objectId);
+      const defendingPlayer = defendedTarget ? this.getDefendingPlayer(defendedTarget, state) : null;
+      if (defendingPlayer && blocker.controller !== defendingPlayer) {
+        return false;
+      }
+    }
+
     // Unblockable: creature with this keyword can't be blocked
     if (this.hasKeyword(attacker, Keyword.UNBLOCKABLE)) return false;
 
@@ -408,6 +416,62 @@ export class CombatManager {
     }
 
     return possibleTargets;
+  }
+
+  getUnblockedAttackers(
+    state: GameState,
+    controller: PlayerId,
+  ): Array<{ attacker: CardInstance; defender: AttackTarget }> {
+    if (!state.combat) return [];
+
+    const blockedAttackers = new Set(state.combat.blockers.values());
+    const results: Array<{ attacker: CardInstance; defender: AttackTarget }> = [];
+
+    for (const [attackerId, defender] of state.combat.attackers.entries()) {
+      if (blockedAttackers.has(attackerId)) continue;
+      const attacker = findCard(state, attackerId);
+      if (!attacker || attacker.zone !== 'BATTLEFIELD' || attacker.controller !== controller) continue;
+      results.push({ attacker, defender });
+    }
+
+    return results;
+  }
+
+  addAttackingPermanent(
+    state: GameState,
+    permanentId: ObjectId,
+    defender: AttackTarget,
+    options?: { tapped?: boolean },
+  ): boolean {
+    if (!state.combat) return false;
+
+    const permanent = findCard(state, permanentId);
+    if (!permanent || permanent.zone !== 'BATTLEFIELD' || permanent.phasedOut) return false;
+    if (!permanent.definition.types.includes(CardType.CREATURE)) return false;
+
+    state.combat.attackers.set(permanentId, defender);
+    if (options?.tapped) {
+      permanent.tapped = true;
+    }
+    return true;
+  }
+
+  removeAttackersDefendingTarget(state: GameState, targetId: ObjectId): void {
+    if (!state.combat) return;
+
+    const removedAttackers = new Set<ObjectId>();
+    for (const [attackerId, defender] of [...state.combat.attackers.entries()]) {
+      if (defender.id !== targetId) continue;
+      state.combat.attackers.delete(attackerId);
+      state.combat.blockerOrder.delete(attackerId);
+      removedAttackers.add(attackerId);
+    }
+
+    for (const [blockerId, attackerId] of [...state.combat.blockers.entries()]) {
+      if (removedAttackers.has(attackerId)) {
+        state.combat.blockers.delete(blockerId);
+      }
+    }
   }
 
   private applyDamage(state: GameState, assignment: DamageAssignment): void {
@@ -461,13 +525,15 @@ export class CombatManager {
         state.monarch = source.controller;
       }
     } else {
-      // Damage to creature/planeswalker
+      // Damage to creature/planeswalker/battle
       const target = findCard(state, targetId);
       if (!target || target.zone !== 'BATTLEFIELD') return;
 
       if (target.definition.types.includes(CardType.PLANESWALKER)) {
         // Damage to planeswalker removes loyalty counters
         target.counters['loyalty'] = (target.counters['loyalty'] ?? 0) - assignment.amount;
+      } else if (target.definition.types.includes(CardType.BATTLE)) {
+        target.counters.defense = Math.max(0, (target.counters.defense ?? target.definition.defense ?? 0) - assignment.amount);
       } else {
         target.markedDamage += assignment.amount;
         if (source && this.hasKeyword(source, Keyword.DEATHTOUCH) && assignment.amount > 0) {
@@ -600,21 +666,24 @@ export class CombatManager {
     const attackTargets: AttackTarget[] = [];
 
     for (const playerId of state.turnOrder) {
-      if (playerId === card.controller) continue;
-      if (state.players[playerId].hasLost) continue;
-
-      const playerTarget: AttackTarget = { type: 'player', id: playerId };
-      if (this.canAttackTarget(card, playerTarget, state) && (taxesPaid || this.canCurrentlyAffordAttackTarget(card, playerTarget, state))) {
-        attackTargets.push(playerTarget);
+      if (playerId !== card.controller && !state.players[playerId].hasLost) {
+        const playerTarget: AttackTarget = { type: 'player', id: playerId };
+        if (this.canAttackTarget(card, playerTarget, state) && (taxesPaid || this.canCurrentlyAffordAttackTarget(card, playerTarget, state))) {
+          attackTargets.push(playerTarget);
+        }
       }
 
       for (const permanent of state.zones[playerId].BATTLEFIELD) {
-        if (!permanent.definition.types.includes(CardType.PLANESWALKER)) continue;
+        if (!permanent.definition.types.includes(CardType.PLANESWALKER) && !permanent.definition.types.includes(CardType.BATTLE)) continue;
         if (permanent.phasedOut) continue;
+        if (permanent.definition.types.includes(CardType.PLANESWALKER) && permanent.controller === card.controller) continue;
 
-        const planeswalkerTarget: AttackTarget = { type: 'planeswalker', id: permanent.objectId };
-        if (this.canAttackTarget(card, planeswalkerTarget, state) && (taxesPaid || this.canCurrentlyAffordAttackTarget(card, planeswalkerTarget, state))) {
-          attackTargets.push(planeswalkerTarget);
+        const permanentTarget: AttackTarget = {
+          type: permanent.definition.types.includes(CardType.BATTLE) ? 'battle' : 'planeswalker',
+          id: permanent.objectId,
+        };
+        if (this.canAttackTarget(card, permanentTarget, state) && (taxesPaid || this.canCurrentlyAffordAttackTarget(card, permanentTarget, state))) {
+          attackTargets.push(permanentTarget);
         }
       }
     }
@@ -626,6 +695,7 @@ export class CombatManager {
     const defendingPlayer = this.getDefendingPlayer(target, state);
     if (!defendingPlayer) return false;
     if (state.players[defendingPlayer].hasLost) return false;
+    if (defendingPlayer === card.controller) return false;
 
     return true;
   }
@@ -663,9 +733,12 @@ export class CombatManager {
       return target.id as PlayerId;
     }
 
-    const planeswalker = findCard(state, target.id as ObjectId);
-    if (!planeswalker || planeswalker.zone !== 'BATTLEFIELD') return null;
-    return planeswalker.controller;
+    const permanent = findCard(state, target.id as ObjectId);
+    if (!permanent || permanent.zone !== 'BATTLEFIELD') return null;
+    if (target.type === 'battle') {
+      return permanent.battleProtector ?? null;
+    }
+    return permanent.controller;
   }
 
   private isTargetControlledByAny(target: AttackTarget, players: PlayerId[], state: GameState): boolean {
@@ -678,9 +751,7 @@ export class CombatManager {
   }
 
   private canCurrentlyAffordAttackTarget(card: CardInstance, target: AttackTarget, state: GameState): boolean {
-    const defendingPlayer = this.getDefendingPlayer(target, state);
-    if (!defendingPlayer) return false;
-    const taxCost = this.getAttackTaxCostForDefender(card, defendingPlayer);
+    const taxCost = this.getAttackTaxCostForTarget(card, target, state);
     if (
       taxCost.generic === 0 &&
       taxCost.W === 0 &&
@@ -699,10 +770,13 @@ export class CombatManager {
     return this.manaManager.autoTapForCost(state, card.controller, taxCost, battlefield) != null;
   }
 
-  private getAttackTaxCostForDefender(card: CardInstance, defendingPlayer: PlayerId): ManaCost {
+  private getAttackTaxCostForTarget(card: CardInstance, target: AttackTarget, state: GameState): ManaCost {
     const total: ManaCost = { generic: 0, W: 0, U: 0, B: 0, R: 0, G: 0, C: 0, X: 0 };
+    const defendingPlayer = this.getDefendingPlayer(target, state);
+    if (!defendingPlayer) return total;
+
     for (const tax of card.attackTaxes ?? []) {
-      if (tax.defender !== defendingPlayer || !tax.cost.mana) continue;
+      if (target.type !== 'player' || tax.defender !== defendingPlayer || !tax.cost.mana) continue;
       total.generic += tax.cost.mana.generic;
       total.W += tax.cost.mana.W;
       total.U += tax.cost.mana.U;

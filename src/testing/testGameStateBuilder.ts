@@ -29,6 +29,7 @@ export interface BattlefieldCardState {
   counters?: Record<string, number>;
   markedDamage?: number;
   controller?: PlayerId;
+  battleProtector?: PlayerId | null;
 }
 
 export interface PlayerStatePatch {
@@ -152,6 +153,7 @@ export class TestGameStateBuilder {
     if (patch.summoningSick !== undefined) card.summoningSick = patch.summoningSick;
     if (patch.counters !== undefined) card.counters = { ...patch.counters };
     if (patch.markedDamage !== undefined) card.markedDamage = patch.markedDamage;
+    if (patch.battleProtector !== undefined) card.battleProtector = patch.battleProtector;
 
     return this;
   }
@@ -218,6 +220,7 @@ export class TestGameStateBuilder {
     card.attachedTo = null;
     card.attachments = [];
     card.faceDown = false;
+    card.battleProtector = null;
     card.modifiedPower = undefined;
     card.modifiedToughness = undefined;
     card.modifiedKeywords = undefined;

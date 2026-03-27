@@ -5,6 +5,7 @@ import type {
   GameEngine as IGameEngine, CardType as CardTypeEnum,
   ModalAbilityDef, AbilityDefinition, EffectDuration, ContinuousEffect,
   Layer as LayerType, Cost, DelayedTrigger, PredefinedTokenType, SearchLibraryOptions,
+  AttackTarget, AlternativeCast,
 } from './types';
 import {
   GameEventType, ActionType, CardType, Step, Zone,
@@ -47,6 +48,12 @@ export interface GameEngineInit {
   initialState?: GameState;
   drawOpeningHands?: boolean;
   runGameLoopOnInit?: boolean;
+}
+
+interface NonManaCostPaymentResult {
+  paid: boolean;
+  returnedCards: CardInstance[];
+  returnedAttackerDefender?: AttackTarget;
 }
 
 const PREDEFINED_TOKENS: Record<PredefinedTokenType, Partial<CardDefinition> & { name: string; types: CardTypeEnum[] }> = {
@@ -264,7 +271,7 @@ export class GameEngineImpl implements IGameEngine {
 
       case ActionType.DECLARE_BLOCKERS:
         this.combatManager.declareBlockers(this.state, action.blockers);
-        this.priorityManager.playerTookAction(this.state, action.playerId);
+        this.priorityManager.startPriorityRound(this.state, this.state.activePlayer);
         break;
 
       case ActionType.CONCEDE:
@@ -347,19 +354,16 @@ export class GameEngineImpl implements IGameEngine {
     for (const card of hand) {
       if (card.definition.types.includes(CardType.LAND)) continue;
 
-      const isInstant = card.definition.types.includes(CardType.INSTANT);
-      const hasFlash = card.definition.keywords.includes('Flash' as Keyword);
-
-      if (isInstant || hasFlash || isSorcerySpeed) {
-        if (this.manaManager.canAffordWithManaProduction(this.state, playerId, card.definition.manaCost)) {
-          actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId });
-        }
+      if (
+        this.canCastThisWay(playerId, card, { spellDefinition: card.definition }) &&
+        this.manaManager.canAffordWithManaProduction(this.state, playerId, card.definition.manaCost)
+      ) {
+        actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId });
       }
 
       if (card.definition.adventure) {
         const adventure = card.definition.adventure;
-        const adventureIsInstant = adventure.types.includes(CardType.INSTANT);
-        if ((adventureIsInstant || isSorcerySpeed) &&
+        if (this.canCastThisWay(playerId, card, { spellDefinition: adventure, castAsAdventure: true }) &&
           this.manaManager.canAffordWithManaProduction(this.state, playerId, adventure.manaCost)) {
           actions.push({
             type: ActionType.CAST_SPELL,
@@ -380,9 +384,7 @@ export class GameEngineImpl implements IGameEngine {
           }
         } else {
           // Back face is a spell
-          const backIsInstant = back.types.includes(CardType.INSTANT);
-          const backHasFlash = back.keywords.includes('Flash' as Keyword);
-          if (backIsInstant || backHasFlash || isSorcerySpeed) {
+          if (this.canCastThisWay(playerId, card, { spellDefinition: back, chosenFace: 'back' })) {
             if (this.manaManager.canAffordWithManaProduction(this.state, playerId, back.manaCost)) {
               actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId, chosenFace: 'back' });
             }
@@ -391,8 +393,10 @@ export class GameEngineImpl implements IGameEngine {
       }
 
       for (const altCost of card.definition.alternativeCosts ?? []) {
-        if (altCost.zone && altCost.zone !== card.zone) continue;
-        if (!altCost.cost.mana || this.manaManager.canAffordWithManaProduction(this.state, playerId, altCost.cost.mana)) {
+        if (
+          this.canCastThisWay(playerId, card, { spellDefinition: card.definition, castMethod: altCost.id }) &&
+          (!altCost.cost.mana || this.manaManager.canAffordWithManaProduction(this.state, playerId, altCost.cost.mana))
+        ) {
           actions.push({
             type: ActionType.CAST_SPELL,
             playerId,
@@ -409,16 +413,14 @@ export class GameEngineImpl implements IGameEngine {
       const right = card.definition.splitHalf;
 
       // Right half
-      const rightIsInstant = right.types.includes(CardType.INSTANT);
-      const rightHasFlash = right.keywords.includes('Flash' as Keyword);
-      if (rightIsInstant || rightHasFlash || isSorcerySpeed) {
+      if (this.canCastThisWay(playerId, card, { spellDefinition: right, chosenHalf: 'right' })) {
         if (this.manaManager.canAffordWithManaProduction(this.state, playerId, right.manaCost)) {
           actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId, chosenHalf: 'right' });
         }
       }
 
       // Fuse: cast both halves as one spell (sorcery speed only)
-      if (card.definition.hasFuse && isSorcerySpeed) {
+      if (card.definition.hasFuse && this.canCastThisWay(playerId, card, { spellDefinition: card.definition, chosenHalf: 'fused' })) {
         const fusedCost: ManaCost = {
           generic: card.definition.manaCost.generic + right.manaCost.generic,
           W: card.definition.manaCost.W + right.manaCost.W,
@@ -440,13 +442,11 @@ export class GameEngineImpl implements IGameEngine {
     for (const card of graveyard) {
       if (!card.definition.alternativeCosts) continue;
       for (const altCost of card.definition.alternativeCosts) {
-        if (altCost.zone !== 'GRAVEYARD') continue;
-
-        const isInstant = card.definition.types.includes(CardType.INSTANT);
-        const hasFlash = card.definition.keywords.includes('Flash' as Keyword);
-        if (!isInstant && !hasFlash && !isSorcerySpeed) continue;
-
-        if (altCost.cost.mana && this.manaManager.canAffordWithManaProduction(this.state, playerId, altCost.cost.mana)) {
+        if (
+          this.canCastThisWay(playerId, card, { spellDefinition: card.definition, castMethod: altCost.id }) &&
+          altCost.cost.mana &&
+          this.manaManager.canAffordWithManaProduction(this.state, playerId, altCost.cost.mana)
+        ) {
           actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId, castMethod: altCost.id });
         }
       }
@@ -458,7 +458,10 @@ export class GameEngineImpl implements IGameEngine {
       if (player.commanderIds.includes(card.cardId)) {
         const tax = (player.commanderTimesCast[card.cardId] ?? 0) * 2;
         const totalCost = { ...card.definition.manaCost, generic: card.definition.manaCost.generic + tax };
-        if (this.manaManager.canAffordWithManaProduction(this.state, playerId, totalCost) && isSorcerySpeed) {
+        if (
+          this.canCastThisWay(playerId, card, { spellDefinition: card.definition }) &&
+          this.manaManager.canAffordWithManaProduction(this.state, playerId, totalCost)
+        ) {
           actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId });
         }
       }
@@ -469,7 +472,10 @@ export class GameEngineImpl implements IGameEngine {
     for (const card of exile) {
       if (card.castAsAdventure && card.definition.adventure) {
         // Can cast the creature portion from exile
-        if (isSorcerySpeed && this.manaManager.canAffordWithManaProduction(this.state, playerId, card.definition.manaCost)) {
+        if (
+          this.canCastThisWay(playerId, card, { spellDefinition: card.definition }) &&
+          this.manaManager.canAffordWithManaProduction(this.state, playerId, card.definition.manaCost)
+        ) {
           actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId });
         }
       }
@@ -520,6 +526,73 @@ export class GameEngineImpl implements IGameEngine {
     }
 
     return actions;
+  }
+
+  private canCastThisWay(
+    playerId: PlayerId,
+    card: CardInstance,
+    opts: {
+      spellDefinition: Pick<CardDefinition, 'types'> & { keywords?: Keyword[] };
+      castMethod?: string;
+      castAsAdventure?: boolean;
+      chosenFace?: 'front' | 'back';
+      chosenHalf?: 'left' | 'right' | 'fused';
+    },
+  ): boolean {
+    if (this.state.priorityPlayer !== playerId) return false;
+    if (!this.isCastZoneLegal(playerId, card, opts)) return false;
+
+    const alternativeCast = opts.castMethod ? this.findAlternativeCast(card, opts.castMethod) : undefined;
+    if (opts.castMethod && !alternativeCast) {
+      return false;
+    }
+
+    if (alternativeCast?.available) {
+      return alternativeCast.available(this.state, card, playerId);
+    }
+
+    return this.canCastAtDefaultTiming(playerId, opts.spellDefinition);
+  }
+
+  private canCastAtDefaultTiming(
+    playerId: PlayerId,
+    spellDefinition: Pick<CardDefinition, 'types'> & { keywords?: Keyword[] },
+  ): boolean {
+    const isInstant = spellDefinition.types.includes(CardType.INSTANT as CardTypeEnum);
+    const hasFlash = (spellDefinition.keywords ?? []).includes('Flash' as Keyword);
+    return isInstant || hasFlash || this.turnManager.canPlaySorcerySpeed(this.state, playerId);
+  }
+
+  private findAlternativeCast(card: CardInstance, castMethod: string): AlternativeCast | undefined {
+    return card.definition.alternativeCosts?.find(
+      (alternativeCast) => alternativeCast.zone === card.zone && alternativeCast.id === castMethod,
+    );
+  }
+
+  private isCastZoneLegal(
+    playerId: PlayerId,
+    card: CardInstance,
+    opts: {
+      castMethod?: string;
+      castAsAdventure?: boolean;
+    },
+  ): boolean {
+    if (opts.castMethod) {
+      return this.findAlternativeCast(card, opts.castMethod) != null;
+    }
+
+    if (opts.castAsAdventure) {
+      return card.zone === Zone.HAND && !!card.definition.adventure;
+    }
+
+    if (card.zone === Zone.HAND) return true;
+    if (card.zone === Zone.COMMAND) {
+      return this.state.players[playerId].commanderIds.includes(card.cardId);
+    }
+    if (card.zone === Zone.EXILE) {
+      return Boolean(card.castAsAdventure && card.definition.adventure);
+    }
+    return false;
   }
 
   // --- IGameEngine implementation ---
@@ -618,6 +691,8 @@ export class GameEngineImpl implements IGameEngine {
       if (!target || target.zone !== 'BATTLEFIELD') return;
       if (target.definition.types.includes(CardType.PLANESWALKER as CardTypeEnum)) {
         target.counters['loyalty'] = (target.counters['loyalty'] ?? target.definition.loyalty ?? 0) - finalAmount;
+      } else if (target.definition.types.includes(CardType.BATTLE as CardTypeEnum)) {
+        target.counters.defense = Math.max(0, (target.counters.defense ?? target.definition.defense ?? 0) - finalAmount);
       } else {
         target.markedDamage += finalAmount;
         if (source && source.definition.keywords.includes('Deathtouch' as Keyword)) {
@@ -893,6 +968,12 @@ export class GameEngineImpl implements IGameEngine {
     // Update controller and add to new controller's battlefield
     card.controller = newController;
     this.state.zones[newController].BATTLEFIELD.push(card);
+    if (card.definition.types.includes(CardType.PLANESWALKER as CardTypeEnum) || card.definition.types.includes(CardType.BATTLE as CardTypeEnum)) {
+      this.removeAttackersDefendingTarget(card.objectId);
+    }
+    if (card.definition.types.includes(CardType.BATTLE as CardTypeEnum)) {
+      card.battleProtector = this.chooseDefaultBattleProtector(newController);
+    }
 
     // If duration is provided, add a continuous effect that reverts at cleanup
     if (duration) {
@@ -1108,6 +1189,12 @@ export class GameEngineImpl implements IGameEngine {
   returnToHand(objectId: ObjectId): void {
     const card = findCard(this.state, objectId);
     if (!card) return;
+    if (card.zone === 'BATTLEFIELD') {
+      this.removePermanentFromCombat(card.objectId);
+      if (card.definition.types.includes(CardType.PLANESWALKER as CardTypeEnum) || card.definition.types.includes(CardType.BATTLE as CardTypeEnum)) {
+        this.removeAttackersDefendingTarget(card.objectId);
+      }
+    }
     this.zoneManager.moveCard(this.state, objectId, 'HAND', card.owner);
   }
 
@@ -1344,9 +1431,9 @@ export class GameEngineImpl implements IGameEngine {
   ): void {
     const declarations = attackers.map((attacker) => ({
       attackerId: attacker.attackerId,
-      defendingPlayer: attacker.defendingPlayer
-        ?? (attacker.defender?.type === 'player' ? attacker.defender.id as PlayerId : undefined),
-    })).filter((attacker): attacker is { attackerId: ObjectId; defendingPlayer: PlayerId } => Boolean(attacker.defendingPlayer));
+      defender: attacker.defender
+        ?? (attacker.defendingPlayer ? { type: 'player' as const, id: attacker.defendingPlayer } : undefined),
+    })).filter((attacker): attacker is { attackerId: ObjectId; defender: AttackTarget } => Boolean(attacker.defender));
 
     if (!this.payAttackTaxesIfNeeded(playerId, declarations)) {
       return;
@@ -1392,6 +1479,16 @@ export class GameEngineImpl implements IGameEngine {
         this.state.combat.blockers.delete(blockerId);
       }
     }
+  }
+
+  private removeAttackersDefendingTarget(targetId: ObjectId): void {
+    this.combatManager.removeAttackersDefendingTarget(this.state, targetId);
+  }
+
+  private chooseDefaultBattleProtector(controller: PlayerId): PlayerId | null {
+    return this.state.turnOrder.find((candidate) =>
+      candidate !== controller && !this.state.players[candidate].hasLost
+    ) ?? null;
   }
 
   private handlePlayLand(playerId: PlayerId, cardId: ObjectId, chosenFace?: 'front' | 'back'): void {
@@ -1441,10 +1538,18 @@ export class GameEngineImpl implements IGameEngine {
     let castMethod = requestedCastMethod;
 
     const matchingAltCost = castMethod
-      ? card.definition.alternativeCosts?.find(
-        ac => ac.zone === card.zone && ac.id === castMethod
-      )
+      ? this.findAlternativeCast(card, castMethod)
       : undefined;
+
+    if (!this.canCastThisWay(playerId, card, {
+      spellDefinition: effectiveDef,
+      castMethod,
+      castAsAdventure,
+      chosenFace,
+      chosenHalf,
+    })) {
+      return;
+    }
 
     let cost: ManaCost;
     if (matchingAltCost && matchingAltCost.cost.mana) {
@@ -1512,7 +1617,10 @@ export class GameEngineImpl implements IGameEngine {
       cost = this.addManaCosts(cost, additionalCostResult.extraManaCost);
     }
 
-    if (matchingAltCost && !await this.payNonManaCostParts(playerId, card, matchingAltCost.cost)) {
+    const altCostPayment: NonManaCostPaymentResult = matchingAltCost
+      ? await this.payNonManaCostParts(playerId, card, matchingAltCost.cost)
+      : { paid: true, returnedCards: [] };
+    if (!altCostPayment.paid) {
       return;
     }
 
@@ -1598,6 +1706,14 @@ export class GameEngineImpl implements IGameEngine {
     if (additionalCostsPaid.length > 0) {
       stackEntry.additionalCostsPaid = additionalCostsPaid;
     }
+    if (matchingAltCost?.permanentResolution) {
+      stackEntry.battlefieldEntry = {
+        tapped: matchingAltCost.permanentResolution.tapped,
+        attacking: matchingAltCost.permanentResolution.attacking === 'returned-attacker-target'
+          ? altCostPayment.returnedAttackerDefender
+          : undefined,
+      };
+    }
 
     // --- Modal spell handling ---
     if (spellAbility) {
@@ -1645,11 +1761,11 @@ export class GameEngineImpl implements IGameEngine {
     if (ability.cost.mana) {
       if (!this.manaManager.payMana(this.state, playerId, ability.cost.mana)) return;
     }
-    if (!await this.payNonManaCostParts(playerId, card, {
+    if (!(await this.payNonManaCostParts(playerId, card, {
       ...ability.cost,
       mana: undefined,
       tap: undefined,
-    })) return;
+    })).paid) return;
 
     // Planeswalker loyalty ability tracking: mark this planeswalker as having used an ability
     const isPlaneswalker = card.definition.types.includes(CardType.PLANESWALKER as CardTypeEnum);
@@ -1903,6 +2019,7 @@ export class GameEngineImpl implements IGameEngine {
 
     this.pruneLastKnownInformation(playerId);
     this.removePlayerFromTurnOrder(playerId);
+    this.reassignBattleProtectors(playerId);
 
     if (wasActivePlayer && !this.state.isGameOver) {
       const nextActive = this.findNextSurvivingPlayer(previousTurnOrder, playerId);
@@ -2010,6 +2127,19 @@ export class GameEngineImpl implements IGameEngine {
     }
 
     return null;
+  }
+
+  private reassignBattleProtectors(removedPlayerId: PlayerId): void {
+    for (const playerId of this.state.turnOrder) {
+      for (const card of this.state.zones[playerId].BATTLEFIELD) {
+        if (!card.definition.types.includes(CardType.BATTLE as CardTypeEnum)) continue;
+        if (card.battleProtector !== removedPlayerId) continue;
+        card.battleProtector = this.chooseDefaultBattleProtector(card.controller);
+        if (!card.battleProtector) {
+          this.removeAttackersDefendingTarget(card.objectId);
+        }
+      }
+    }
   }
 
   private effectBelongsToPlayer(sourceId: ObjectId, playerId: PlayerId): boolean {
@@ -2179,7 +2309,7 @@ export class GameEngineImpl implements IGameEngine {
             addBattlefieldCards([CardType.CREATURE as CardTypeEnum, CardType.PLANESWALKER as CardTypeEnum]);
             break;
           case 'any':
-            addBattlefieldCards([CardType.CREATURE as CardTypeEnum, CardType.PLANESWALKER as CardTypeEnum]);
+            addBattlefieldCards([CardType.CREATURE as CardTypeEnum, CardType.PLANESWALKER as CardTypeEnum, CardType.BATTLE as CardTypeEnum]);
             addPlayers();
             break;
           case 'spell':
@@ -2366,7 +2496,7 @@ export class GameEngineImpl implements IGameEngine {
       if (!additionalCost.optional) continue;
       const payIt = await helper.chooseYesNo(`Pay additional cost ${additionalCost.description}?`);
       if (!payIt) continue;
-      if (!await this.payNonManaCostParts(playerId, source, additionalCost.cost)) continue;
+      if (!(await this.payNonManaCostParts(playerId, source, additionalCost.cost)).paid) continue;
       extraManaCost = this.addManaCosts(extraManaCost, additionalCost.cost.mana);
       paidIds.push(additionalCost.id);
     }
@@ -2447,7 +2577,12 @@ export class GameEngineImpl implements IGameEngine {
     );
   }
 
-  private async payNonManaCostParts(playerId: PlayerId, source: CardInstance, cost: import('./types').Cost): Promise<boolean> {
+  private async payNonManaCostParts(playerId: PlayerId, source: CardInstance, cost: import('./types').Cost): Promise<NonManaCostPaymentResult> {
+    const result: NonManaCostPaymentResult = {
+      paid: true,
+      returnedCards: [],
+    };
+
     if (cost.payLife) {
       this.loseLife(playerId, cost.payLife);
     }
@@ -2456,7 +2591,7 @@ export class GameEngineImpl implements IGameEngine {
       const graveyard = this.state.zones[playerId].GRAVEYARD.filter(card => card.objectId !== source.objectId);
       const helper = this.createChoiceHelper(playerId);
       if (typeof cost.exileFromGraveyard === 'number') {
-        if (graveyard.length < cost.exileFromGraveyard) return false;
+        if (graveyard.length < cost.exileFromGraveyard) return { ...result, paid: false };
         const selected = await helper.chooseN(
           `Choose ${cost.exileFromGraveyard} card(s) to exile from your graveyard`,
           graveyard,
@@ -2468,7 +2603,7 @@ export class GameEngineImpl implements IGameEngine {
         }
       } else {
         const matching = graveyard.filter(card => this.matchesFilter(card, cost.exileFromGraveyard as CardFilter, playerId));
-        if (matching.length === 0) return false;
+        if (matching.length === 0) return { ...result, paid: false };
         const selected = await helper.chooseOne(
           'Choose a card to exile from your graveyard',
           matching,
@@ -2480,7 +2615,7 @@ export class GameEngineImpl implements IGameEngine {
 
     if (typeof cost.discard === 'number' && cost.discard > 0) {
       const hand = [...this.state.zones[playerId].HAND];
-      if (hand.length < cost.discard) return false;
+      if (hand.length < cost.discard) return { ...result, paid: false };
       const helper = this.createChoiceHelper(playerId);
       const selected = await helper.chooseN(
         `Choose ${cost.discard} card(s) to discard`,
@@ -2495,7 +2630,7 @@ export class GameEngineImpl implements IGameEngine {
       const matching = this.state.zones[playerId].HAND.filter(card =>
         this.matchesFilter(card, cost.discard as CardFilter, playerId)
       );
-      if (matching.length === 0) return false;
+      if (matching.length === 0) return { ...result, paid: false };
       const helper = this.createChoiceHelper(playerId);
       const selected = await helper.chooseOne(
         'Choose a card to discard',
@@ -2505,9 +2640,34 @@ export class GameEngineImpl implements IGameEngine {
       this.zoneManager.discardCard(this.state, playerId, selected.objectId);
     }
 
+    if (cost.returnToHand) {
+      const helper = this.createChoiceHelper(playerId);
+      const { candidates, defenderByObjectId } = this.getReturnToHandCandidates(playerId, cost.returnToHand);
+      if (candidates.length < cost.returnToHand.count) {
+        return { ...result, paid: false };
+      }
+
+      const selected = cost.returnToHand.count === 1
+        ? [await helper.chooseOne('Choose a permanent to return to hand', candidates, card => card.definition.name)]
+        : await helper.chooseN(
+          `Choose ${cost.returnToHand.count} permanent(s) to return to hand`,
+          candidates,
+          cost.returnToHand.count,
+          card => card.definition.name,
+        );
+
+      for (const card of selected) {
+        if (!result.returnedAttackerDefender) {
+          result.returnedAttackerDefender = defenderByObjectId.get(card.objectId);
+        }
+        this.returnToHand(card.objectId);
+        result.returnedCards.push(card);
+      }
+    }
+
     if (cost.removeCounters) {
       const currentCount = source.counters[cost.removeCounters.type] ?? 0;
-      if (currentCount < cost.removeCounters.count) return false;
+      if (currentCount < cost.removeCounters.count) return { ...result, paid: false };
       this.removeCounters(source.objectId, cost.removeCounters.type, cost.removeCounters.count);
     }
 
@@ -2521,14 +2681,60 @@ export class GameEngineImpl implements IGameEngine {
           1,
           'Choose a permanent to sacrifice',
         );
-        if (selected.length === 0) return false;
+        if (selected.length === 0) return { ...result, paid: false };
       }
     }
 
     if (cost.custom && !cost.custom(this.state, source, playerId)) {
-      return false;
+      return { ...result, paid: false };
     }
 
+    return result;
+  }
+
+  private getReturnToHandCandidates(
+    playerId: PlayerId,
+    requirement: NonNullable<Cost['returnToHand']>,
+  ): {
+    candidates: CardInstance[];
+    defenderByObjectId: Map<ObjectId, AttackTarget>;
+  } {
+    const defenderByObjectId = new Map<ObjectId, AttackTarget>();
+
+    if (requirement.mustBeUnblockedAttacker) {
+      const candidates = this.combatManager.getUnblockedAttackers(this.state, playerId)
+        .filter(({ attacker }) =>
+          this.matchesReturnToHandController(attacker, playerId, requirement.controller) &&
+          this.matchesFilter(attacker, requirement.filter, playerId)
+        )
+        .map(({ attacker, defender }) => {
+          defenderByObjectId.set(attacker.objectId, defender);
+          return attacker;
+        });
+
+      return { candidates, defenderByObjectId };
+    }
+
+    const candidates: CardInstance[] = [];
+    for (const candidate of this.getBattlefield()) {
+      if (
+        this.matchesReturnToHandController(candidate, playerId, requirement.controller) &&
+        this.matchesFilter(candidate, requirement.filter, playerId)
+      ) {
+        candidates.push(candidate);
+      }
+    }
+
+    return { candidates, defenderByObjectId };
+  }
+
+  private matchesReturnToHandController(
+    candidate: CardInstance,
+    playerId: PlayerId,
+    controller: NonNullable<Cost['returnToHand']>['controller'] = 'you',
+  ): boolean {
+    if (controller === 'you') return candidate.controller === playerId;
+    if (controller === 'opponent') return candidate.controller !== playerId;
     return true;
   }
 
@@ -2605,7 +2811,7 @@ export class GameEngineImpl implements IGameEngine {
 
   private payAttackTaxesIfNeeded(
     playerId: PlayerId,
-    declarations: Array<{ attackerId: ObjectId; defendingPlayer: PlayerId }>,
+    declarations: Array<{ attackerId: ObjectId; defender: AttackTarget }>,
   ): boolean {
     const attackTaxCost = this.getAttackTaxCost(declarations);
     if (manaCostTotal(attackTaxCost) === 0 && (attackTaxCost.hybrid?.length ?? 0) === 0 && (attackTaxCost.phyrexian?.length ?? 0) === 0) {
@@ -2622,7 +2828,7 @@ export class GameEngineImpl implements IGameEngine {
   }
 
   private getAttackTaxCost(
-    declarations: Array<{ attackerId: ObjectId; defendingPlayer: PlayerId }>,
+    declarations: Array<{ attackerId: ObjectId; defender: AttackTarget }>,
   ): ManaCost {
     let totalCost = emptyManaCost();
 
@@ -2631,7 +2837,7 @@ export class GameEngineImpl implements IGameEngine {
       if (!attacker) continue;
 
       for (const tax of attacker.attackTaxes ?? []) {
-        if (tax.defender !== declaration.defendingPlayer) continue;
+        if (declaration.defender.type !== 'player' || tax.defender !== declaration.defender.id) continue;
         totalCost = this.addManaCosts(totalCost, tax.cost.mana);
       }
     }
@@ -2673,7 +2879,7 @@ export class GameEngineImpl implements IGameEngine {
       const confirmed = await helper.chooseYesNo(prompt);
       if (!confirmed) return false;
     }
-    if (!await this.payNonManaCostParts(playerId, source, cost)) return false;
+    if (!(await this.payNonManaCostParts(playerId, source, cost)).paid) return false;
     if (cost.mana && !await this.payExtraManaCost(playerId, cost.mana)) return false;
     return true;
   }
@@ -2793,7 +2999,9 @@ export class GameEngineImpl implements IGameEngine {
       'card-in-graveyard': candidate.zone === (spec.zone ?? 'GRAVEYARD'),
       'creature-or-player': candidate.definition.types.includes(CardType.CREATURE),
       'creature-or-planeswalker': candidate.definition.types.includes(CardType.CREATURE) || candidate.definition.types.includes(CardType.PLANESWALKER),
-      any: candidate.zone === 'BATTLEFIELD',
+      any: candidate.definition.types.includes(CardType.CREATURE)
+        || candidate.definition.types.includes(CardType.PLANESWALKER)
+        || candidate.definition.types.includes(CardType.BATTLE),
     };
     if (!typeChecks[spec.what]) return false;
     if (spec.filter && !this.matchesFilter(candidate, spec.filter, controller)) return false;
