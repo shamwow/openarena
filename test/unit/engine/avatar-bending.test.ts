@@ -29,6 +29,35 @@ function makeBasicLand(name: string, subtype: string, color: 'W' | 'U' | 'B' | '
     .build();
 }
 
+function makeCreatureManaDork(name: string, color: 'W' | 'U' | 'B' | 'R' | 'G') {
+  return CardBuilder.create(name)
+    .cost('{G}')
+    .types(CardType.CREATURE)
+    .stats(1, 1)
+    .tapForMana(color)
+    .build();
+}
+
+function makeBadgermoleCub() {
+  return CardBuilder.create('Badgermole Cub')
+    .cost('{1}{G}')
+    .types(CardType.CREATURE)
+    .subtypes('Badger', 'Mole')
+    .stats(2, 2)
+    .triggered(
+      { on: 'tap-for-mana', filter: { types: [CardType.CREATURE], controller: 'you' } },
+      (ctx) => {
+        ctx.game.addMana(ctx.controller, 'G', 1);
+      },
+      {
+        isManaAbility: true,
+        manaProduction: [{ amount: 1, colors: ['G'] }],
+        description: 'Whenever you tap a creature for mana, add an additional {G}.',
+      },
+    )
+    .build();
+}
+
 async function runLoop(engine: ReturnType<typeof createHarness>['engine']) {
   await (engine as unknown as { runGameLoop(): Promise<void> }).runGameLoop();
   await settleEngine();
@@ -408,4 +437,97 @@ test('earthbending animates a land with haste and returns it tapped after it die
   assert.ok(returnedLand.zoneChangeCounter > originalZoneChangeCounter);
   assert.equal(hasType(returnedLand, CardType.CREATURE), false);
   assert.equal(graveyardNames(state, 'player1').includes('Practice Field'), false);
+});
+
+test('Badgermole Cub adds {G} as an immediate triggered mana ability when you tap a creature for mana', async () => {
+  const badgermoleCub = makeBadgermoleCub();
+  const manaDork = makeCreatureManaDork('Tunnel Tender', 'G');
+
+  const { state, engine } = createHarness({
+    decks: [
+      { commander: makeCommander('Earth Commander', '{G}'), cards: [badgermoleCub, manaDork], playerName: 'Earth' },
+      { commander: makeCommander('P2 Commander', '{2}'), cards: [], playerName: 'P2' },
+      { commander: makeCommander('P3 Commander', '{2}'), cards: [], playerName: 'P3' },
+      { commander: makeCommander('P4 Commander', '{2}'), cards: [], playerName: 'P4' },
+    ],
+    setup: (builder) => {
+      builder
+        .moveCard({ playerId: 'player1', name: 'Badgermole Cub' }, Zone.BATTLEFIELD)
+        .moveCard({ playerId: 'player1', name: 'Tunnel Tender' }, Zone.BATTLEFIELD)
+        .setBattlefieldCard({ playerId: 'player1', name: 'Badgermole Cub' }, { summoningSick: false })
+        .setBattlefieldCard({ playerId: 'player1', name: 'Tunnel Tender' }, { summoningSick: false })
+        .setTurn({
+          activePlayer: 'player1',
+          currentPhase: Phase.PRECOMBAT_MAIN,
+          currentStep: Step.MAIN,
+          priorityPlayer: 'player1',
+          passedPriority: [],
+        });
+    },
+  });
+
+  await engine.submitAction(getLegalAction(
+    engine,
+    'player1',
+    (action) => action.type === ActionType.ACTIVATE_ABILITY && action.sourceId === getCard(state, 'player1', Zone.BATTLEFIELD, 'Tunnel Tender').objectId,
+  ));
+  await settleEngine();
+
+  assert.equal(state.players.player1.manaPool.G, 2);
+  assert.equal(state.stack.length, 0);
+});
+
+test('Badgermole Cub mana is included in autotap affordability for normal cast actions', async () => {
+  const badgermoleCub = makeBadgermoleCub();
+  const manaDork = makeCreatureManaDork('Tunnel Tender', 'G');
+  const forest = makeBasicLand('Badger Forest', 'Forest', 'G');
+  const expensiveSpell = CardBuilder.create('Badger Lesson')
+    .cost('{2}{G}')
+    .types(CardType.SORCERY)
+    .spellEffect(() => {})
+    .build();
+
+  const { state, engine } = createHarness({
+    decks: [
+      {
+        commander: makeCommander('Earth Commander', '{G}'),
+        cards: [badgermoleCub, manaDork, forest, expensiveSpell],
+        playerName: 'Earth',
+      },
+      { commander: makeCommander('P2 Commander', '{2}'), cards: [], playerName: 'P2' },
+      { commander: makeCommander('P3 Commander', '{2}'), cards: [], playerName: 'P3' },
+      { commander: makeCommander('P4 Commander', '{2}'), cards: [], playerName: 'P4' },
+    ],
+    setup: (builder) => {
+      builder
+        .moveCard({ playerId: 'player1', name: 'Badgermole Cub' }, Zone.BATTLEFIELD)
+        .moveCard({ playerId: 'player1', name: 'Tunnel Tender' }, Zone.BATTLEFIELD)
+        .moveCard({ playerId: 'player1', name: 'Badger Forest' }, Zone.BATTLEFIELD)
+        .moveCard({ playerId: 'player1', name: 'Badger Lesson' }, Zone.HAND)
+        .setBattlefieldCard({ playerId: 'player1', name: 'Badgermole Cub' }, { summoningSick: false })
+        .setBattlefieldCard({ playerId: 'player1', name: 'Tunnel Tender' }, { summoningSick: false })
+        .setBattlefieldCard({ playerId: 'player1', name: 'Badger Forest' }, { summoningSick: false })
+        .setTurn({
+          activePlayer: 'player1',
+          currentPhase: Phase.PRECOMBAT_MAIN,
+          currentStep: Step.MAIN,
+          priorityPlayer: 'player1',
+          passedPriority: [],
+        });
+    },
+  });
+
+  const castAction = getLegalAction(
+    engine,
+    'player1',
+    (action) => action.type === ActionType.CAST_SPELL && action.cardId === getCard(state, 'player1', Zone.HAND, 'Badger Lesson').objectId,
+  );
+
+  await engine.submitAction(castAction);
+  await settleEngine();
+
+  assert.ok(graveyardNames(state, 'player1').includes('Badger Lesson'));
+  assert.equal(getCard(state, 'player1', Zone.BATTLEFIELD, 'Tunnel Tender').tapped, true);
+  assert.equal(getCard(state, 'player1', Zone.BATTLEFIELD, 'Badger Forest').tapped, true);
+  assert.deepEqual(state.players.player1.manaPool, { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 });
 });

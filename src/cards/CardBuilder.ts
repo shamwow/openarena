@@ -3,7 +3,7 @@ import type {
   AbilityDefinition, ActivatedAbilityDef, TriggeredAbilityDef,
   StaticAbilityDef, SpellAbilityDef, ModalAbilityDef, Cost, TriggerCondition,
   EffectFn, TargetSpec, StaticEffectDef, ManaPool, ProtectionFrom,
-  AlternativeCast, AdditionalCost, Zone, ManaCost,
+  AlternativeCast, AdditionalCost, Zone, ManaCost, ManaProduction,
 } from '../engine/types';
 import {
   parseManaCost,
@@ -212,15 +212,24 @@ export class CardBuilder {
   triggered(
     trigger: TriggerCondition,
     effect: EffectFn,
-    opts?: { targets?: TargetSpec[]; optional?: boolean; interveningIf?: TriggeredAbilityDef['interveningIf']; description?: string }
+    opts?: {
+      targets?: TargetSpec[];
+      optional?: boolean;
+      interveningIf?: TriggeredAbilityDef['interveningIf'];
+      isManaAbility?: boolean;
+      manaProduction?: ManaProduction[];
+      description?: string;
+    }
   ): this {
     const ability: TriggeredAbilityDef = {
       kind: 'triggered',
       trigger,
       effect,
+      manaProduction: opts?.manaProduction,
       targets: opts?.targets,
       optional: opts?.optional ?? false,
       interveningIf: opts?.interveningIf,
+      isManaAbility: opts?.isManaAbility ?? false,
       description: opts?.description ?? '',
     };
     this.def.abilities.push(ability);

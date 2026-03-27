@@ -10,13 +10,13 @@ import type {
   PlayerId,
 } from './types';
 import { GameEventType, Keyword, emptyManaPool } from './types';
-import { getEffectiveSubtypes, getNextTimestamp, hasType } from './GameState';
+import { getEffectiveSubtypes, getEffectiveSupertypes, getNextTimestamp, hasType } from './GameState';
 import type { EventBus } from './EventBus';
 
 export interface AutoTapPlanEntry {
   sourceId: string;
-  color: ManaSymbol;
-  amount: number;
+  mana: Partial<ManaPool>;
+  plannerMana?: Partial<ManaPool>;
   tap: boolean;
   sacrificeSelf: boolean;
 }
@@ -153,18 +153,23 @@ export class ManaManager {
           return [];
         }
 
+        const triggeredBonuses = ability.cost.tap && hasType(card, 'Creature' as import('./types').CardType)
+          ? this.getTriggeredTapForManaBonuses(state, player, card)
+          : [{}];
+
         return [{
           sourceId: card.objectId,
-          options: productions.flatMap((production) => {
-            const colors = this.normalizeProductionColors(production, state.players[player].colorIdentity);
-            return colors.map(color => ({
-              sourceId: card.objectId,
-              color,
-              amount: production.amount,
-              tap: Boolean(ability.cost.tap),
-              sacrificeSelf: Boolean(ability.cost.sacrifice?.self),
-            }));
-          }),
+          options: productions.flatMap((production) =>
+            this.expandManaProduction(production, state.players[player].colorIdentity).flatMap((baseMana) =>
+              triggeredBonuses.map((bonusMana) => ({
+                sourceId: card.objectId,
+                mana: baseMana,
+                plannerMana: this.mergeManaMaps(baseMana, bonusMana),
+                tap: Boolean(ability.cost.tap),
+                sacrificeSelf: Boolean(ability.cost.sacrifice?.self),
+              }))
+            )
+          ),
         }];
       });
   }
@@ -241,6 +246,74 @@ export class ManaManager {
     return [...normalized];
   }
 
+  private expandManaProduction(
+    production: ManaProduction,
+    colorIdentity: ManaColor[],
+  ): Partial<ManaPool>[] {
+    return this.normalizeProductionColors(production, colorIdentity).map((color) => ({
+      [color]: production.amount,
+    }));
+  }
+
+  private mergeManaMaps(a: Partial<ManaPool>, b: Partial<ManaPool>): Partial<ManaPool> {
+    const merged: Partial<ManaPool> = { ...a };
+    for (const color of Object.keys(b) as ManaSymbol[]) {
+      merged[color] = (merged[color] ?? 0) + (b[color] ?? 0);
+    }
+    return merged;
+  }
+
+  private getTriggeredTapForManaBonuses(
+    state: GameState,
+    player: PlayerId,
+    tappedCreature: CardInstance,
+  ): Partial<ManaPool>[] {
+    let bonusOptions: Partial<ManaPool>[] = [{}];
+
+    for (const source of state.zones[player].BATTLEFIELD) {
+      if (source.phasedOut) continue;
+      const abilities = source.modifiedAbilities ?? source.definition.abilities;
+      for (const ability of abilities) {
+        if (ability.kind !== 'triggered') continue;
+        if (!ability.isManaAbility || !ability.manaProduction || ability.manaProduction.length === 0) continue;
+        if (ability.trigger.on !== 'tap-for-mana') continue;
+        if (ability.trigger.filter && !this.matchesCardFilter(tappedCreature, ability.trigger.filter, source.controller, state)) {
+          continue;
+        }
+
+        const expanded = ability.manaProduction.flatMap((production) =>
+          this.expandManaProduction(production, state.players[player].colorIdentity)
+        );
+        bonusOptions = bonusOptions.flatMap((existing) =>
+          expanded.map((bonus) => this.mergeManaMaps(existing, bonus))
+        );
+      }
+    }
+
+    return bonusOptions;
+  }
+
+  private matchesCardFilter(
+    card: CardInstance,
+    filter: import('./types').CardFilter,
+    sourceController: PlayerId,
+    state: GameState,
+  ): boolean {
+    if (filter.types && !filter.types.some(type => hasType(card, type))) return false;
+    if (filter.subtypes && !filter.subtypes.some(subtype => getEffectiveSubtypes(card).includes(subtype))) return false;
+    if (filter.supertypes && !filter.supertypes.some(supertype => getEffectiveSupertypes(card).includes(supertype))) return false;
+    if (filter.colors && !filter.colors.some(color => card.definition.colorIdentity.includes(color))) return false;
+    if (filter.keywords && !filter.keywords.some(keyword => (card.modifiedKeywords ?? card.definition.keywords).includes(keyword as Keyword))) return false;
+    if (filter.controller === 'you' && card.controller !== sourceController) return false;
+    if (filter.controller === 'opponent' && card.controller === sourceController) return false;
+    if (filter.name && card.definition.name !== filter.name) return false;
+    if (filter.tapped === true && !card.tapped) return false;
+    if (filter.tapped === false && card.tapped) return false;
+    if (filter.isToken === true && !card.isToken) return false;
+    if (filter.custom && !filter.custom(card, state)) return false;
+    return true;
+  }
+
   private findSourcePaymentPlan(
     pool: ManaPool,
     cost: ManaCost,
@@ -270,7 +343,10 @@ export class ManaManager {
 
     for (const option of source.options) {
       const nextPool = { ...pool };
-      nextPool[option.color] += option.amount;
+      const producedMana = option.plannerMana ?? option.mana;
+      for (const color of Object.keys(producedMana) as ManaSymbol[]) {
+        nextPool[color] += producedMana[color] ?? 0;
+      }
       plan.push(option);
       const result = this.findSourcePaymentPlan(nextPool, cost, life, sources, index + 1, plan);
       if (result) {

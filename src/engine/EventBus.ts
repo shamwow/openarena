@@ -318,6 +318,10 @@ export class EventBus {
         if (event.type !== 'TAPPED') return false;
         return this.matchesCardFilter(trigger.filter, event.objectId, source, state, event.objectZoneChangeCounter, event.lastKnownInfo);
 
+      case 'tap-for-mana':
+        if (event.type !== 'TAPPED_FOR_MANA') return false;
+        return this.matchesCardFilter(trigger.filter, event.objectId, source, state, event.objectZoneChangeCounter, event.lastKnownInfo);
+
       case 'untap':
         if (event.type !== 'UNTAPPED') return false;
         return this.matchesCardFilter(trigger.filter, event.objectId, source, state, event.objectZoneChangeCounter, event.lastKnownInfo);

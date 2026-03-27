@@ -4,7 +4,7 @@ import type {
   StackEntry, GameEvent, PlayerAction, ProtectionFrom,
   GameEngine as IGameEngine, CardType as CardTypeEnum,
   ModalAbilityDef, AbilityDefinition, EffectDuration, ContinuousEffect,
-  Layer as LayerType, Cost, DelayedTrigger, PredefinedTokenType, SearchLibraryOptions, CastPermission,
+  Layer as LayerType, Cost, DelayedTrigger, PredefinedTokenType, SearchLibraryOptions, CastPermission, PendingTrigger,
 } from './types';
 import {
   GameEventType, ActionType, CardType, Step, Zone,
@@ -559,6 +559,53 @@ export class GameEngineImpl implements IGameEngine {
 
   addMana(player: PlayerId, color: keyof ManaPool, amount: number): void {
     this.manaManager.addMana(this.state, player, color, amount);
+  }
+
+  private emitTappedForManaEvent(player: PlayerId, source: CardInstance): void {
+    const event: GameEvent = {
+      type: GameEventType.TAPPED_FOR_MANA,
+      timestamp: getNextTimestamp(this.state),
+      objectId: source.objectId,
+      cardId: source.cardId,
+      objectZoneChangeCounter: source.zoneChangeCounter,
+      lastKnownInfo: cloneCardInstance(source),
+      player,
+    };
+    this.state.eventLog.push(event);
+    this.eventBus.emit(event);
+    this.resolveImmediateTriggeredManaAbilities(event);
+  }
+
+  private resolveImmediateTriggeredManaAbilities(event: GameEvent): void {
+    const triggers = this.eventBus.checkTriggers(event, this.state);
+    for (const trigger of triggers) {
+      if (trigger.ability.isManaAbility) {
+        this.resolveTriggeredManaAbility(trigger);
+      } else {
+        this.state.pendingTriggers.push(trigger);
+      }
+    }
+  }
+
+  private resolveTriggeredManaAbility(trigger: PendingTrigger): void {
+    const disallowChoice = async () => {
+      throw new Error('Triggered mana abilities cannot request choices or targets.');
+    };
+    const ctx: EffectContext = {
+      game: this,
+      state: this.state,
+      source: trigger.source,
+      controller: trigger.controller,
+      targets: [],
+      event: trigger.event,
+      choices: this.createChoiceHelper(trigger.controller),
+      chooseTarget: disallowChoice,
+      chooseTargets: disallowChoice,
+    };
+    const result = trigger.ability.effect(ctx);
+    if (result && typeof (result as PromiseLike<unknown>).then === 'function') {
+      throw new Error('Triggered mana abilities must resolve synchronously.');
+    }
   }
 
   payMana(player: PlayerId, cost: ManaCost): boolean {
@@ -1889,6 +1936,9 @@ export class GameEngineImpl implements IGameEngine {
       });
       ctx.source = card;
       await ability.effect(ctx);
+      if (paymentCost.tap && hasType(card, CardType.CREATURE)) {
+        this.emitTappedForManaEvent(playerId, card);
+      }
     } else {
       this.stackManager.activateAbility(
         this.state, card, ability, playerId, targets ?? []
@@ -3088,12 +3138,21 @@ export class GameEngineImpl implements IGameEngine {
     for (const entry of plan) {
       const source = findCard(this.state, entry.sourceId);
       if (!source) continue;
-      this.manaManager.addMana(this.state, playerId, entry.color, entry.amount);
+      const sourceSnapshot = cloneCardInstance(source);
       if (entry.tap) {
         this.zoneManager.tapPermanent(this.state, entry.sourceId);
       }
       if (entry.sacrificeSelf) {
         this.sacrificePermanent(entry.sourceId, playerId);
+      }
+      for (const color of Object.keys(entry.mana) as Array<keyof ManaPool>) {
+        const amount = entry.mana[color] ?? 0;
+        if (amount > 0) {
+          this.manaManager.addMana(this.state, playerId, color, amount);
+        }
+      }
+      if (entry.tap && hasType(sourceSnapshot, CardType.CREATURE)) {
+        this.emitTappedForManaEvent(playerId, sourceSnapshot);
       }
     }
   }

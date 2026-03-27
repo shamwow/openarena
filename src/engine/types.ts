@@ -368,8 +368,10 @@ export interface TriggeredAbilityDef {
   kind: 'triggered';
   trigger: TriggerCondition;
   effect: EffectFn;
+  manaProduction?: ManaProduction[];
   targets?: TargetSpec[];
   interveningIf?: (game: GameState, source: CardInstance, event: GameEvent) => boolean;
+  isManaAbility?: boolean;
   optional: boolean;
   description: string;
 }
@@ -430,6 +432,7 @@ export type TriggerCondition =
   | { on: 'end-step'; whose?: 'yours' | 'each' }
   | { on: 'draw-card'; whose?: 'yours' | 'opponents' | 'any' }
   | { on: 'tap'; filter?: CardFilter }
+  | { on: 'tap-for-mana'; filter?: CardFilter }
   | { on: 'untap'; filter?: CardFilter }
   | { on: 'gain-life'; whose?: 'yours' | 'opponents' | 'any' }
   | { on: 'lose-life'; whose?: 'yours' | 'opponents' | 'any' }
@@ -599,6 +602,7 @@ export const GameEventType = {
   SPELL_RESOLVED: 'SPELL_RESOLVED',
   SPELL_COUNTERED: 'SPELL_COUNTERED',
   TAPPED: 'TAPPED',
+  TAPPED_FOR_MANA: 'TAPPED_FOR_MANA',
   UNTAPPED: 'UNTAPPED',
   DESTROYED: 'DESTROYED',
   SACRIFICED: 'SACRIFICED',
@@ -705,6 +709,12 @@ export interface TappedEvent extends BaseGameEvent {
 export interface UntappedEvent extends BaseGameEvent {
   type: typeof GameEventType.UNTAPPED;
   objectId: ObjectId;
+}
+
+export interface TappedForManaEvent extends BaseGameEvent {
+  type: typeof GameEventType.TAPPED_FOR_MANA;
+  objectId: ObjectId;
+  player: PlayerId;
 }
 
 export interface DestroyedEvent extends BaseGameEvent {
@@ -822,6 +832,7 @@ export type GameEvent =
   | DrewCardEvent
   | DiscardedEvent
   | TappedEvent
+  | TappedForManaEvent
   | UntappedEvent
   | DestroyedEvent
   | SacrificedEvent
