@@ -18,6 +18,7 @@ import { GameEventType, emptyManaPool } from './types';
 import { getEffectiveAbilities, getEffectiveSubtypes, getEffectiveSupertypes, getNextTimestamp, hasType } from './GameState';
 import { getActivationRuleProfile } from './AbilityPrimitives';
 import type { EventBus } from './EventBus';
+import { ActivatedAbility, TriggeredAbility } from './abilities';
 
 export interface AutoTapPlanEntry {
   sourceId: string;
@@ -181,24 +182,24 @@ export class ManaManager {
     return battlefield
       .filter(card => card.controller === player && !card.tapped)
       .flatMap((card) => {
-        const abilities = getEffectiveAbilities(card).filter(
-          (candidate): candidate is ActivatedAbilityDef => candidate.kind === 'activated' && candidate.isManaAbility,
-        );
-        if (abilities.length === 0) {
+        const manaAbilities = getEffectiveAbilities(card)
+          .filter((candidate) => candidate.kind === 'activated' && candidate.isManaAbility)
+          .map((candidate) => ActivatedAbility.from(candidate as ActivatedAbilityDef));
+        if (manaAbilities.length === 0) {
           return [];
         }
 
-        const options = abilities.flatMap((ability) => {
-          if (!this.canActivateManaAbility(card, ability, state)) {
+        const options = manaAbilities.flatMap((aa) => {
+          if (!this.canActivateManaAbility(card, aa, state)) {
             return [];
           }
 
-          const productions = this.getManaProductions(card, ability, state.players[player].colorIdentity);
+          const productions = this.getManaProductions(card, aa, state.players[player].colorIdentity);
           if (productions.length === 0) {
             return [];
           }
 
-          const triggeredBonuses = ability.cost.tap && hasType(card, 'Creature' as import('./types').CardType)
+          const triggeredBonuses = aa.requiresTap() && hasType(card, 'Creature' as import('./types').CardType)
             ? this.getTriggeredTapForManaBonuses(state, player, card)
             : [{}];
 
@@ -208,9 +209,9 @@ export class ManaManager {
                 sourceId: card.objectId,
                 mana: baseMana,
                 plannerMana: this.mergeManaMaps(baseMana, bonusMana),
-                tap: Boolean(ability.cost.tap),
-                sacrificeSelf: Boolean(ability.cost.sacrifice?.self),
-                trackedManaEffect: ability.trackedManaEffect,
+                tap: aa.requiresTap(),
+                sacrificeSelf: aa.requiresSelfSacrifice(),
+                trackedManaEffect: aa.getTrackedManaEffect(),
               }))
             )
           );
@@ -227,8 +228,8 @@ export class ManaManager {
       });
   }
 
-  private canActivateManaAbility(card: CardInstance, ability: { cost: { tap?: boolean } }, state: GameState): boolean {
-    if (!ability.cost.tap) {
+  private canActivateManaAbility(card: CardInstance, aa: ActivatedAbility, state: GameState): boolean {
+    if (!aa.requiresTap()) {
       return true;
     }
     if (!hasType(card, 'Creature' as import('./types').CardType)) {
@@ -242,11 +243,12 @@ export class ManaManager {
 
   private getManaProductions(
     card: CardInstance,
-    ability: { manaProduction?: ManaProduction[]; description: string },
+    aa: ActivatedAbility,
     colorIdentity: ManaColor[],
   ): ManaProduction[] {
-    if (ability.manaProduction && ability.manaProduction.length > 0) {
-      return ability.manaProduction;
+    const manaProduction = aa.getManaProduction();
+    if (manaProduction && manaProduction.length > 0) {
+      return manaProduction;
     }
 
     const subtypes = getEffectiveSubtypes(card);
@@ -256,7 +258,7 @@ export class ManaManager {
     if (subtypes.includes('Mountain')) return [{ amount: 1, colors: ['R'] }];
     if (subtypes.includes('Forest')) return [{ amount: 1, colors: ['G'] }];
 
-    const lower = ability.description.toLowerCase();
+    const lower = aa.getDescription().toLowerCase();
     if (lower.includes('commander') && lower.includes('any color')) {
       const colors = colorIdentity.length > 0 ? colorIdentity : ['C'];
       return [{ amount: 1, colors: colors as ManaSymbol[], restrictToColorIdentity: true }];
@@ -267,7 +269,7 @@ export class ManaManager {
 
     const parsed: ManaProduction[] = [];
     for (const color of ['W', 'U', 'B', 'R', 'G', 'C'] as const) {
-      const matches = ability.description.match(new RegExp(`\\{${color}\\}`, 'g'));
+      const matches = aa.getDescription().match(new RegExp(`\\{${color}\\}`, 'g'));
       if (matches) {
         parsed.push({ amount: matches.length, colors: [color] });
       }
@@ -400,13 +402,10 @@ export class ManaManager {
       const abilities = getEffectiveAbilities(source);
       for (const ability of abilities) {
         if (ability.kind !== 'triggered') continue;
-        if (!ability.isManaAbility || !ability.manaProduction || ability.manaProduction.length === 0) continue;
-        if (ability.trigger.on !== 'tap-for-mana') continue;
-        if (ability.trigger.filter && !this.matchesCardFilter(tappedCreature, ability.trigger.filter, source.controller, state)) {
-          continue;
-        }
+        const ta = TriggeredAbility.from(ability);
+        if (!ta.matchesTapForManaTrigger(tappedCreature, source.controller, state)) continue;
 
-        const expanded = ability.manaProduction.flatMap((production) =>
+        const expanded = ta.getManaProduction()!.flatMap((production) =>
           this.expandManaProduction(production, state.players[player].colorIdentity)
         );
         bonusOptions = bonusOptions.flatMap((existing) =>

@@ -7,6 +7,7 @@ import type {
   Layer as LayerType, DelayedTrigger, PredefinedTokenType, SearchLibraryOptions, CastPermission, PendingTrigger,
 } from './types';
 import { Cost, type CostContext } from './costs';
+import { StaticAbility } from './abilities';
 import {
   GameEventType, ActionType, CardType, Step, Zone,
   StackEntryType, manaCostTotal, Layer, emptyManaCost,
@@ -2178,7 +2179,7 @@ export class GameEngineImpl implements IGameEngine {
     const battlefield = this.state.zones[playerId].BATTLEFIELD;
     if (battlefield.some((card) =>
       getEffectiveAbilities(card).some((ability) =>
-        ability.kind === 'static' && ability.effect.type === 'no-max-hand-size'
+        ability.kind === 'static' && StaticAbility.from(ability).isNoMaxHandSize()
       )
     )) {
       return null;
@@ -2979,8 +2980,10 @@ export class GameEngineImpl implements IGameEngine {
     for (const permanent of this.getBattlefield(undefined)) {
       for (const ability of getEffectiveAbilities(permanent)) {
         if (ability.kind !== 'static') continue;
-        if (ability.condition && !ability.condition(this.state, permanent)) continue;
-        if (ability.effect.type !== 'cost-modification') continue;
+        const sa = StaticAbility.from(ability);
+        if (!sa.isActive(this.state, permanent)) continue;
+        const costMod = sa.getCostModification();
+        if (!costMod) continue;
         const spellReference: CardInstance = {
           ...source,
           definition,
@@ -2988,8 +2991,8 @@ export class GameEngineImpl implements IGameEngine {
           modifiedSubtypes: [...definition.subtypes],
           modifiedSupertypes: [...definition.supertypes],
         };
-        if (!this.matchesSpellFilter(spellReference, ability.effect.filter, playerId, permanent.controller)) continue;
-        cost.addManaTax(ability.effect.costDelta);
+        if (!this.matchesSpellFilter(spellReference, costMod.filter, playerId, permanent.controller)) continue;
+        cost.addManaTax(costMod.costDelta);
       }
     }
   }

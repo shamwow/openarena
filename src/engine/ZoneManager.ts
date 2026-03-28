@@ -17,6 +17,8 @@ import {
   rememberLastKnownInformation,
 } from './GameState';
 import type { EventBus } from './EventBus';
+import { StaticAbility } from './abilities';
+import type { EffectCompilationContext } from './effects';
 
 type CommanderReplacementResolver = (state: GameState, card: CardInstance, toZone: Zone) => boolean;
 
@@ -436,9 +438,7 @@ export class ZoneManager {
     const fullDef: import('./types').CardDefinition = {
       id: `token-${definition.name.toLowerCase().replace(/\s/g, '-')}-${Date.now()}`,
       name: definition.name,
-      spellCost: definition.spellCost ?? {
-        mana: { generic: 0, W: 0, U: 0, B: 0, R: 0, G: 0, C: 0, X: 0 },
-      },
+      cost: definition.cost,
       colorIdentity: definition.colorIdentity ?? [],
       commanderOptions: definition.commanderOptions,
       types: definition.types,
@@ -643,19 +643,20 @@ export class ZoneManager {
 
     for (const [index, ability] of abilities.entries()) {
       if (ability.kind !== 'static') continue;
-      if (ability.condition && !ability.condition(state, card)) continue;
-      const effect = ability.effect;
-      if (effect.type !== 'replacement' || effect.replaces !== 'would-enter-battlefield' || !effect.selfReplacement) continue;
+      const sa = StaticAbility.from(ability);
+      if (!sa.isActive(state, card)) continue;
 
-      replacements.push({
-        id: `${card.objectId}:${nextZoneChangeCounter}:self-replacement:${index}`,
-        sourceId: card.objectId,
-        isSelfReplacement: true,
-        appliesTo: event =>
-          event.objectId === card.objectId &&
-          event.objectZoneChangeCounter === nextZoneChangeCounter,
-        replace: (event, game) => effect.replace(game, card, event),
-      });
+      const ctx: EffectCompilationContext = {
+        state,
+        source: card,
+        description: sa.getDescription(),
+        matchesFilter: () => false,
+        findCardById: () => undefined,
+      };
+      const compiled = sa.compileSelfReplacement(ctx, card.objectId, nextZoneChangeCounter, index);
+      if (compiled) {
+        replacements.push(compiled);
+      }
     }
 
     return replacements;

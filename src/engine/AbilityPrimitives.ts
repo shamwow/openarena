@@ -8,6 +8,7 @@ import type {
   Zone,
 } from './types';
 import { getEffectiveAbilities } from './GameState';
+import { StaticAbility } from './abilities';
 
 type AbilitySource = CardDefinition | CardInstance;
 
@@ -226,17 +227,8 @@ export function getTimingPermissionProfile(
     canActivateAsInstant: false,
   };
 
-  for (const effect of getStaticEffects(source, state)) {
-    if (effect.type !== 'timing-permission') continue;
-    if (zone && effect.zones?.length && !effect.zones.includes(zone)) continue;
-    if (!effect.anyTimeCouldCastInstant) continue;
-
-    if (effect.scope === 'spell' || effect.scope === 'all') {
-      profile.canCastAsInstant = true;
-    }
-    if (effect.scope === 'activated-ability' || effect.scope === 'all') {
-      profile.canActivateAsInstant = true;
-    }
+  for (const sa of getActiveStaticAbilities(source, state)) {
+    sa.contributeToTimingProfile(profile, zone);
   }
 
   return profile;
@@ -252,17 +244,8 @@ export function getAttackRuleProfile(
     attacksWithoutTapping: false,
   };
 
-  for (const effect of getStaticEffects(source, state)) {
-    if (effect.type !== 'attack-rule') continue;
-    if (effect.canAttack === false) {
-      profile.canAttack = false;
-    }
-    if (effect.ignoreSummoningSickness) {
-      profile.ignoreSummoningSickness = true;
-    }
-    if (effect.attacksWithoutTapping) {
-      profile.attacksWithoutTapping = true;
-    }
+  for (const sa of getActiveStaticAbilities(source, state)) {
+    sa.contributeToAttackProfile(profile);
   }
 
   return profile;
@@ -276,11 +259,8 @@ export function getActivationRuleProfile(
     ignoreTapSummoningSickness: false,
   };
 
-  for (const effect of getStaticEffects(source, state)) {
-    if (effect.type !== 'activation-rule') continue;
-    if (effect.ignoreTapSummoningSickness) {
-      profile.ignoreTapSummoningSickness = true;
-    }
+  for (const sa of getActiveStaticAbilities(source, state)) {
+    sa.contributeToActivationProfile(profile);
   }
 
   return profile;
@@ -290,7 +270,6 @@ export function getBlockRuleProfile(
   source: AbilitySource,
   state?: GameState,
 ): BlockRuleProfile {
-  const landwalkSubtypes = new Set<string>();
   const profile: BlockRuleProfile = {
     canBlock: true,
     canBeBlocked: true,
@@ -300,30 +279,9 @@ export function getBlockRuleProfile(
     landwalkSubtypes: [],
   };
 
-  for (const effect of getStaticEffects(source, state)) {
-    if (effect.type !== 'block-rule') continue;
-    if (effect.canBlock === false) {
-      profile.canBlock = false;
-    }
-    if (effect.canBeBlocked === false) {
-      profile.canBeBlocked = false;
-    }
-    if (effect.minBlockers !== undefined) {
-      profile.minBlockers = Math.max(profile.minBlockers, effect.minBlockers);
-    }
-    if (effect.evasion === 'requires-flying-or-reach') {
-      profile.hasFlying = true;
-      profile.canBlockFlying = true;
-    }
-    if (effect.canBlockIfAttackerHas === 'flying') {
-      profile.canBlockFlying = true;
-    }
-    for (const subtype of effect.landwalkSubtypes ?? []) {
-      landwalkSubtypes.add(subtype);
-    }
+  for (const sa of getActiveStaticAbilities(source, state)) {
+    sa.contributeToBlockProfile(profile);
   }
-
-  profile.landwalkSubtypes = [...landwalkSubtypes];
   return profile;
 }
 
@@ -340,27 +298,8 @@ export function getCombatDamageRuleProfile(
     controllerGainsLifeFromDamage: false,
   };
 
-  for (const effect of getStaticEffects(source, state)) {
-    if (effect.type !== 'combat-damage-rule') continue;
-    if (effect.combatDamageStep === 'first-strike') {
-      profile.hasFirstStrike = true;
-    }
-    if (effect.combatDamageStep === 'double-strike') {
-      profile.hasFirstStrike = true;
-      profile.hasDoubleStrike = true;
-    }
-    if (effect.lethalDamageIsOne) {
-      profile.lethalDamageIsOne = true;
-    }
-    if (effect.marksDeathtouchDamage) {
-      profile.marksDeathtouchDamage = true;
-    }
-    if (effect.excessToDefender) {
-      profile.excessToDefender = true;
-    }
-    if (effect.controllerGainsLifeFromDamage) {
-      profile.controllerGainsLifeFromDamage = true;
-    }
+  for (const sa of getActiveStaticAbilities(source, state)) {
+    sa.contributeToCombatDamageProfile(profile);
   }
 
   return profile;
@@ -375,14 +314,8 @@ export function getSurvivalRuleProfile(
     ignoreLethalDamage: false,
   };
 
-  for (const effect of getStaticEffects(source, state)) {
-    if (effect.type !== 'survival-rule') continue;
-    if (effect.ignoreDestroy) {
-      profile.ignoreDestroy = true;
-    }
-    if (effect.ignoreLethalDamage) {
-      profile.ignoreLethalDamage = true;
-    }
+  for (const sa of getActiveStaticAbilities(source, state)) {
+    sa.contributeToSurvivalProfile(profile);
   }
 
   return profile;
@@ -397,14 +330,8 @@ export function getPhaseRuleProfile(
     phasesOutDuringUntap: false,
   };
 
-  for (const effect of getStaticEffects(source, state)) {
-    if (effect.type !== 'phase-rule') continue;
-    if (effect.phasesInDuringUntap) {
-      profile.phasesInDuringUntap = true;
-    }
-    if (effect.phasesOutDuringUntap) {
-      profile.phasesOutDuringUntap = true;
-    }
+  for (const sa of getActiveStaticAbilities(source, state)) {
+    sa.contributeToPhaseProfile(profile);
   }
 
   return profile;
@@ -418,10 +345,10 @@ export function hasAbilityDescription(
   const abilities = isCardInstance(source) ? getEffectiveAbilities(source) : source.abilities;
   return abilities.some((ability) => {
     if (ability.description !== description) return false;
-    if (!isCardInstance(source) || !state || ability.kind !== 'static' || !ability.condition) {
+    if (!isCardInstance(source) || !state || ability.kind !== 'static') {
       return true;
     }
-    return ability.condition(state, source);
+    return StaticAbility.from(ability).isActive(state, source);
   });
 }
 
@@ -432,16 +359,19 @@ function createLandwalkAbilities(subtype: string, description: string): AbilityD
   }, description)];
 }
 
-function getStaticEffects(source: AbilitySource, state?: GameState): StaticEffectDef[] {
+function getActiveStaticAbilities(source: AbilitySource, state?: GameState): StaticAbility[] {
   const abilities = isCardInstance(source) ? getEffectiveAbilities(source) : source.abilities;
   return abilities.flatMap((ability) => {
     if (ability.kind !== 'static') return [];
-    if (isCardInstance(source) && state && ability.condition && !ability.condition(state, source)) {
+    const sa = StaticAbility.from(ability);
+    if (isCardInstance(source) && state && !sa.isActive(state, source)) {
       return [];
     }
-    return [ability.effect];
+    return [sa];
   });
 }
+
+export { getActiveStaticAbilities };
 
 function isCardInstance(source: AbilitySource): source is CardInstance {
   return 'zone' in source;

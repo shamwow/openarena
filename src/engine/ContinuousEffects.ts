@@ -4,15 +4,14 @@ import type {
   CompiledInteractionHook,
   ContinuousEffect,
   GameState,
-  InteractionHookDef,
   ReplacementEffect,
-  StaticAbilityDef,
   WouldEnterBattlefieldReplacementEffect,
 } from './types';
 import { CardType, GameEventType, Layer } from './types';
 import { getEffectiveSubtypes, getEffectiveSupertypes, getEffectiveTypes, hasType } from './GameState';
-import { matchesInteractionSource } from './InteractionEngine';
-import { Cost } from './costs';
+import { StaticAbility } from './abilities';
+import type { EffectCompilationContext } from './effects';
+import { findCard } from './GameState';
 
 /**
  * Implements the MTG Layer System (rule 613) for applying continuous effects.
@@ -132,6 +131,16 @@ export class ContinuousEffectsEngine {
     return undefined;
   }
 
+  private createCompilationContext(state: GameState, source: CardInstance, description: string): EffectCompilationContext {
+    return {
+      state,
+      source,
+      description,
+      matchesFilter: (card, filter, src, st) => this.matchesFilter(card, filter, src, st),
+      findCardById: (st, id) => findCard(st, id) ?? undefined,
+    };
+  }
+
   private compileStaticContinuousEffects(state: GameState): ContinuousEffect[] {
     const effects: ContinuousEffect[] = [];
 
@@ -142,9 +151,11 @@ export class ContinuousEffectsEngine {
         const abilities = source.modifiedAbilities ?? source.definition.abilities;
         for (const ability of abilities) {
           if (ability.kind !== 'static') continue;
-          if (ability.condition && !ability.condition(state, source)) continue;
+          const sa = StaticAbility.from(ability);
+          if (!sa.isActive(state, source)) continue;
 
-          const compiled = this.compileStaticAbility(state, source, ability);
+          const ctx = this.createCompilationContext(state, source, sa.getDescription());
+          const compiled = sa.compile(ctx);
           if (compiled) {
             effects.push(compiled);
           }
@@ -165,42 +176,13 @@ export class ContinuousEffectsEngine {
         const abilities = source.modifiedAbilities ?? source.definition.abilities;
         for (const ability of abilities) {
           if (ability.kind !== 'static') continue;
-          if (ability.condition && !ability.condition(state, source)) continue;
-          const effect = ability.effect;
+          const sa = StaticAbility.from(ability);
+          if (!sa.isActive(state, source)) continue;
 
-          if (effect.type === 'replacement') {
-            if (effect.selfReplacement || effect.replaces === 'would-enter-battlefield') {
-              continue;
-            }
-            replacements.push({
-              id: `${source.objectId}:${source.zoneChangeCounter}:replacement:${replacements.length}`,
-              sourceId: source.objectId,
-              isSelfReplacement: false,
-              appliesTo: (event) => this.matchesReplacementEvent(effect.replaces, event.type) && (!effect.replace || Boolean(source)) && source.zone === 'BATTLEFIELD',
-              replace: (event, game) => effect.replace(game, source, event),
-            });
-          }
-
-          if (effect.type === 'prevention') {
-            replacements.push({
-              id: `${source.objectId}:${source.zoneChangeCounter}:prevention:${replacements.length}`,
-              sourceId: source.objectId,
-              isSelfReplacement: false,
-              appliesTo: (event, game) => {
-                if (event.type !== GameEventType.DAMAGE_DEALT) return false;
-                if (effect.prevents === 'combat-damage' && !event.isCombatDamage) return false;
-                if (effect.prevents === 'damage' || event.isCombatDamage) {
-                  if (typeof event.targetId === 'string' && event.targetId.startsWith('player')) {
-                    return false;
-                  }
-                  const target = this.findCardById(game, event.targetId as string);
-                  if (!target) return false;
-                  return !effect.filter || this.matchesFilter(target, effect.filter, source, game);
-                }
-                return false;
-              },
-              replace: () => null,
-            });
+          const ctx = this.createCompilationContext(state, source, sa.getDescription());
+          const compiled = sa.compileReplacement(ctx, replacements.length);
+          if (compiled) {
+            replacements.push(compiled);
           }
         }
       }
@@ -219,19 +201,14 @@ export class ContinuousEffectsEngine {
         const abilities = source.modifiedAbilities ?? source.definition.abilities;
         for (const ability of abilities) {
           if (ability.kind !== 'static') continue;
-          if (ability.condition && !ability.condition(state, source)) continue;
-          const effect = ability.effect;
-          if (effect.type !== 'replacement' || effect.replaces !== 'would-enter-battlefield' || effect.selfReplacement) {
-            continue;
-          }
+          const sa = StaticAbility.from(ability);
+          if (!sa.isActive(state, source)) continue;
 
-          replacements.push({
-            id: `${source.objectId}:${source.zoneChangeCounter}:would-enter:${replacements.length}`,
-            sourceId: source.objectId,
-            isSelfReplacement: false,
-            appliesTo: () => source.zone === 'BATTLEFIELD',
-            replace: (event, game) => effect.replace(game, source, event),
-          });
+          const ctx = this.createCompilationContext(state, source, sa.getDescription());
+          const compiled = sa.compileWouldEnterBattlefieldReplacement(ctx, replacements.length);
+          if (compiled) {
+            replacements.push(compiled);
+          }
         }
       }
     }
@@ -249,219 +226,19 @@ export class ContinuousEffectsEngine {
         const abilities = source.modifiedAbilities ?? source.definition.abilities;
         for (const ability of abilities) {
           if (ability.kind !== 'static') continue;
-          if (ability.condition && !ability.condition(state, source)) continue;
+          const sa = StaticAbility.from(ability);
+          if (!sa.isActive(state, source)) continue;
 
-          if (ability.effect.type === 'interaction-hook') {
-            hooks.push(this.compileInteractionHook(state, source, ability, ability.effect.hook, hooks.length));
-          }
-
-          if (ability.effect.type === 'cant-be-targeted') {
-            hooks.push(this.compileInteractionHook(state, source, ability, {
-              type: 'forbid',
-              interactions: ['target'],
-              phases: ['candidate', 'revalidate'],
-              filter: ability.effect.filter,
-              source: { controller: 'opponents' },
-            }, hooks.length));
+          const ctx = this.createCompilationContext(state, source, sa.getDescription());
+          const compiled = sa.compileInteractionHook(ctx, hooks.length);
+          if (compiled) {
+            hooks.push(compiled);
           }
         }
       }
     }
 
     return hooks;
-  }
-
-  private compileStaticAbility(
-    state: GameState,
-    source: CardInstance,
-    ability: StaticAbilityDef,
-  ): ContinuousEffect | null {
-    const effect = ability.effect;
-
-    switch (effect.type) {
-      case 'pump':
-        return {
-          id: `${source.objectId}:${source.zoneChangeCounter}:pump:${ability.description}`,
-          sourceId: source.objectId,
-          layer: Layer.PT_MODIFY,
-          timestamp: source.timestamp,
-          duration: { type: 'static', sourceId: source.objectId },
-          appliesTo: permanent => this.matchesFilter(permanent, effect.filter, source, state),
-          apply: permanent => {
-            permanent.modifiedPower = (permanent.modifiedPower ?? permanent.definition.power ?? 0) + effect.power;
-            permanent.modifiedToughness = (permanent.modifiedToughness ?? permanent.definition.toughness ?? 0) + effect.toughness;
-          },
-        };
-
-      case 'attached-pump':
-        if (!source.attachedTo) return null;
-        return {
-          id: `${source.objectId}:${source.zoneChangeCounter}:attached-pump:${ability.description}`,
-          sourceId: source.objectId,
-          layer: Layer.PT_MODIFY,
-          timestamp: source.timestamp,
-          duration: { type: 'static', sourceId: source.objectId },
-          appliesTo: permanent => permanent.objectId === source.attachedTo,
-          apply: permanent => {
-            const power = typeof effect.power === 'function' ? effect.power(state, source) : effect.power;
-            const toughness = typeof effect.toughness === 'function' ? effect.toughness(state, source) : effect.toughness;
-            permanent.modifiedPower = (permanent.modifiedPower ?? permanent.definition.power ?? 0) + power;
-            permanent.modifiedToughness = (permanent.modifiedToughness ?? permanent.definition.toughness ?? 0) + toughness;
-          },
-        };
-
-      case 'set-base-pt':
-        return {
-          id: `${source.objectId}:${source.zoneChangeCounter}:set-base-pt:${ability.description}`,
-          sourceId: source.objectId,
-          layer: effect.layer === 'cda' ? Layer.PT_CDA : Layer.PT_SET,
-          timestamp: source.timestamp,
-          duration: { type: 'static', sourceId: source.objectId },
-          appliesTo: permanent => this.matchesFilter(permanent, effect.filter, source, state),
-          apply: permanent => {
-            permanent.modifiedPower =
-              typeof effect.power === 'function' ? effect.power(state, source) : effect.power;
-            permanent.modifiedToughness =
-              typeof effect.toughness === 'function' ? effect.toughness(state, source) : effect.toughness;
-          },
-        };
-
-      case 'add-types':
-        return {
-          id: `${source.objectId}:${source.zoneChangeCounter}:add-types:${ability.description}`,
-          sourceId: source.objectId,
-          layer: Layer.TYPE,
-          timestamp: source.timestamp,
-          duration: { type: 'static', sourceId: source.objectId },
-          appliesTo: permanent => this.matchesFilter(permanent, effect.filter, source, state),
-          apply: permanent => {
-            const types = permanent.modifiedTypes ?? [...permanent.definition.types];
-            for (const type of effect.types) {
-              if (!types.includes(type)) {
-                types.push(type);
-              }
-            }
-            permanent.modifiedTypes = types;
-          },
-        };
-
-      case 'grant-abilities':
-        return {
-          id: `${source.objectId}:${source.zoneChangeCounter}:grant-abilities:${ability.description}`,
-          sourceId: source.objectId,
-          layer: Layer.ABILITY,
-          timestamp: source.timestamp,
-          duration: { type: 'static', sourceId: source.objectId },
-          appliesTo: permanent => this.matchesFilter(permanent, effect.filter, source, state),
-          apply: permanent => {
-            const abilities = permanent.modifiedAbilities ?? [...permanent.definition.abilities];
-            abilities.push(...effect.abilities);
-            permanent.modifiedAbilities = abilities;
-          },
-        };
-
-      case 'no-max-hand-size':
-      case 'cant-be-targeted':
-      case 'interaction-hook':
-        return null;
-
-      case 'attack-tax':
-        return {
-          id: `${source.objectId}:${source.zoneChangeCounter}:attack-tax:${ability.description}`,
-          sourceId: source.objectId,
-          layer: Layer.ABILITY,
-          timestamp: source.timestamp,
-          duration: { type: 'static', sourceId: source.objectId },
-          appliesTo: permanent => this.matchesFilter(permanent, effect.filter, source, state),
-          apply: permanent => {
-            permanent.attackTaxes ??= [];
-            permanent.attackTaxes.push({
-              sourceId: source.objectId,
-              defender: effect.defender === 'source-controller' ? source.controller : source.controller,
-              cost: Cost.from(effect.cost).toPlainCost(),
-            });
-          },
-        };
-
-      case 'custom':
-        return {
-          id: `${source.objectId}:${source.zoneChangeCounter}:custom:${ability.description}`,
-          sourceId: source.objectId,
-          layer: Layer.ABILITY,
-          timestamp: source.timestamp,
-          duration: { type: 'static', sourceId: source.objectId },
-          appliesTo: permanent => permanent.objectId === source.objectId && permanent.zoneChangeCounter === source.zoneChangeCounter,
-          apply: () => {
-            effect.apply(state, source);
-          },
-        };
-
-      default:
-        return null;
-    }
-  }
-
-  private compileInteractionHook(
-    state: GameState,
-    source: CardInstance,
-    ability: StaticAbilityDef,
-    hook: InteractionHookDef,
-    index: number,
-  ): CompiledInteractionHook {
-    const id = `${source.objectId}:${source.zoneChangeCounter}:interaction:${index}:${ability.description}`;
-    return {
-      id,
-      sourceId: source.objectId,
-      appliesTo: object => this.matchesFilter(object, hook.filter, source, state),
-      evaluate: (ctx) => {
-        if (hook.type === 'forbid') {
-          if (!hook.interactions.includes(ctx.kind)) return null;
-          if (hook.phases && !hook.phases.includes(ctx.phase)) return null;
-          if (!matchesInteractionSource(hook.source, ctx)) return null;
-          return { kind: 'forbid', reason: hook.reason };
-        }
-
-        if (ctx.kind !== hook.interaction) return null;
-        if (ctx.phase !== (hook.phase ?? 'lock')) return null;
-        if (!matchesInteractionSource(hook.source, ctx)) return null;
-
-        const scope = hook.requirementScope ?? 'object-instance';
-        const requirementId = scope === 'source-and-object-instance'
-          ? `${id}:${ctx.actor.objectId}:${ctx.actor.zoneChangeCounter}:${ctx.object.objectId}:${ctx.object.zoneChangeCounter}`
-          : `${id}:${ctx.object.objectId}:${ctx.object.zoneChangeCounter}`;
-
-        return {
-          kind: 'require',
-          requirement: {
-            id: requirementId,
-            prompt: hook.prompt ?? `Pay for ${ctx.object.definition.name}?`,
-            cost: Cost.from(hook.cost).toPlainCost(),
-            onFailure: hook.onFailure,
-          },
-        };
-      },
-    };
-  }
-
-  private matchesReplacementEvent(
-    replaces: import('./types').ReplacementEventType,
-    eventType: import('./types').GameEventType,
-  ): boolean {
-    switch (replaces) {
-      case 'deal-damage':
-        return eventType === GameEventType.DAMAGE_DEALT;
-      case 'create-token':
-        return eventType === GameEventType.TOKEN_CREATED;
-      case 'place-counters':
-        return eventType === GameEventType.COUNTER_ADDED;
-      case 'draw-card':
-        return eventType === GameEventType.DREW_CARD;
-      case 'discard':
-        return eventType === GameEventType.DISCARDED;
-      case 'dies':
-        return eventType === GameEventType.ZONE_CHANGE;
-    }
-    return false;
   }
 
   private matchesFilter(
