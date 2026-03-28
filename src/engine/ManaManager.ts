@@ -1,4 +1,5 @@
 import type {
+  ActivatedAbilityDef,
   AddManaOptions,
   CardInstance,
   CardDefinition,
@@ -180,7 +181,7 @@ export class ManaManager {
       .filter(card => card.controller === player && !card.tapped)
       .flatMap((card) => {
         const abilities = getEffectiveAbilities(card).filter(
-          candidate => candidate.kind === 'activated' && candidate.isManaAbility,
+          (candidate): candidate is ActivatedAbilityDef => candidate.kind === 'activated' && candidate.isManaAbility,
         );
         if (abilities.length === 0) {
           return [];

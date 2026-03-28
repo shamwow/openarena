@@ -94,7 +94,7 @@ export const ExoticOrchard = CardBuilder.create('Exotic Orchard')
 export const ReliquaryTower = CardBuilder.create('Reliquary Tower')
   .types(CardType.LAND)
   .tapForMana('C')
-  .tag('no-max-hand-size')
+  .noMaxHandSize()
   .oracleText('You have no maximum hand size.\n{T}: Add {C}.')
   .build();
 

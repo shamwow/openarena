@@ -1,6 +1,5 @@
 import type {
   GameState, PlayerId, ObjectId, CardInstance, DamageAssignment, GameEvent,
-  ProtectionFrom,
   AttackTarget,
   ManaCost,
   CardFilter,
@@ -10,16 +9,19 @@ import { findCard, getEffectiveSubtypes, getEffectiveSupertypes, hasSubtype, has
 import type { EventBus } from './EventBus';
 import type { ZoneManager } from './ZoneManager';
 import type { ManaManager } from './ManaManager';
+import type { InteractionEngine } from './InteractionEngine';
 
 export class CombatManager {
   private eventBus: EventBus;
   private zoneManager: ZoneManager;
   private manaManager: ManaManager;
+  private interactionEngine: InteractionEngine;
 
-  constructor(eventBus: EventBus, zoneManager: ZoneManager, manaManager: ManaManager) {
+  constructor(eventBus: EventBus, zoneManager: ZoneManager, manaManager: ManaManager, interactionEngine: InteractionEngine) {
     this.eventBus = eventBus;
     this.zoneManager = zoneManager;
     this.manaManager = manaManager;
+    this.interactionEngine = interactionEngine;
   }
 
   /** Start combat phase — initialize combat state */
@@ -380,7 +382,7 @@ export class CombatManager {
     }
 
     // Protection: attacker with protection from a quality the blocker possesses can't be blocked
-    if (this.hasProtectionFrom(attacker, blocker)) return false;
+    if (state && this.interactionEngine.preventsBlocking(state, blocker, attacker)) return false;
 
     return true;
   }
@@ -518,42 +520,6 @@ export class CombatManager {
   private hasKeyword(card: CardInstance, keyword: Keyword): boolean {
     if (card.modifiedKeywords) return card.modifiedKeywords.includes(keyword);
     return card.definition.keywords.includes(keyword);
-  }
-
-  /** Get all protection-from entries for a card (computed or definition) */
-  private getProtection(card: CardInstance): ProtectionFrom[] {
-    return card.protectionFrom ?? card.definition.protectionFrom ?? [];
-  }
-
-  /**
-   * Check if `protectedCard` has protection from a quality that `source` possesses.
-   * Protection prevents: Damage, Enchanting/Equipping, Blocking, Targeting (DEBT).
-   * For blocking: the attacker's protection is checked against blocker qualities.
-   */
-  private hasProtectionFrom(protectedCard: CardInstance, source: CardInstance): boolean {
-    const protections = this.getProtection(protectedCard);
-    if (protections.length === 0) return false;
-
-    for (const prot of protections) {
-      // Check color protection: source's color identity matches a protected color
-      if (prot.colors && prot.colors.length > 0) {
-        if (prot.colors.some(c => source.definition.colorIdentity.includes(c))) {
-          return true;
-        }
-      }
-      // Check type protection: source's types match a protected type
-      if (prot.types && prot.types.length > 0) {
-        if (prot.types.some(t => hasType(source, t))) {
-          return true;
-        }
-      }
-      // Check custom protection
-      if (prot.custom && prot.custom(source)) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
   /** Landwalk map: keyword -> basic land subtype */

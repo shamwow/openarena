@@ -54,9 +54,10 @@ test('How to Start a Riot grants menace and pumps the chosen player\'s creatures
     },
   });
 
-  const riotSpell = HowToStartARiot.abilities[0];
+  const riotSpell = HowToStartARiot.spell;
   const playerTwoId = 'player2';
-  assert.equal(riotSpell.kind, 'spell');
+  assert.equal(riotSpell?.kind, 'simple');
+  assert.ok(riotSpell);
 
   const riotSource = getCard(state, 'player1', Zone.HAND, 'How to Start a Riot');
   await riotSpell.effect({

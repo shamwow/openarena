@@ -98,6 +98,8 @@ export function createBaseGameState(
     combat: null,
     continuousEffects: [],
     replacementEffects: [],
+    wouldEnterBattlefieldReplacementEffects: [],
+    interactionHooks: [],
     exileInsteadOfDyingThisTurn: new Set(),
     lastKnownInformation: {},
     timestampCounter,
@@ -166,7 +168,6 @@ export function cloneCardInstance(card: CardInstance): CardInstance {
     modifiedSupertypes: card.modifiedSupertypes ? [...card.modifiedSupertypes] : undefined,
     modifiedKeywords: card.modifiedKeywords ? [...card.modifiedKeywords] : undefined,
     modifiedAbilities: card.modifiedAbilities ? [...card.modifiedAbilities] : undefined,
-    protectionFrom: card.protectionFrom ? [...card.protectionFrom] : undefined,
     attackTaxes: card.attackTaxes ? card.attackTaxes.map(tax => ({
       sourceId: tax.sourceId,
       defender: tax.defender,
@@ -352,19 +353,19 @@ function resolveDeckCommanders(deck: DeckConfig): CardDefinition[] {
 }
 
 function isLegalCommanderPair(first: CardDefinition, second: CardDefinition): boolean {
-  if (hasTag(first, 'partner') && hasTag(second, 'partner')) return true;
-  if (hasTag(first, 'friends-forever') && hasTag(second, 'friends-forever')) return true;
+  if (first.commanderOptions?.partner && second.commanderOptions?.partner) return true;
+  if (first.commanderOptions?.friendsForever && second.commanderOptions?.friendsForever) return true;
 
-  const firstPartnerWith = getTagValue(first, 'partner-with:');
-  const secondPartnerWith = getTagValue(second, 'partner-with:');
+  const firstPartnerWith = first.commanderOptions?.partnerWith;
+  const secondPartnerWith = second.commanderOptions?.partnerWith;
   if (firstPartnerWith && secondPartnerWith) {
     const firstMatches = firstPartnerWith === second.id || firstPartnerWith === second.name;
     const secondMatches = secondPartnerWith === first.id || secondPartnerWith === first.name;
     if (firstMatches && secondMatches) return true;
   }
 
-  const firstChoosesBackground = hasTag(first, 'choose-a-background');
-  const secondChoosesBackground = hasTag(second, 'choose-a-background');
+  const firstChoosesBackground = first.commanderOptions?.chooseABackground ?? false;
+  const secondChoosesBackground = second.commanderOptions?.chooseABackground ?? false;
   if ((firstChoosesBackground && isBackground(second)) || (secondChoosesBackground && isBackground(first))) {
     return true;
   }
@@ -373,15 +374,7 @@ function isLegalCommanderPair(first: CardDefinition, second: CardDefinition): bo
 }
 
 function isBackground(card: CardDefinition): boolean {
-  return card.subtypes.includes('Background') || hasTag(card, 'background');
-}
-
-function hasTag(card: CardDefinition, tag: string): boolean {
-  return card.tags?.includes(tag) ?? false;
-}
-
-function getTagValue(card: CardDefinition, prefix: string): string | undefined {
-  return card.tags?.find(tag => tag.startsWith(prefix))?.slice(prefix.length);
+  return card.subtypes.includes('Background');
 }
 
 function shuffleArray<T>(arr: T[]): void {

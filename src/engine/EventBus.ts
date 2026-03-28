@@ -1,6 +1,7 @@
 import type {
   GameEvent, GameEventType, TriggeredAbilityDef, CardInstance,
   GameState, ReplacementEffect, PlayerId, CounterAddedEvent, LastKnownInformation,
+  WouldEnterBattlefieldEvent, WouldEnterBattlefieldReplacementEffect, WouldEnterBattlefieldReplacementResult,
 } from './types';
 import { CardType } from './types';
 import {
@@ -96,6 +97,37 @@ export class EventBus {
     }
 
     return current;
+  }
+
+  applyWouldEnterBattlefieldReplacements(
+    event: WouldEnterBattlefieldEvent,
+    replacements: WouldEnterBattlefieldReplacementEffect[],
+    state: GameState,
+  ): WouldEnterBattlefieldReplacementResult {
+    let current = event;
+    let applied = true;
+    const appliedIds = new Set<string>();
+
+    while (applied) {
+      applied = false;
+      for (const re of replacements) {
+        if (appliedIds.has(re.id)) continue;
+        if (!re.appliesTo(current, state)) continue;
+
+        const result = re.replace(current, state);
+        appliedIds.add(re.id);
+        applied = true;
+
+        if (result.kind !== 'enter') {
+          return result;
+        }
+
+        current = result.event;
+        break;
+      }
+    }
+
+    return { kind: 'enter', event: current };
   }
 
   /** Check all triggered abilities on the battlefield against an event */

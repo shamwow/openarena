@@ -1,13 +1,17 @@
 import type {
   CardFilter,
   CardInstance,
+  CompiledInteractionHook,
   ContinuousEffect,
   GameState,
+  InteractionHookDef,
   ReplacementEffect,
   StaticAbilityDef,
+  WouldEnterBattlefieldReplacementEffect,
 } from './types';
 import { CardType, GameEventType, Layer } from './types';
 import { getEffectiveSubtypes, getEffectiveSupertypes, getEffectiveTypes, hasType } from './GameState';
+import { matchesInteractionSource } from './InteractionEngine';
 
 /**
  * Implements the MTG Layer System (rule 613) for applying continuous effects.
@@ -29,6 +33,8 @@ export class ContinuousEffectsEngine {
 
     const compiledStaticEffects = this.compileStaticContinuousEffects(state);
     state.replacementEffects = this.compileStaticReplacementEffects(state);
+    state.wouldEnterBattlefieldReplacementEffects = this.compileStaticWouldEnterBattlefieldReplacementEffects(state);
+    state.interactionHooks = this.compileStaticInteractionHooks(state);
 
     // Sort effects by layer, then by timestamp (with dependency handling)
     const sorted = this.sortEffects([...state.continuousEffects, ...compiledStaticEffects]);
@@ -94,10 +100,6 @@ export class ContinuousEffectsEngine {
           card.modifiedKeywords = [...baseDef.keywords];
           card.modifiedAbilities = [...baseDef.abilities];
         }
-
-        card.protectionFrom = baseDef.protectionFrom ? [...baseDef.protectionFrom] : undefined;
-        card.wardCost = baseDef.wardCost ? { ...baseDef.wardCost } : undefined;
-        card.cantBeTargetedByOpponents = false;
         card.attackTaxes = [];
       }
     }
@@ -168,6 +170,9 @@ export class ContinuousEffectsEngine {
           const effect = ability.effect;
 
           if (effect.type === 'replacement') {
+            if (effect.selfReplacement || effect.replaces === 'would-enter-battlefield') {
+              continue;
+            }
             replacements.push({
               id: `${source.objectId}:${source.zoneChangeCounter}:replacement:${replacements.length}`,
               sourceId: source.objectId,
@@ -203,6 +208,68 @@ export class ContinuousEffectsEngine {
     }
 
     return replacements;
+  }
+
+  private compileStaticWouldEnterBattlefieldReplacementEffects(state: GameState): WouldEnterBattlefieldReplacementEffect[] {
+    const replacements: WouldEnterBattlefieldReplacementEffect[] = [];
+
+    for (const playerId of state.turnOrder) {
+      if (state.players[playerId].hasLost) continue;
+      for (const source of state.zones[playerId].BATTLEFIELD) {
+        if (source.phasedOut) continue;
+        const abilities = source.modifiedAbilities ?? source.definition.abilities;
+        for (const ability of abilities) {
+          if (ability.kind !== 'static') continue;
+          if (ability.condition && !ability.condition(state, source)) continue;
+          const effect = ability.effect;
+          if (effect.type !== 'replacement' || effect.replaces !== 'would-enter-battlefield' || effect.selfReplacement) {
+            continue;
+          }
+
+          replacements.push({
+            id: `${source.objectId}:${source.zoneChangeCounter}:would-enter:${replacements.length}`,
+            sourceId: source.objectId,
+            isSelfReplacement: false,
+            appliesTo: () => source.zone === 'BATTLEFIELD',
+            replace: (event, game) => effect.replace(game, source, event),
+          });
+        }
+      }
+    }
+
+    return replacements;
+  }
+
+  private compileStaticInteractionHooks(state: GameState): CompiledInteractionHook[] {
+    const hooks: CompiledInteractionHook[] = [];
+
+    for (const playerId of state.turnOrder) {
+      if (state.players[playerId].hasLost) continue;
+      for (const source of state.zones[playerId].BATTLEFIELD) {
+        if (source.phasedOut) continue;
+        const abilities = source.modifiedAbilities ?? source.definition.abilities;
+        for (const ability of abilities) {
+          if (ability.kind !== 'static') continue;
+          if (ability.condition && !ability.condition(state, source)) continue;
+
+          if (ability.effect.type === 'interaction-hook') {
+            hooks.push(this.compileInteractionHook(state, source, ability, ability.effect.hook, hooks.length));
+          }
+
+          if (ability.effect.type === 'cant-be-targeted') {
+            hooks.push(this.compileInteractionHook(state, source, ability, {
+              type: 'forbid',
+              interactions: ['target'],
+              phases: ['candidate', 'revalidate'],
+              filter: ability.effect.filter,
+              source: { controller: 'opponents' },
+            }, hooks.length));
+          }
+        }
+      }
+    }
+
+    return hooks;
   }
 
   private compileStaticAbility(
@@ -311,20 +378,10 @@ export class ContinuousEffectsEngine {
           },
         };
 
+      case 'no-max-hand-size':
       case 'cant-be-targeted':
-        return {
-          id: `${source.objectId}:${source.zoneChangeCounter}:cant-be-targeted:${ability.description}`,
-          sourceId: source.objectId,
-          layer: Layer.ABILITY,
-          timestamp: source.timestamp,
-          duration: { type: 'static', sourceId: source.objectId },
-          appliesTo: permanent => this.matchesFilter(permanent, effect.filter, source, state),
-          apply: permanent => {
-            if (effect.by === 'opponents') {
-              permanent.cantBeTargetedByOpponents = true;
-            }
-          },
-        };
+      case 'interaction-hook':
+        return null;
 
       case 'attack-tax':
         return {
@@ -365,6 +422,48 @@ export class ContinuousEffectsEngine {
     }
   }
 
+  private compileInteractionHook(
+    state: GameState,
+    source: CardInstance,
+    ability: StaticAbilityDef,
+    hook: InteractionHookDef,
+    index: number,
+  ): CompiledInteractionHook {
+    const id = `${source.objectId}:${source.zoneChangeCounter}:interaction:${index}:${ability.description}`;
+    return {
+      id,
+      sourceId: source.objectId,
+      appliesTo: object => this.matchesFilter(object, hook.filter, source, state),
+      evaluate: (ctx) => {
+        if (hook.type === 'forbid') {
+          if (!hook.interactions.includes(ctx.kind)) return null;
+          if (hook.phases && !hook.phases.includes(ctx.phase)) return null;
+          if (!matchesInteractionSource(hook.source, ctx)) return null;
+          return { kind: 'forbid', reason: hook.reason };
+        }
+
+        if (ctx.kind !== hook.interaction) return null;
+        if (ctx.phase !== (hook.phase ?? 'lock')) return null;
+        if (!matchesInteractionSource(hook.source, ctx)) return null;
+
+        const scope = hook.requirementScope ?? 'object-instance';
+        const requirementId = scope === 'source-and-object-instance'
+          ? `${id}:${ctx.actor.objectId}:${ctx.actor.zoneChangeCounter}:${ctx.object.objectId}:${ctx.object.zoneChangeCounter}`
+          : `${id}:${ctx.object.objectId}:${ctx.object.zoneChangeCounter}`;
+
+        return {
+          kind: 'require',
+          requirement: {
+            id: requirementId,
+            prompt: hook.prompt ?? `Pay for ${ctx.object.definition.name}?`,
+            cost: cloneCost(hook.cost),
+            onFailure: hook.onFailure,
+          },
+        };
+      },
+    };
+  }
+
   private matchesReplacementEvent(
     replaces: import('./types').ReplacementEventType,
     eventType: import('./types').GameEventType,
@@ -382,9 +481,8 @@ export class ContinuousEffectsEngine {
         return eventType === GameEventType.DISCARDED;
       case 'dies':
         return eventType === GameEventType.ZONE_CHANGE;
-      case 'enter-battlefield':
-        return eventType === GameEventType.ENTERS_BATTLEFIELD;
     }
+    return false;
   }
 
   private matchesFilter(
@@ -474,4 +572,17 @@ export class ContinuousEffectsEngine {
         return !effect.duration.check(state);
     }
   }
+}
+
+function cloneCost(cost: import('./types').Cost): import('./types').Cost {
+  return {
+    ...cost,
+    mana: cost.mana ? { ...cost.mana } : undefined,
+    genericTapSubstitution: cost.genericTapSubstitution
+      ? {
+        ...cost.genericTapSubstitution,
+        filter: { ...cost.genericTapSubstitution.filter },
+      }
+      : undefined,
+  };
 }

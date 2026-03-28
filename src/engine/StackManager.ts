@@ -2,9 +2,9 @@ import { v4 as uuid } from 'uuid';
 import type {
   GameState, StackEntry, ObjectId, PlayerId, CardInstance,
   EffectContext, ActivatedAbilityDef, TriggeredAbilityDef,
-  GameEvent, ModalAbilityDef, ProtectionFrom, TargetSpec,
+  GameEvent, TargetSpec,
 } from './types';
-import { GameEventType, StackEntryType, CardType, Keyword } from './types';
+import { GameEventType, StackEntryType, CardType } from './types';
 import {
   cloneCardInstance,
   findCard,
@@ -17,16 +17,19 @@ import {
 import type { EventBus } from './EventBus';
 import type { ZoneManager } from './ZoneManager';
 import type { ManaManager } from './ManaManager';
+import type { InteractionEngine } from './InteractionEngine';
 
 export class StackManager {
   private eventBus: EventBus;
   private zoneManager: ZoneManager;
   private manaManager: ManaManager;
+  private interactionEngine: InteractionEngine;
 
-  constructor(eventBus: EventBus, zoneManager: ZoneManager, manaManager: ManaManager) {
+  constructor(eventBus: EventBus, zoneManager: ZoneManager, manaManager: ManaManager, interactionEngine: InteractionEngine) {
     this.eventBus = eventBus;
     this.zoneManager = zoneManager;
     this.manaManager = manaManager;
+    this.interactionEngine = interactionEngine;
   }
 
   /** Push a spell onto the stack */
@@ -45,10 +48,10 @@ export class StackManager {
     card.zoneChangeCounter += 1;
     card.timestamp = getNextTimestamp(state);
 
-    // Find the spell ability
+    // Find the spell payload
     const effectiveDefinition = spellDefinition ?? card.definition;
-    const spellAbility = effectiveDefinition.abilities.find(a => a.kind === 'spell');
-    const resolveEffect = spellAbility?.effect ?? (() => {});
+    const spell = effectiveDefinition.spell;
+    const resolveEffect = spell?.kind === 'simple' ? spell.effect : (() => {});
 
     const entry: StackEntry = {
       id: uuid(),
@@ -61,7 +64,7 @@ export class StackManager {
       timestamp: getNextTimestamp(state),
       targets,
       targetZoneChangeCounters: this.captureTargetZoneChangeCounters(state, targets),
-      targetSpecs: spellAbility?.kind === 'spell' ? spellAbility.targets : undefined,
+      targetSpecs: spell?.kind === 'simple' ? spell.targets : undefined,
       cardInstance: card,
       xValue,
       spellDefinition: effectiveDefinition,
@@ -203,20 +206,17 @@ export class StackManager {
     // Build effect context and resolve
     const ctx = makeEffectContext(entry);
 
-    // Modal ability: execute only the selected mode effects in sequence
+    // Modal spells execute only the selected mode effects in sequence.
     const spellDefinition = entry.spellDefinition ?? entry.cardInstance?.definition;
-    const ability = entry.ability ?? spellDefinition?.abilities.find(
-      a => a.kind === 'modal'
-    );
-    if (ability && ability.kind === 'modal' && entry.modeChoices && entry.modeChoices.length > 0) {
-      const modalAbility = ability as ModalAbilityDef;
+    const spell = spellDefinition?.spell;
+    if (spell?.kind === 'modal' && entry.modeChoices && entry.modeChoices.length > 0) {
       const targetSpecs = this.getTargetSpecs(entry);
       const groupCounts = this.getTargetGroupCounts(entry, targetSpecs);
       let targetSpecIndex = 0;
       let targetIndex = 0;
 
       for (const modeIdx of entry.modeChoices) {
-        const mode = modalAbility.modes[modeIdx];
+        const mode = spell.modes[modeIdx];
         if (!mode) continue;
 
         const modeSpecCount = mode.targets?.length ?? 0;
@@ -234,9 +234,9 @@ export class StackManager {
     } else if (entry.chosenHalf === 'fused' && entry.cardInstance?.definition.splitHalf) {
       // Fuse: execute both halves' effects in sequence (left then right)
       await entry.resolve(ctx);
-      const rightAbility = entry.cardInstance.definition.splitHalf.abilities.find(a => a.kind === 'spell');
-      if (rightAbility && rightAbility.kind === 'spell') {
-        await rightAbility.effect(ctx);
+      const rightSpell = entry.cardInstance.definition.splitHalf.spell;
+      if (rightSpell?.kind === 'simple') {
+        await rightSpell.effect(ctx);
       }
     } else {
       await entry.resolve(ctx);
@@ -393,11 +393,9 @@ export class StackManager {
     }
 
     const definition = entry.spellDefinition ?? entry.cardInstance?.definition;
-    const modalAbility = entry.ability?.kind === 'modal'
-      ? entry.ability
-      : definition?.abilities.find((ability): ability is ModalAbilityDef => ability.kind === 'modal');
-    if (modalAbility?.kind === 'modal' && entry.modeChoices && entry.modeChoices.length > 0) {
-      return entry.modeChoices.flatMap((modeIndex) => modalAbility.modes[modeIndex]?.targets ?? []);
+    const spell = definition?.spell;
+    if (spell?.kind === 'modal' && entry.modeChoices && entry.modeChoices.length > 0) {
+      return entry.modeChoices.flatMap((modeIndex) => spell.modes[modeIndex]?.targets ?? []);
     }
 
     const directAbility = entry.ability;
@@ -405,9 +403,8 @@ export class StackManager {
       return directAbility.targets;
     }
 
-    const spellAbility = definition?.abilities.find((ability) => ability.kind === 'spell');
-    if (spellAbility?.kind === 'spell') {
-      return spellAbility.targets ?? [];
+    if (spell?.kind === 'simple') {
+      return spell.targets ?? [];
     }
 
     return [];
@@ -442,7 +439,7 @@ export class StackManager {
     if (!source) {
       return true;
     }
-    return this.canTarget(card, source, entry.controller);
+    return this.interactionEngine.isTargetStillLegal(state, source, entry.controller, card, spec);
   }
 
   private matchesTargetSpec(candidate: CardInstance, spec: TargetSpec, controller: PlayerId, state: GameState): boolean {
@@ -488,26 +485,6 @@ export class StackManager {
     return true;
   }
 
-  private canTarget(candidate: CardInstance, source: CardInstance, controller: PlayerId): boolean {
-    const keywords = candidate.modifiedKeywords ?? candidate.definition.keywords;
-    if (keywords.includes(Keyword.SHROUD)) return false;
-    if (candidate.controller !== controller && keywords.includes(Keyword.HEXPROOF)) return false;
-    return !this.hasProtectionFrom(candidate, source);
-  }
-
-  private hasProtectionFrom(protectedCard: CardInstance, source: CardInstance): boolean {
-    const protections: ProtectionFrom[] = protectedCard.protectionFrom ?? protectedCard.definition.protectionFrom ?? [];
-    return protections.some((protection) => {
-      if (protection.colors?.some(color => source.definition.colorIdentity.includes(color))) {
-        return true;
-      }
-      if (protection.types?.some(type => hasType(source, type))) {
-        return true;
-      }
-      return protection.custom?.(source) ?? false;
-    });
-  }
-
   private captureTargetZoneChangeCounters(
     state: GameState,
     targets: (ObjectId | PlayerId)[],
@@ -544,19 +521,37 @@ export class StackManager {
 
     const fromController = card.controller;
     const leavingSnapshot = rememberLastKnownInformation(state, card);
-    card.zoneChangeCounter += 1;
-    card.zone = toZone;
-    card.timestamp = getNextTimestamp(state);
+    const nextZoneChangeCounter = card.zoneChangeCounter + 1;
+    let resolvedZone = toZone;
+    let wouldEnterResult: import('./types').WouldEnterBattlefieldReplacementResult | null = null;
 
     if (toZone === 'BATTLEFIELD') {
-      card.controller = toOwner;
-      card.summoningSick = true;
-      if (hasType(card, CardType.PLANESWALKER) && card.definition.loyalty !== undefined) {
-        card.counters.loyalty = card.definition.loyalty;
+      wouldEnterResult = this.zoneManager.applyWouldEnterBattlefieldReplacements(
+        state,
+        card,
+        nextZoneChangeCounter,
+        'STACK',
+        toOwner,
+        { counters: entry.entersBattlefieldWithCounters },
+      );
+      if (wouldEnterResult.kind === 'redirect') {
+        resolvedZone = wouldEnterResult.toZone;
+        toOwner = wouldEnterResult.toOwner ?? card.owner;
+      } else if (wouldEnterResult.kind === 'enter') {
+        toOwner = wouldEnterResult.event.controller;
+      } else if (wouldEnterResult.kind === 'prevent' && !card.isToken) {
+        throw new Error('would-enter-battlefield prevent results are only supported for token entries');
       }
-      this.applyEntersBattlefieldCounters(card, entry);
+    }
+
+    card.zoneChangeCounter = nextZoneChangeCounter;
+    card.zone = resolvedZone;
+    card.timestamp = getNextTimestamp(state);
+
+    if (resolvedZone === 'BATTLEFIELD' && wouldEnterResult?.kind === 'enter') {
+      this.zoneManager.applyBattlefieldEntryState(card, wouldEnterResult.event);
       state.zones[toOwner].BATTLEFIELD.push(card);
-      if (card.definition.attachmentType === 'Aura' && card.attachedTo) {
+      if (card.definition.attachment?.type === 'Aura' && card.attachedTo) {
         const host = findCard(state, card.attachedTo);
         if (!host || host.zone !== 'BATTLEFIELD' || host.phasedOut) {
           card.attachedTo = null;
@@ -572,8 +567,15 @@ export class StackManager {
         }
       }
       card.attachedTo = null;
-      card.controller = card.owner;
-      state.zones[card.owner][toZone].push(card);
+      card.tapped = false;
+      card.faceDown = false;
+      card.counters = {};
+      card.controller = toOwner;
+      state.zones[toOwner][resolvedZone].push(card);
+    }
+
+    if (wouldEnterResult?.kind === 'prevent') {
+      return;
     }
 
     const zoneChangeEvent: GameEvent = {
@@ -582,8 +584,8 @@ export class StackManager {
       objectId: card.objectId,
       cardId: card.cardId,
       fromZone: 'STACK',
-      toZone,
-      controller: toZone === 'BATTLEFIELD' ? toOwner : card.owner,
+      toZone: resolvedZone,
+      controller: toOwner,
       objectZoneChangeCounter: leavingSnapshot.zoneChangeCounter,
       newObjectZoneChangeCounter: card.zoneChangeCounter,
       lastKnownInfo: leavingSnapshot,
@@ -596,7 +598,7 @@ export class StackManager {
       state.pendingTriggers.push(trigger);
     }
 
-    if (toZone === 'BATTLEFIELD') {
+    if (resolvedZone === 'BATTLEFIELD' && wouldEnterResult?.kind === 'enter') {
       const etbEvent: GameEvent = {
         type: GameEventType.ENTERS_BATTLEFIELD,
         timestamp: getNextTimestamp(state),
@@ -614,14 +616,14 @@ export class StackManager {
       }
 
       this.emitCounterAddedEvents(state, card, entry);
-    } else if (toZone === 'GRAVEYARD') {
+    } else if (resolvedZone === 'GRAVEYARD') {
       const graveyardEvent: GameEvent = {
         type: GameEventType.ZONE_CHANGE,
         timestamp: getNextTimestamp(state),
         objectId: card.objectId,
         cardId: card.cardId,
         fromZone: 'STACK',
-        toZone,
+        toZone: resolvedZone,
         controller: fromController,
         objectZoneChangeCounter: leavingSnapshot.zoneChangeCounter,
         newObjectZoneChangeCounter: card.zoneChangeCounter,
@@ -645,15 +647,6 @@ export class StackManager {
       ? card.definition.alternativeCosts.find(ac => ac.id === entry.castMethod)
       : undefined;
     return altCost?.afterResolution ?? defaultZone;
-  }
-
-  private applyEntersBattlefieldCounters(card: CardInstance, entry: StackEntry): void {
-    for (const [counterType, amount] of Object.entries(entry.entersBattlefieldWithCounters ?? {})) {
-      if (amount <= 0) {
-        continue;
-      }
-      card.counters[counterType] = (card.counters[counterType] ?? 0) + amount;
-    }
   }
 
   private emitCounterAddedEvents(state: GameState, card: CardInstance, entry: StackEntry): void {

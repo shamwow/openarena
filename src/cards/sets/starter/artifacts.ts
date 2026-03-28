@@ -78,7 +78,7 @@ export const CommandersSphere = CardBuilder.create("Commander's Sphere")
 export const ThoughtVessel = CardBuilder.create('Thought Vessel')
   .cost('{2}')
   .types(CardType.ARTIFACT)
-  .tag('no-max-hand-size')
+  .noMaxHandSize()
   .activated(
     { tap: true },
     (ctx) => {

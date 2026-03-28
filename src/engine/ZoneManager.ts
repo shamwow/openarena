@@ -1,8 +1,11 @@
 import type {
-  GameState, CardInstance, PlayerId, Zone, ObjectId, GameEvent, CardFilter,
+  GameState, CardInstance, PlayerId, Zone, ObjectId, GameEvent,
+  BattlefieldEntryState, WouldEnterBattlefieldEvent,
+  WouldEnterBattlefieldReplacementEffect, WouldEnterBattlefieldReplacementResult,
 } from './types';
 import { GameEventType, CardType } from './types';
 import {
+  cloneCardInstance,
   createCardInstance,
   findCard,
   clearExileInsteadOfDyingThisTurn,
@@ -24,6 +27,41 @@ export class ZoneManager {
   constructor(eventBus: EventBus, commanderReplacementResolver?: CommanderReplacementResolver) {
     this.eventBus = eventBus;
     this.commanderReplacementResolver = commanderReplacementResolver;
+  }
+
+  applyWouldEnterBattlefieldReplacements(
+    state: GameState,
+    card: CardInstance,
+    nextZoneChangeCounter: number,
+    fromZone: Zone | undefined,
+    controller: PlayerId,
+    options?: { tapped?: boolean; faceDown?: boolean; counters?: Record<string, number> },
+  ): WouldEnterBattlefieldReplacementResult {
+    const event = this.createWouldEnterBattlefieldEvent(
+      state,
+      card,
+      nextZoneChangeCounter,
+      fromZone,
+      controller,
+      options,
+    );
+    const replacements = [
+      ...state.wouldEnterBattlefieldReplacementEffects,
+      ...(options?.faceDown ? [] : this.collectSelfReplacementEffects(state, card, nextZoneChangeCounter)),
+    ];
+    return this.eventBus.applyWouldEnterBattlefieldReplacements(event, replacements, state);
+  }
+
+  applyBattlefieldEntryState(card: CardInstance, event: WouldEnterBattlefieldEvent): void {
+    card.zone = 'BATTLEFIELD';
+    card.controller = event.controller;
+    card.tapped = event.entry.tapped;
+    card.faceDown = event.entry.faceDown;
+    card.counters = { ...event.entry.counters };
+    card.attachedTo = event.entry.attachedTo;
+    card.copyOf = event.entry.copyOf;
+    card.isTransformed = event.entry.transformed;
+    card.summoningSick = true;
   }
 
   moveCard(
@@ -49,8 +87,32 @@ export class ZoneManager {
     ) {
       resolvedZone = 'EXILE';
     }
-    const targetOwner = replacementDecision ? card.owner : (toOwner ?? card.owner);
+    let targetOwner = replacementDecision ? card.owner : (toOwner ?? card.owner);
     const leavingSnapshot = rememberLastKnownInformation(state, card);
+    const nextZoneChangeCounter = fromZone !== toZone ? card.zoneChangeCounter + 1 : card.zoneChangeCounter;
+    let wouldEnterResult: WouldEnterBattlefieldReplacementResult | null = null;
+
+    if (resolvedZone === 'BATTLEFIELD') {
+      wouldEnterResult = this.applyWouldEnterBattlefieldReplacements(
+        state,
+        card,
+        nextZoneChangeCounter,
+        fromZone,
+        targetOwner,
+        {
+          tapped: options?.tapped ?? false,
+          faceDown: options?.faceDown ?? false,
+        },
+      );
+      if (wouldEnterResult.kind === 'redirect') {
+        resolvedZone = wouldEnterResult.toZone;
+        targetOwner = wouldEnterResult.toOwner ?? card.owner;
+      } else if (wouldEnterResult.kind === 'enter') {
+        targetOwner = wouldEnterResult.event.controller;
+      } else if (wouldEnterResult.kind === 'prevent' && !card.isToken) {
+        throw new Error('would-enter-battlefield prevent results are only supported for token entries');
+      }
+    }
 
     // Remove from old zone
     this.removeFromZone(state, card);
@@ -93,7 +155,7 @@ export class ZoneManager {
     }
 
     if (fromZone !== toZone) {
-      card.zoneChangeCounter += 1;
+      card.zoneChangeCounter = nextZoneChangeCounter;
     }
 
     if (fromZone === 'EXILE' || resolvedZone !== 'EXILE') {
@@ -104,38 +166,9 @@ export class ZoneManager {
     card.zone = resolvedZone;
     card.controller = targetOwner;
     card.timestamp = getNextTimestamp(state);
-
-    if (options?.tapped) card.tapped = true;
-    if (options?.faceDown) card.faceDown = true;
-
-    if (resolvedZone === 'BATTLEFIELD') {
-      if (card.definition.entersTapped) {
-        card.tapped = true;
-      }
-      if (
-        card.definition.entersTappedUnlessYouControl &&
-        !this.controlsPermanentMatchingFilter(
-          state,
-          targetOwner,
-          card.definition.entersTappedUnlessYouControl,
-        )
-      ) {
-        card.tapped = true;
-      }
-      card.summoningSick = true;
-      card.controller = targetOwner;
-
-      // Planeswalker ETB: set loyalty counters to definition.loyalty
-      if (hasType(card, CardType.PLANESWALKER) && card.definition.loyalty !== undefined) {
-        card.counters['loyalty'] = card.definition.loyalty;
-      }
-
-      // Sagas enter with their first lore counter.
-      if (card.definition.sagaChapters && card.definition.sagaChapters.length > 0) {
-        card.counters.lore = Math.max(card.counters.lore ?? 0, 1);
-      }
-
-      if (card.definition.attachmentType === 'Aura' && card.attachedTo) {
+    if (resolvedZone === 'BATTLEFIELD' && wouldEnterResult?.kind === 'enter') {
+      this.applyBattlefieldEntryState(card, wouldEnterResult.event);
+      if (card.definition.attachment?.type === 'Aura' && card.attachedTo) {
         const host = findCard(state, card.attachedTo);
         if (!host || !this.isLegalAttachment(state, card, host)) {
           card.attachedTo = null;
@@ -143,11 +176,20 @@ export class ZoneManager {
           host.attachments.push(card.objectId);
         }
       }
+    } else {
+      this.clearBattlefieldEntryState(card);
     }
 
     // Tokens cease to exist after leaving the battlefield instead of persisting in other zones.
-    if (!(card.isToken && resolvedZone !== 'BATTLEFIELD')) {
+    if (wouldEnterResult?.kind !== 'prevent' && !(card.isToken && resolvedZone !== 'BATTLEFIELD')) {
       state.zones[targetOwner][resolvedZone].push(card);
+    }
+
+    if (wouldEnterResult?.kind === 'prevent') {
+      if (fromZone === 'BATTLEFIELD') {
+        clearExileInsteadOfDyingThisTurn(state, objectId);
+      }
+      return;
     }
 
     // Emit zone change event
@@ -173,7 +215,7 @@ export class ZoneManager {
     }
 
     // ETB event
-    if (resolvedZone === 'BATTLEFIELD') {
+    if (resolvedZone === 'BATTLEFIELD' && wouldEnterResult?.kind === 'enter') {
       const etbEvent: GameEvent = {
         type: GameEventType.ENTERS_BATTLEFIELD,
         timestamp: getNextTimestamp(state),
@@ -262,49 +304,6 @@ export class ZoneManager {
     if (fromZone === 'BATTLEFIELD') {
       clearExileInsteadOfDyingThisTurn(state, objectId);
     }
-  }
-
-  private controlsPermanentMatchingFilter(
-    state: GameState,
-    controller: PlayerId,
-    filter: CardFilter,
-  ): boolean {
-    return state.zones[controller].BATTLEFIELD.some((card) => this.matchesFilter(state, card, filter, controller));
-  }
-
-  private matchesFilter(
-    state: GameState,
-    card: CardInstance,
-    filter: CardFilter,
-    sourceController?: PlayerId,
-  ): boolean {
-    if (card.zone === 'BATTLEFIELD' && card.phasedOut) return false;
-    if (filter.types && !filter.types.some((t) => hasType(card, t))) return false;
-    if (filter.subtypes && !filter.subtypes.some((t) => getEffectiveSubtypes(card).includes(t))) return false;
-    if (filter.supertypes && !filter.supertypes.some((t) => getEffectiveSupertypes(card).includes(t))) return false;
-    if (filter.colors && !filter.colors.some((c) => card.definition.colorIdentity.includes(c))) return false;
-    if (filter.keywords && !filter.keywords.some((k) => (card.modifiedKeywords ?? card.definition.keywords).includes(k))) return false;
-    if (filter.controller === 'you' && sourceController && card.controller !== sourceController) return false;
-    if (filter.controller === 'opponent' && sourceController && card.controller === sourceController) return false;
-    if (filter.name && card.definition.name !== filter.name) return false;
-    if (filter.self === true && sourceController && card.controller !== sourceController) return false;
-    if (filter.tapped === true && !card.tapped) return false;
-    if (filter.tapped === false && card.tapped) return false;
-    if (filter.isToken === true && !card.isToken) return false;
-    if (filter.power) {
-      const p = card.modifiedPower ?? card.definition.power ?? 0;
-      if (filter.power.op === 'lte' && p > filter.power.value) return false;
-      if (filter.power.op === 'gte' && p < filter.power.value) return false;
-      if (filter.power.op === 'eq' && p !== filter.power.value) return false;
-    }
-    if (filter.toughness) {
-      const t = card.modifiedToughness ?? card.definition.toughness ?? 0;
-      if (filter.toughness.op === 'lte' && t > filter.toughness.value) return false;
-      if (filter.toughness.op === 'gte' && t < filter.toughness.value) return false;
-      if (filter.toughness.op === 'eq' && t !== filter.toughness.value) return false;
-    }
-    if (filter.custom && !filter.custom(card, state)) return false;
-    return true;
   }
 
   drawCard(state: GameState, player: PlayerId): CardInstance | null {
@@ -432,28 +431,63 @@ export class ZoneManager {
   createToken(
     state: GameState,
     controller: PlayerId,
-    definition: Partial<import('./types').CardDefinition> & { name: string; types: import('./types').CardType[] }
+    definition: Partial<import('./types').CardDefinition> & { name: string; types: import('./types').CardType[] },
+    options?: { copyOf?: ObjectId },
   ): CardInstance {
     const fullDef: import('./types').CardDefinition = {
       id: `token-${definition.name.toLowerCase().replace(/\s/g, '-')}-${Date.now()}`,
       name: definition.name,
       manaCost: definition.manaCost ?? { generic: 0, W: 0, U: 0, B: 0, R: 0, G: 0, C: 0, X: 0 },
       colorIdentity: definition.colorIdentity ?? [],
+      commanderOptions: definition.commanderOptions,
       types: definition.types,
       supertypes: definition.supertypes ?? [],
       subtypes: definition.subtypes ?? [],
       power: definition.power,
       toughness: definition.toughness,
+      loyalty: definition.loyalty,
+      spell: definition.spell,
+      spellCastBehaviors: definition.spellCastBehaviors,
+      spellCostMechanics: definition.spellCostMechanics,
       abilities: definition.abilities ?? [],
       keywords: definition.keywords ?? [],
-      protectionFrom: definition.protectionFrom,
-      wardCost: definition.wardCost,
+      attachment: definition.attachment,
+      alternativeCosts: definition.alternativeCosts,
+      additionalCosts: definition.additionalCosts,
+      castCostAdjustments: definition.castCostAdjustments,
+      backFace: definition.backFace,
+      isMDFC: definition.isMDFC,
+      sagaChapters: definition.sagaChapters,
+      adventure: definition.adventure,
+      splitHalf: definition.splitHalf,
+      hasFuse: definition.hasFuse,
+      morphCost: definition.morphCost,
+      suspend: definition.suspend,
     };
 
     const instance = createCardInstance(fullDef, controller, 'BATTLEFIELD', getNextTimestamp(state));
     instance.controller = controller;
     instance.isToken = true;
-    state.zones[controller].BATTLEFIELD.push(instance);
+    if (options?.copyOf) {
+      instance.copyOf = options.copyOf;
+    }
+    const wouldEnter = this.applyWouldEnterBattlefieldReplacements(
+      state,
+      instance,
+      instance.zoneChangeCounter,
+      undefined,
+      controller,
+    );
+    if (wouldEnter.kind === 'enter') {
+      this.applyBattlefieldEntryState(instance, wouldEnter.event);
+      state.zones[wouldEnter.event.controller].BATTLEFIELD.push(instance);
+    } else if (wouldEnter.kind === 'redirect') {
+      instance.zone = wouldEnter.toZone;
+      instance.controller = wouldEnter.toOwner ?? controller;
+      this.clearBattlefieldEntryState(instance);
+    } else {
+      this.clearBattlefieldEntryState(instance);
+    }
 
     const tokenEvent: GameEvent = {
       type: GameEventType.TOKEN_CREATED,
@@ -464,20 +498,22 @@ export class ZoneManager {
     state.eventLog.push(tokenEvent);
     this.eventBus.emit(tokenEvent);
 
-    const event: GameEvent = {
-      type: GameEventType.ENTERS_BATTLEFIELD,
-      timestamp: getNextTimestamp(state),
-      objectId: instance.objectId,
-      cardId: instance.cardId,
-      controller,
-      objectZoneChangeCounter: instance.zoneChangeCounter,
-    };
-    state.eventLog.push(event);
-    this.eventBus.emit(event);
+    if (wouldEnter.kind === 'enter') {
+      const event: GameEvent = {
+        type: GameEventType.ENTERS_BATTLEFIELD,
+        timestamp: getNextTimestamp(state),
+        objectId: instance.objectId,
+        cardId: instance.cardId,
+        controller: instance.controller,
+        objectZoneChangeCounter: instance.zoneChangeCounter,
+      };
+      state.eventLog.push(event);
+      this.eventBus.emit(event);
 
-    const triggers = this.eventBus.checkTriggers(event, state);
-    for (const t of triggers) {
-      state.pendingTriggers.push(t);
+      const triggers = this.eventBus.checkTriggers(event, state);
+      for (const t of triggers) {
+        state.pendingTriggers.push(t);
+      }
     }
 
     return instance;
@@ -524,17 +560,119 @@ export class ZoneManager {
     return zone === 'GRAVEYARD' || zone === 'EXILE' || zone === 'HAND' || zone === 'LIBRARY';
   }
 
+  private createWouldEnterBattlefieldEvent(
+    state: GameState,
+    card: CardInstance,
+    nextZoneChangeCounter: number,
+    fromZone: Zone | undefined,
+    controller: PlayerId,
+    options?: { tapped?: boolean; faceDown?: boolean; counters?: Record<string, number> },
+  ): WouldEnterBattlefieldEvent {
+    const entry = this.createBattlefieldEntryState(card, options);
+    const entering = cloneCardInstance(card);
+    entering.zone = 'BATTLEFIELD';
+    entering.zoneChangeCounter = nextZoneChangeCounter;
+    entering.controller = controller;
+    entering.tapped = entry.tapped;
+    entering.faceDown = entry.faceDown;
+    entering.counters = { ...entry.counters };
+    entering.attachedTo = entry.attachedTo;
+    entering.copyOf = entry.copyOf;
+    entering.isTransformed = entry.transformed;
+
+    return {
+      type: GameEventType.WOULD_ENTER_BATTLEFIELD,
+      timestamp: getNextTimestamp(state),
+      objectId: card.objectId,
+      cardId: card.cardId,
+      objectZoneChangeCounter: nextZoneChangeCounter,
+      fromZone,
+      controller,
+      entering,
+      entry,
+    };
+  }
+
+  private createBattlefieldEntryState(
+    card: CardInstance,
+    options?: { tapped?: boolean; faceDown?: boolean; counters?: Record<string, number> },
+  ): BattlefieldEntryState {
+    const entry: BattlefieldEntryState = {
+      tapped: options?.tapped ?? false,
+      faceDown: options?.faceDown ?? false,
+      counters: {
+        ...card.counters,
+        ...(options?.counters ?? {}),
+      },
+      attachedTo: card.attachedTo,
+      copyOf: card.copyOf,
+      transformed: card.isTransformed,
+    };
+
+    if (!entry.faceDown) {
+      if (hasType(card, CardType.PLANESWALKER) && card.definition.loyalty !== undefined) {
+        entry.counters.loyalty = Math.max(entry.counters.loyalty ?? 0, card.definition.loyalty);
+      }
+      if (card.definition.sagaChapters && card.definition.sagaChapters.length > 0) {
+        entry.counters.lore = Math.max(entry.counters.lore ?? 0, 1);
+      }
+    }
+
+    return entry;
+  }
+
+  private clearBattlefieldEntryState(card: CardInstance): void {
+    card.tapped = false;
+    card.faceDown = false;
+    card.counters = {};
+    card.attachedTo = null;
+    delete card.copyOf;
+    delete card.isTransformed;
+  }
+
+  private collectSelfReplacementEffects(
+    state: GameState,
+    card: CardInstance,
+    nextZoneChangeCounter: number,
+  ): WouldEnterBattlefieldReplacementEffect[] {
+    if (card.faceDown) {
+      return [];
+    }
+
+    const replacements: WouldEnterBattlefieldReplacementEffect[] = [];
+    const abilities = card.modifiedAbilities ?? card.definition.abilities;
+
+    for (const [index, ability] of abilities.entries()) {
+      if (ability.kind !== 'static') continue;
+      if (ability.condition && !ability.condition(state, card)) continue;
+      const effect = ability.effect;
+      if (effect.type !== 'replacement' || effect.replaces !== 'would-enter-battlefield' || !effect.selfReplacement) continue;
+
+      replacements.push({
+        id: `${card.objectId}:${nextZoneChangeCounter}:self-replacement:${index}`,
+        sourceId: card.objectId,
+        isSelfReplacement: true,
+        appliesTo: event =>
+          event.objectId === card.objectId &&
+          event.objectZoneChangeCounter === nextZoneChangeCounter,
+        replace: (event, game) => effect.replace(game, card, event),
+      });
+    }
+
+    return replacements;
+  }
+
   private isLegalAttachment(state: GameState, attachment: CardInstance, host: CardInstance): boolean {
     if (host.zone !== 'BATTLEFIELD' || host.phasedOut) {
       return false;
     }
 
-    if (attachment.definition.attachmentType === 'Equipment') {
+    if (attachment.definition.attachment?.type === 'Equipment') {
       return hasType(host, CardType.CREATURE);
     }
 
-    if (attachment.definition.attachmentType === 'Aura' && attachment.definition.attachTarget) {
-      const spec = attachment.definition.attachTarget;
+    if (attachment.definition.attachment?.type === 'Aura') {
+      const spec = attachment.definition.attachment.target;
       if (spec.what === 'creature' && !hasType(host, CardType.CREATURE)) {
         return false;
       }

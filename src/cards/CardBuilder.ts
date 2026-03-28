@@ -1,9 +1,10 @@
 import type {
   CardDefinition, CardFilter, CardType, ManaColor, Keyword,
   AbilityDefinition, ActivatedAbilityDef, TriggeredAbilityDef,
-  StaticAbilityDef, SpellAbilityDef, ModalAbilityDef, Cost, TriggerCondition,
+  StaticAbilityDef, SimpleSpellDef, ModalSpellDef, Cost, TriggerCondition,
   EffectFn, TargetSpec, StaticEffectDef, ManaPool, ProtectionFrom,
-  AlternativeCast, AdditionalCost, Zone, ManaProduction,
+  AlternativeCast, AdditionalCost, Zone, ManaProduction, CardInstance,
+  GameState, PlayerId,
 } from '../engine/types';
 import {
   parseManaCost,
@@ -11,9 +12,46 @@ import {
   manaCostColorIdentity,
   CardType as CardTypeConst,
 } from '../engine/types';
+import { getEffectiveSubtypes, getEffectiveSupertypes, hasType } from '../engine/GameState';
 import { createFirebendingTriggeredAbility } from './firebending';
 
+function matchesCardFilter(
+  card: CardInstance,
+  filter: CardFilter,
+  state: GameState,
+  sourceController?: PlayerId,
+): boolean {
+  if (card.zone === 'BATTLEFIELD' && card.phasedOut) return false;
+  if (filter.types && !filter.types.some(type => hasType(card, type))) return false;
+  if (filter.subtypes && !filter.subtypes.some(subtype => getEffectiveSubtypes(card).includes(subtype))) return false;
+  if (filter.supertypes && !filter.supertypes.some(supertype => getEffectiveSupertypes(card).includes(supertype))) return false;
+  if (filter.colors && !filter.colors.some(color => card.definition.colorIdentity.includes(color))) return false;
+  if (filter.keywords && !filter.keywords.some(keyword => (card.modifiedKeywords ?? card.definition.keywords).includes(keyword))) return false;
+  if (filter.controller === 'you' && sourceController && card.controller !== sourceController) return false;
+  if (filter.controller === 'opponent' && sourceController && card.controller === sourceController) return false;
+  if (filter.name && card.definition.name !== filter.name) return false;
+  if (filter.self === true && sourceController && card.controller !== sourceController) return false;
+  if (filter.tapped === true && !card.tapped) return false;
+  if (filter.tapped === false && card.tapped) return false;
+  if (filter.isToken === true && !card.isToken) return false;
+  if (filter.power) {
+    const power = card.modifiedPower ?? card.definition.power ?? 0;
+    if (filter.power.op === 'lte' && power > filter.power.value) return false;
+    if (filter.power.op === 'gte' && power < filter.power.value) return false;
+    if (filter.power.op === 'eq' && power !== filter.power.value) return false;
+  }
+  if (filter.toughness) {
+    const toughness = card.modifiedToughness ?? card.definition.toughness ?? 0;
+    if (filter.toughness.op === 'lte' && toughness > filter.toughness.value) return false;
+    if (filter.toughness.op === 'gte' && toughness < filter.toughness.value) return false;
+    if (filter.toughness.op === 'eq' && toughness !== filter.toughness.value) return false;
+  }
+  if (filter.custom && !filter.custom(card, state)) return false;
+  return true;
+}
+
 export class CardBuilder {
+  private deferredAbilities: AbilityDefinition[];
   private def: Partial<CardDefinition> & {
     abilities: AbilityDefinition[];
     keywords: Keyword[];
@@ -24,6 +62,7 @@ export class CardBuilder {
   };
 
   private constructor(name: string) {
+    this.deferredAbilities = [];
     this.def = {
       id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       name,
@@ -115,22 +154,47 @@ export class CardBuilder {
 
   /** Add protection from the specified qualities */
   protection(from: ProtectionFrom): this {
-    if (!this.def.protectionFrom) {
-      this.def.protectionFrom = [];
-    }
-    this.def.protectionFrom.push(from);
     this.keyword('Protection' as Keyword);
+    this.staticAbility({
+      type: 'interaction-hook',
+      hook: {
+        type: 'forbid',
+        interactions: ['target'],
+        phases: ['candidate', 'revalidate'],
+        filter: { self: true },
+        source: { qualities: from },
+      },
+    }, { description: 'Protection prevents targeting from matching sources.' });
+    this.staticAbility({
+      type: 'interaction-hook',
+      hook: {
+        type: 'forbid',
+        interactions: ['damage', 'attach', 'block'],
+        filter: { self: true },
+        source: { qualities: from },
+      },
+    }, { description: 'Protection prevents damage, attachments, and blocking from matching sources.' });
     return this;
   }
 
   /** Add ward with a cost. If string, treated as mana cost (e.g. "{2}"). */
   ward(cost: Cost | string): this {
-    if (typeof cost === 'string') {
-      this.def.wardCost = { mana: parseManaCost(cost) };
-    } else {
-      this.def.wardCost = cost;
-    }
+    const parsedCost = typeof cost === 'string' ? { mana: parseManaCost(cost) } : cost;
     this.keyword('Ward' as Keyword);
+    this.staticAbility({
+      type: 'interaction-hook',
+      hook: {
+        type: 'require-cost',
+        interaction: 'target',
+        phase: 'lock',
+        filter: { self: true },
+        source: { controller: 'opponents' },
+        cost: parsedCost,
+        prompt: `Pay ward for ${this.def.name}?`,
+        onFailure: 'counter-source',
+        requirementScope: 'object-instance',
+      },
+    }, { description: 'Ward taxes opposing targeted spells and abilities.' });
     return this;
   }
 
@@ -189,13 +253,59 @@ export class CardBuilder {
 
   /** Make this permanent enter tapped. */
   entersTapped(): this {
-    this.def.entersTapped = true;
+    this.deferredAbilities.push({
+      kind: 'static',
+      effect: {
+        type: 'replacement',
+        replaces: 'would-enter-battlefield',
+        selfReplacement: true,
+        replace: (_game, _source, event) => {
+          return {
+            kind: 'enter',
+            event: {
+              ...event,
+              entry: {
+                ...event.entry,
+                tapped: true,
+              },
+            },
+          };
+        },
+      },
+      description: `${this.def.name} enters tapped.`,
+    });
     return this;
   }
 
   /** Make this permanent enter tapped unless you already control a permanent matching the filter. */
   entersTappedUnlessYouControl(filter: CardFilter): this {
-    this.def.entersTappedUnlessYouControl = filter;
+    this.deferredAbilities.push({
+      kind: 'static',
+      effect: {
+        type: 'replacement',
+        replaces: 'would-enter-battlefield',
+        selfReplacement: true,
+        replace: (game, _source, event) => {
+          const controlsMatch = game.zones[event.controller].BATTLEFIELD.some(card =>
+            matchesCardFilter(card, filter, game, event.controller)
+          );
+          if (controlsMatch) {
+            return { kind: 'enter', event };
+          }
+          return {
+            kind: 'enter',
+            event: {
+              ...event,
+              entry: {
+                ...event.entry,
+                tapped: true,
+              },
+            },
+          };
+        },
+      },
+      description: `${this.def.name} enters tapped unless you control a matching permanent.`,
+    });
     return this;
   }
 
@@ -275,16 +385,21 @@ export class CardBuilder {
     return this;
   }
 
-  /** Add the spell effect (what happens when the spell resolves) */
-  spellEffect(effect: EffectFn, opts?: { targets?: TargetSpec[]; description?: string }): this {
-    const ability: SpellAbilityDef = {
-      kind: 'spell',
+  /** Define the spell payload (what happens when the spell resolves). */
+  spell(effect: EffectFn, opts?: { targets?: TargetSpec[]; description?: string }): this {
+    const spell: SimpleSpellDef = {
+      kind: 'simple',
       effect,
       targets: opts?.targets,
       description: opts?.description ?? '',
     };
-    this.def.abilities.push(ability);
+    this.def.spell = spell;
     return this;
+  }
+
+  /** Backward-compatible alias for spell(...). */
+  spellEffect(effect: EffectFn, opts?: { targets?: TargetSpec[]; description?: string }): this {
+    return this.spell(effect, opts);
   }
 
   /** Add an ETB (enters-the-battlefield) triggered effect */
@@ -331,36 +446,78 @@ export class CardBuilder {
     return this;
   }
 
-  /** Add a modal spell ability. Creates a ModalAbilityDef and adds it as the spell ability. */
+  /** Define a modal spell payload. */
   modal(
     modes: Array<{ label: string; effect: EffectFn; targets?: TargetSpec[] }>,
     chooseCount: number,
     description?: string,
     opts?: { allowRepeatedModes?: boolean }
   ): this {
-    const ability: ModalAbilityDef = {
+    const spell: ModalSpellDef = {
       kind: 'modal',
       modes,
       chooseCount,
       allowRepeatedModes: opts?.allowRepeatedModes ?? false,
       description: description ?? `Choose ${chooseCount} —`,
     };
-    this.def.abilities.push(ability);
+    this.def.spell = spell;
     return this;
   }
 
   tag(tag: string): this {
-    if (!this.def.tags) {
-      this.def.tags = [];
+    switch (tag) {
+      case 'storm':
+        return this.storm();
+      case 'cascade':
+        return this.cascade();
+      case 'convoke':
+        return this.convoke();
+      case 'delve':
+        return this.delve();
+      case 'no-max-hand-size':
+        return this.noMaxHandSize();
+      case 'partner':
+        this.ensureCommanderOptions().partner = true;
+        return this;
+      case 'friends-forever':
+        this.ensureCommanderOptions().friendsForever = true;
+        return this;
+      case 'choose-a-background':
+        this.ensureCommanderOptions().chooseABackground = true;
+        return this;
+      case 'background':
+        if (!this.def.subtypes.includes('Background')) {
+          this.def.subtypes.push('Background');
+        }
+        return this;
+      case 'cycling':
+      case 'overload':
+        return this;
+      default:
+        if (tag.startsWith('partner-with:')) {
+          this.ensureCommanderOptions().partnerWith = tag.slice('partner-with:'.length);
+          return this;
+        }
+        throw new Error(`Unsupported legacy tag: ${tag}`);
     }
-    if (!this.def.tags.includes(tag)) {
-      this.def.tags.push(tag);
-    }
-    return this;
+  }
+
+  noMaxHandSize(): this {
+    return this.staticAbility({ type: 'no-max-hand-size' }, { description: 'You have no maximum hand size.' });
   }
 
   waterbend(amount: number): this {
-    this.def.waterbend = amount;
+    this.ensureSpellCostMechanics().push({
+      kind: 'generic-tap-substitution',
+      substitution: {
+        amount,
+        filter: {
+          types: [CardTypeConst.ARTIFACT as CardType, CardTypeConst.CREATURE as CardType],
+          controller: 'you',
+        },
+        ignoreSummoningSickness: true,
+      },
+    });
     return this;
   }
 
@@ -395,14 +552,13 @@ export class CardBuilder {
       description: opts?.description ?? `Equip`,
     };
     this.def.abilities.push(ability);
-    this.def.attachmentType = 'Equipment';
+    this.def.attachment = { type: 'Equipment' };
     return this;
   }
 
   /** Set this card as an Aura with the given target specification. */
   enchant(targetSpec: TargetSpec): this {
-    this.def.attachmentType = 'Aura';
-    this.def.attachTarget = targetSpec;
+    this.def.attachment = { type: 'Aura', target: targetSpec };
     if (!this.def.subtypes.includes('Aura')) {
       this.def.subtypes.push('Aura');
     }
@@ -434,7 +590,11 @@ export class CardBuilder {
                 }
                 card.modifiedKeywords = keywords;
               } else if (underlyingEffect.type === 'cant-be-targeted' && underlyingEffect.by === 'opponents') {
-                card.cantBeTargetedByOpponents = true;
+                const keywords = card.modifiedKeywords ?? [...card.definition.keywords];
+                if (!keywords.includes('Hexproof' as Keyword)) {
+                  keywords.push('Hexproof' as Keyword);
+                }
+                card.modifiedKeywords = keywords;
               }
               return;
             }
@@ -459,6 +619,27 @@ export class CardBuilder {
       return { mana: parseManaCost(cost) };
     }
     return cost;
+  }
+
+  private ensureSpellCastBehaviors() {
+    if (!this.def.spellCastBehaviors) {
+      this.def.spellCastBehaviors = [];
+    }
+    return this.def.spellCastBehaviors;
+  }
+
+  private ensureSpellCostMechanics() {
+    if (!this.def.spellCostMechanics) {
+      this.def.spellCostMechanics = [];
+    }
+    return this.def.spellCostMechanics;
+  }
+
+  private ensureCommanderOptions() {
+    if (!this.def.commanderOptions) {
+      this.def.commanderOptions = {};
+    }
+    return this.def.commanderOptions;
   }
 
   /** Add flashback — cast from graveyard for the given cost, then exile. */
@@ -515,15 +696,17 @@ export class CardBuilder {
       this.def.alternativeCosts = [];
     }
     this.def.alternativeCosts.push(altCost);
-    return this.tag('overload');
+    return this;
   }
 
   cascade(): this {
-    return this.tag('cascade');
+    this.ensureSpellCastBehaviors().push({ kind: 'cascade' });
+    return this;
   }
 
   storm(): this {
-    return this.tag('storm');
+    this.ensureSpellCastBehaviors().push({ kind: 'storm' });
+    return this;
   }
 
   cycling(cost: Cost | string): this {
@@ -539,7 +722,7 @@ export class CardBuilder {
         activationZone: 'HAND',
         description: 'Cycling',
       },
-    ).tag('cycling');
+    );
   }
 
   affinity(filter: import('../engine/types').CardFilter, description = 'Affinity'): this {
@@ -589,23 +772,13 @@ export class CardBuilder {
 
   /** Add the convoke tag — creatures you control can tap to help pay for this spell. */
   convoke(): this {
-    if (!this.def.tags) {
-      this.def.tags = [];
-    }
-    if (!this.def.tags.includes('convoke')) {
-      this.def.tags.push('convoke');
-    }
+    this.ensureSpellCostMechanics().push({ kind: 'convoke' });
     return this;
   }
 
   /** Add the delve tag — exile cards from your graveyard to pay generic mana. */
   delve(): this {
-    if (!this.def.tags) {
-      this.def.tags = [];
-    }
-    if (!this.def.tags.includes('delve')) {
-      this.def.tags.push('delve');
-    }
+    this.ensureSpellCostMechanics().push({ kind: 'delve' });
     return this;
   }
 
@@ -637,10 +810,9 @@ export class CardBuilder {
 
   // --- Sagas ---
 
-  /** Define saga chapters. Automatically sets ENCHANTMENT type and totalChapters. */
+  /** Define saga chapters. Automatically sets ENCHANTMENT type. */
   saga(chapters: Array<{ chapter: number; effect: EffectFn }>): this {
     this.def.sagaChapters = chapters;
-    this.def.totalChapters = Math.max(...chapters.map(c => c.chapter));
     if (!this.def.types.includes(CardTypeConst.ENCHANTMENT as CardType)) {
       this.def.types.push(CardTypeConst.ENCHANTMENT as CardType);
     }
@@ -672,8 +844,10 @@ export class CardBuilder {
 
   /** Add suspend — exile with time counters, cast for free when last counter removed */
   suspend(timeCounters: number, cost: Cost | string): this {
-    this.def.suspendCost = this.parseCostParam(cost);
-    this.def.suspendTimeCounters = timeCounters;
+    this.def.suspend = {
+      cost: this.parseCostParam(cost),
+      timeCounters,
+    };
     return this;
   }
 
@@ -692,35 +866,30 @@ export class CardBuilder {
       name: this.def.name,
       manaCost: this.def.manaCost!,
       colorIdentity: this.def.colorIdentity,
+      commanderOptions: this.def.commanderOptions,
       types: this.def.types,
       supertypes: this.def.supertypes,
       subtypes: this.def.subtypes,
       power: this.def.power,
       toughness: this.def.toughness,
       loyalty: this.def.loyalty,
-      abilities: this.def.abilities,
+      spell: this.def.spell,
+      spellCastBehaviors: this.def.spellCastBehaviors,
+      spellCostMechanics: this.def.spellCostMechanics,
+      abilities: [...this.def.abilities, ...this.deferredAbilities],
       keywords: this.def.keywords,
-      protectionFrom: this.def.protectionFrom,
-      wardCost: this.def.wardCost,
-      attachmentType: this.def.attachmentType,
-      attachTarget: this.def.attachTarget,
-      waterbend: this.def.waterbend,
+      attachment: this.def.attachment,
       alternativeCosts: this.def.alternativeCosts,
       additionalCosts: this.def.additionalCosts,
       castCostAdjustments: this.def.castCostAdjustments,
-      entersTapped: this.def.entersTapped,
-      tags: this.def.tags,
       backFace: this.def.backFace,
       isMDFC: this.def.isMDFC,
       splitHalf: this.def.splitHalf,
       hasFuse: this.def.hasFuse,
       sagaChapters: this.def.sagaChapters,
-      totalChapters: this.def.totalChapters,
       adventure: this.def.adventure,
       morphCost: this.def.morphCost,
-      suspendCost: this.def.suspendCost,
-      suspendTimeCounters: this.def.suspendTimeCounters,
-      entersTappedUnlessYouControl: this.def.entersTappedUnlessYouControl,
+      suspend: this.def.suspend,
     };
   }
 

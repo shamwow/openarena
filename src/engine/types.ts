@@ -256,6 +256,113 @@ export interface ProtectionFrom {
   custom?: (source: CardInstance) => boolean;
 }
 
+export interface SpellModeDef {
+  label: string;
+  effect: EffectFn;
+  targets?: TargetSpec[];
+}
+
+export interface SimpleSpellDef {
+  kind: 'simple';
+  effect: EffectFn;
+  targets?: TargetSpec[];
+  description: string;
+}
+
+export interface ModalSpellDef {
+  kind: 'modal';
+  modes: SpellModeDef[];
+  chooseCount: number;
+  allowRepeatedModes?: boolean;
+  description: string;
+}
+
+export type SpellDefinition = SimpleSpellDef | ModalSpellDef;
+
+export type AttachmentDefinition =
+  | { type: 'Equipment' }
+  | { type: 'Aura'; target: TargetSpec };
+
+export interface SuspendDefinition {
+  cost: Cost;
+  timeCounters: number;
+}
+
+export interface CommanderOptions {
+  partner?: boolean;
+  friendsForever?: boolean;
+  partnerWith?: string;
+  chooseABackground?: boolean;
+}
+
+export type SpellCastBehavior =
+  | { kind: 'storm' }
+  | { kind: 'cascade' };
+
+export type SpellCostMechanic =
+  | { kind: 'delve' }
+  | { kind: 'convoke' }
+  | { kind: 'generic-tap-substitution'; substitution: GenericTapSubstitution };
+
+export type InteractionKind = 'target' | 'damage' | 'attach' | 'block';
+export type InteractionPhase = 'candidate' | 'lock' | 'revalidate';
+
+export interface InteractionSourceMatcher {
+  controller?: 'same' | 'opponents' | 'anyone';
+  qualities?: ProtectionFrom;
+}
+
+export type InteractionHookDef =
+  | {
+      type: 'forbid';
+      interactions: InteractionKind[];
+      phases?: InteractionPhase[];
+      filter: CardFilter;
+      source?: InteractionSourceMatcher;
+      reason?: string;
+    }
+  | {
+      type: 'require-cost';
+      interaction: 'target';
+      phase?: InteractionPhase;
+      filter: CardFilter;
+      source?: InteractionSourceMatcher;
+      cost: Cost;
+      prompt?: string;
+      onFailure: 'deny-action' | 'counter-source';
+      requirementScope?: 'object-instance' | 'source-and-object-instance';
+    };
+
+export interface InteractionRequirement {
+  id: string;
+  prompt: string;
+  cost: Cost;
+  onFailure: 'deny-action' | 'counter-source';
+}
+
+export type InteractionVerdict =
+  | { kind: 'allow' }
+  | { kind: 'forbid'; reason?: string }
+  | { kind: 'require'; requirement: InteractionRequirement };
+
+export interface InteractionContext {
+  state: GameState;
+  actor: CardInstance;
+  actorController: PlayerId;
+  object: CardInstance;
+  kind: InteractionKind;
+  phase: InteractionPhase;
+  spec?: TargetSpec;
+  isCombatDamage?: boolean;
+}
+
+export interface CompiledInteractionHook {
+  id: string;
+  sourceId: ObjectId;
+  appliesTo: (object: CardInstance, game: GameState) => boolean;
+  evaluate: (ctx: InteractionContext) => InteractionVerdict | InteractionVerdict[] | null;
+}
+
 // --- Alternative/Additional Costs ---
 
 export interface AlternativeCast {
@@ -287,35 +394,30 @@ export interface CardDefinition {
   name: string;
   manaCost: ManaCost;
   colorIdentity: ManaColor[];
+  commanderOptions?: CommanderOptions;
   types: CardType[];
   supertypes: string[];
   subtypes: string[];
   power?: number;
   toughness?: number;
   loyalty?: number;
+  spell?: SpellDefinition;
+  spellCastBehaviors?: SpellCastBehavior[];
+  spellCostMechanics?: SpellCostMechanic[];
   abilities: AbilityDefinition[];
   keywords: Keyword[];
-  protectionFrom?: ProtectionFrom[];
-  wardCost?: Cost;
-  attachmentType?: 'Equipment' | 'Aura';
-  attachTarget?: TargetSpec;
-  waterbend?: number;
+  attachment?: AttachmentDefinition;
   alternativeCosts?: AlternativeCast[];
   additionalCosts?: AdditionalCost[];
   castCostAdjustments?: CastCostAdjustment[];
-  entersTapped?: boolean;
-  entersTappedUnlessYouControl?: CardFilter;
-  tags?: string[];
   backFace?: CardDefinition;
   isMDFC?: boolean;
   sagaChapters?: Array<{ chapter: number; effect: EffectFn }>;
-  totalChapters?: number;
   adventure?: { name: string; manaCost: ManaCost; types: CardType[]; effect: EffectFn };
   splitHalf?: CardDefinition;
   hasFuse?: boolean;
   morphCost?: Cost;
-  suspendCost?: Cost;
-  suspendTimeCounters?: number;
+  suspend?: SuspendDefinition;
 }
 
 // --- Card Instance (live game object) ---
@@ -364,9 +466,6 @@ export interface CardInstance {
   modifiedToughness?: number;
   modifiedKeywords?: Keyword[];
   modifiedAbilities?: AbilityDefinition[];
-  protectionFrom?: ProtectionFrom[];
-  wardCost?: Cost;
-  cantBeTargetedByOpponents?: boolean;
   attackTaxes?: AttackTaxRequirement[];
 }
 
@@ -383,9 +482,7 @@ export interface AttackTaxRequirement {
 export type AbilityDefinition =
   | ActivatedAbilityDef
   | TriggeredAbilityDef
-  | StaticAbilityDef
-  | SpellAbilityDef
-  | ModalAbilityDef;
+  | StaticAbilityDef;
 
 export interface ActivatedAbilityDef {
   kind: 'activated';
@@ -419,21 +516,6 @@ export interface StaticAbilityDef {
   kind: 'static';
   effect: StaticEffectDef;
   condition?: (game: GameState, source: CardInstance) => boolean;
-  description: string;
-}
-
-export interface SpellAbilityDef {
-  kind: 'spell';
-  effect: EffectFn;
-  targets?: TargetSpec[];
-  description: string;
-}
-
-export interface ModalAbilityDef {
-  kind: 'modal';
-  modes: Array<{ label: string; effect: EffectFn; targets?: TargetSpec[] }>;
-  chooseCount: number;
-  allowRepeatedModes?: boolean;
   description: string;
 }
 
@@ -567,6 +649,48 @@ export interface SearchLibraryOptions {
 
 // --- Static Effects ---
 
+export interface BattlefieldEntryState {
+  tapped: boolean;
+  faceDown: boolean;
+  counters: Record<string, number>;
+  attachedTo: ObjectId | null;
+  copyOf?: ObjectId;
+  transformed?: boolean;
+}
+
+export type GenericReplacementEventType = Exclude<ReplacementEventType, 'would-enter-battlefield'>;
+
+export type ReplacementFn = (
+  game: GameState,
+  source: CardInstance,
+  event: GameEvent
+) => GameEvent | null; // null = event prevented
+
+export type WouldEnterBattlefieldReplacementResult =
+  | { kind: 'enter'; event: WouldEnterBattlefieldEvent }
+  | { kind: 'redirect'; toZone: Exclude<Zone, 'BATTLEFIELD'>; toOwner?: PlayerId }
+  | { kind: 'prevent' };
+
+export type WouldEnterBattlefieldReplacementFn = (
+  game: GameState,
+  source: CardInstance,
+  event: WouldEnterBattlefieldEvent
+) => WouldEnterBattlefieldReplacementResult;
+
+export type GenericReplacementEffectDef = {
+  type: 'replacement';
+  replaces: GenericReplacementEventType;
+  replace: ReplacementFn;
+  selfReplacement?: boolean;
+};
+
+export type WouldEnterBattlefieldReplacementEffectDef = {
+  type: 'replacement';
+  replaces: 'would-enter-battlefield';
+  replace: WouldEnterBattlefieldReplacementFn;
+  selfReplacement?: boolean;
+};
+
 export type StaticEffectDef =
   | { type: 'pump'; power: number; toughness: number; filter: CardFilter; duration?: EffectDuration }
   | { type: 'attached-pump'; power: number | ((game: GameState, source: CardInstance) => number); toughness: number | ((game: GameState, source: CardInstance) => number) }
@@ -584,20 +708,17 @@ export type StaticEffectDef =
   | { type: 'attack-tax'; filter: CardFilter; cost: Cost; defender: 'source-controller' }
   | { type: 'cant-attack'; filter: CardFilter }
   | { type: 'cant-block'; filter: CardFilter }
+  | { type: 'no-max-hand-size' }
   | { type: 'cant-be-targeted'; by: 'opponents'; filter: CardFilter }
-  | { type: 'replacement'; replaces: ReplacementEventType; replace: ReplacementFn }
+  | { type: 'interaction-hook'; hook: InteractionHookDef }
+  | GenericReplacementEffectDef
+  | WouldEnterBattlefieldReplacementEffectDef
   | { type: 'prevention'; prevents: 'damage' | 'combat-damage'; filter?: CardFilter }
   | { type: 'custom'; apply: (game: GameState, source: CardInstance) => void };
 
 export type ReplacementEventType =
   | 'deal-damage' | 'create-token' | 'place-counters'
-  | 'draw-card' | 'discard' | 'dies' | 'enter-battlefield';
-
-export type ReplacementFn = (
-  game: GameState,
-  source: CardInstance,
-  event: GameEvent
-) => GameEvent | null; // null = event prevented
+  | 'draw-card' | 'discard' | 'dies' | 'would-enter-battlefield';
 
 // --- Continuous Effects (Layer System) ---
 
@@ -641,10 +762,19 @@ export interface ReplacementEffect {
   isSelfReplacement: boolean;
 }
 
+export interface WouldEnterBattlefieldReplacementEffect {
+  id: ObjectId;
+  sourceId: ObjectId;
+  appliesTo: (event: WouldEnterBattlefieldEvent, game: GameState) => boolean;
+  replace: (event: WouldEnterBattlefieldEvent, game: GameState) => WouldEnterBattlefieldReplacementResult;
+  isSelfReplacement: boolean;
+}
+
 // --- Events ---
 
 export const GameEventType = {
   ZONE_CHANGE: 'ZONE_CHANGE',
+  WOULD_ENTER_BATTLEFIELD: 'WOULD_ENTER_BATTLEFIELD',
   ENTERS_BATTLEFIELD: 'ENTERS_BATTLEFIELD',
   LEAVES_BATTLEFIELD: 'LEAVES_BATTLEFIELD',
   PHASE_CHANGE: 'PHASE_CHANGE',
@@ -699,6 +829,15 @@ export interface ZoneChangeEvent extends BaseGameEvent {
   fromZone: Zone;
   toZone: Zone;
   controller: PlayerId;
+}
+
+export interface WouldEnterBattlefieldEvent extends BaseGameEvent {
+  type: typeof GameEventType.WOULD_ENTER_BATTLEFIELD;
+  objectId: ObjectId;
+  controller: PlayerId;
+  fromZone?: Zone;
+  entering: CardInstance;
+  entry: BattlefieldEntryState;
 }
 
 export interface EntersBattlefieldEvent extends BaseGameEvent {
@@ -878,6 +1017,7 @@ export interface MilledEvent extends BaseGameEvent {
 
 export type GameEvent =
   | ZoneChangeEvent
+  | WouldEnterBattlefieldEvent
   | EntersBattlefieldEvent
   | LeavesBattlefieldEvent
   | SpellCastEvent
@@ -1128,6 +1268,8 @@ export interface GameState {
   combat: CombatState | null;
   continuousEffects: ContinuousEffect[];
   replacementEffects: ReplacementEffect[];
+  wouldEnterBattlefieldReplacementEffects: WouldEnterBattlefieldReplacementEffect[];
+  interactionHooks: CompiledInteractionHook[];
   exileInsteadOfDyingThisTurn: Set<string>;
   lastKnownInformation: Record<string, LastKnownInformation>;
   timestampCounter: number;

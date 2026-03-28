@@ -1,9 +1,9 @@
 import type {
   GameState, PlayerId, ObjectId, CardInstance, CardDefinition,
   AddCounterOptions, AddManaOptions, CardFilter, ManaPool, ManaCost, EffectContext,
-  StackEntry, GameEvent, PlayerAction, ProtectionFrom,
+  StackEntry, GameEvent, PlayerAction,
   GameEngine as IGameEngine, CardType as CardTypeEnum,
-  ModalAbilityDef, AbilityDefinition, EffectDuration, ContinuousEffect, TrackedMana,
+  AbilityDefinition, EffectDuration, ContinuousEffect, TrackedMana,
   Layer as LayerType, Cost, DelayedTrigger, PredefinedTokenType, SearchLibraryOptions, CastPermission, PendingTrigger,
 } from './types';
 import {
@@ -34,6 +34,7 @@ import { StackManager } from './StackManager';
 import { StateBasedActions } from './StateBasedActions';
 import { CombatManager } from './CombatManager';
 import { ContinuousEffectsEngine } from './ContinuousEffects';
+import { InteractionEngine } from './InteractionEngine';
 import type { ChoiceHelper } from './types';
 
 export type GameEventCallback = (event: GameEvent) => void;
@@ -138,6 +139,7 @@ export class GameEngineImpl implements IGameEngine {
   private sbaChecker: StateBasedActions;
   private combatManager: CombatManager;
   private continuousEffects: ContinuousEffectsEngine;
+  private interactionEngine: InteractionEngine;
 
   private stateChangeListeners: StateChangeCallback[] = [];
   private choiceRequestHandler: ((req: ChoiceRequest) => void) | null = null;
@@ -159,9 +161,10 @@ export class GameEngineImpl implements IGameEngine {
     this.manaManager = new ManaManager(this.eventBus);
     this.turnManager = new TurnManager(this.eventBus, this.zoneManager, this.manaManager);
     this.priorityManager = new PriorityManager();
-    this.stackManager = new StackManager(this.eventBus, this.zoneManager, this.manaManager);
-    this.sbaChecker = new StateBasedActions(this.zoneManager, this.eventBus);
-    this.combatManager = new CombatManager(this.eventBus, this.zoneManager, this.manaManager);
+    this.interactionEngine = new InteractionEngine();
+    this.stackManager = new StackManager(this.eventBus, this.zoneManager, this.manaManager, this.interactionEngine);
+    this.sbaChecker = new StateBasedActions(this.zoneManager, this.eventBus, this.interactionEngine);
+    this.combatManager = new CombatManager(this.eventBus, this.zoneManager, this.manaManager, this.interactionEngine);
     this.continuousEffects = new ContinuousEffectsEngine();
 
     const resolvedDecks = decks ?? [];
@@ -194,6 +197,7 @@ export class GameEngineImpl implements IGameEngine {
     if (runGameLoopOnInit) {
       void this.runGameLoop().finally(() => this.notifyStateChange());
     }
+    this.continuousEffects.applyAll(this.state);
     this.notifyStateChange();
   }
 
@@ -670,12 +674,11 @@ export class GameEngineImpl implements IGameEngine {
 
     const source = findCard(this.state, sourceId);
 
-    // 3A: Protection check — if the target has protection from the source's color/type, prevent damage
     if (source) {
       const isPlayerTarget = typeof targetId === 'string' && targetId.startsWith('player');
       if (!isPlayerTarget) {
         const target = findCard(this.state, targetId as string);
-        if (target && this.hasProtectionFrom(target, source)) return;
+        if (target && this.interactionEngine.preventsDamage(this.state, source, target, isCombat)) return;
       }
     }
 
@@ -794,10 +797,12 @@ export class GameEngineImpl implements IGameEngine {
   }
 
   moveCard(objectId: ObjectId, toZone: Zone, toOwner?: PlayerId): void {
+    this.continuousEffects.applyAll(this.state);
     this.zoneManager.moveCard(this.state, objectId, toZone, toOwner);
   }
 
   createToken(controller: PlayerId, definition: Partial<CardDefinition>): CardInstance {
+    this.continuousEffects.applyAll(this.state);
     return this.zoneManager.createToken(
       this.state,
       controller,
@@ -920,6 +925,7 @@ export class GameEngineImpl implements IGameEngine {
   // --- Phase 5: Copy, Control, Advanced Mechanics ---
 
   copyPermanent(objectId: ObjectId, controller: PlayerId): CardInstance | undefined {
+    this.continuousEffects.applyAll(this.state);
     const original = findCard(this.state, objectId);
     if (!original || original.zone !== 'BATTLEFIELD') return undefined;
 
@@ -928,33 +934,7 @@ export class GameEngineImpl implements IGameEngine {
       ...original.definition,
       id: `copy-${original.definition.id}-${Date.now()}`,
     };
-
-    const token = createCardInstance(tokenDef, controller, 'BATTLEFIELD', getNextTimestamp(this.state));
-    token.controller = controller;
-    token.copyOf = original.objectId;
-
-    this.state.zones[controller].BATTLEFIELD.push(token);
-
-    // Set loyalty counters for planeswalker copies
-    if (tokenDef.types.includes(CardType.PLANESWALKER as CardTypeEnum) && tokenDef.loyalty !== undefined) {
-      token.counters['loyalty'] = tokenDef.loyalty;
-    }
-
-    const event: GameEvent = {
-      type: GameEventType.ENTERS_BATTLEFIELD,
-      timestamp: getNextTimestamp(this.state),
-      objectId: token.objectId,
-      controller,
-    };
-    this.state.eventLog.push(event);
-    this.eventBus.emit(event);
-
-    const triggers = this.eventBus.checkTriggers(event, this.state);
-    for (const t of triggers) {
-      this.state.pendingTriggers.push(t);
-    }
-
-    return token;
+    return this.zoneManager.createToken(this.state, controller, tokenDef, { copyOf: original.objectId });
   }
 
   copySpellOnStack(stackEntryId: ObjectId, newController: PlayerId): void {
@@ -1039,20 +1019,19 @@ export class GameEngineImpl implements IGameEngine {
     );
 
     // Handle modal spells
-    const spellAbility = card.definition.abilities.find(a => a.kind === 'modal') as ModalAbilityDef | undefined;
-    if (spellAbility) {
+    const spell = card.definition.spell;
+    if (spell?.kind === 'modal') {
       const choices = this.createChoiceHelper(controller);
-      const modeLabels = spellAbility.modes.map((m, i) => ({ label: m.label, index: i }));
+      const modeLabels = spell.modes.map((m, i) => ({ label: m.label, index: i }));
         const selected = await choices.chooseN(
-          `Choose ${spellAbility.chooseCount} mode(s)`,
+          `Choose ${spell.chooseCount} mode(s)`,
           modeLabels,
-          spellAbility.chooseCount,
+          spell.chooseCount,
           (m) => m.label,
-          { allowDuplicates: spellAbility.allowRepeatedModes }
+          { allowDuplicates: spell.allowRepeatedModes }
         );
         stackEntry.modeChoices = selected.map(m => m.index);
-        stackEntry.ability = spellAbility;
-      stackEntry.targetSpecs = stackEntry.modeChoices.flatMap((modeIndex) => spellAbility.modes[modeIndex]?.targets ?? []);
+      stackEntry.targetSpecs = stackEntry.modeChoices.flatMap((modeIndex) => spell.modes[modeIndex]?.targets ?? []);
     }
 
     await this.applyCastKeywordEffects(controller, card, card.definition, stackEntry);
@@ -1451,11 +1430,11 @@ export class GameEngineImpl implements IGameEngine {
     if (!attachment || !host) return;
     if (attachment.zone !== 'BATTLEFIELD' || host.zone !== 'BATTLEFIELD') return;
     if (attachment.phasedOut || host.phasedOut) return;
-    if (attachment.definition.attachmentType === 'Equipment' && !hasType(host, CardType.CREATURE as CardTypeEnum)) return;
-    if (attachment.definition.attachmentType === 'Aura' && attachment.definition.attachTarget) {
-      if (!this.matchesTargetSpec(host, attachment.definition.attachTarget, attachment.controller)) return;
+    if (attachment.definition.attachment?.type === 'Equipment' && !hasType(host, CardType.CREATURE as CardTypeEnum)) return;
+    if (attachment.definition.attachment?.type === 'Aura') {
+      if (!this.matchesTargetSpec(host, attachment.definition.attachment.target, attachment.controller)) return;
     }
-    if (this.hasProtectionFrom(host, attachment)) return;
+    if (this.interactionEngine.preventsAttachment(this.state, attachment, host)) return;
 
     // Detach from previous host if already attached
     if (attachment.attachedTo) {
@@ -1891,23 +1870,23 @@ export class GameEngineImpl implements IGameEngine {
       return;
     }
 
-    const spellAbility = effectiveDef.abilities.find(a => a.kind === 'modal') as ModalAbilityDef | undefined;
+    const spell = effectiveDef.spell;
     let selectedModeChoices = requestedModeChoices ? [...requestedModeChoices] : undefined;
     let chosenTargetSpecs: import('./types').TargetSpec[] | undefined;
-    if (spellAbility) {
+    if (spell?.kind === 'modal') {
       if (!selectedModeChoices) {
         const choices = this.createChoiceHelper(playerId);
-        const modeLabels = spellAbility.modes.map((m, i) => ({ label: m.label, index: i }));
+        const modeLabels = spell.modes.map((m, i) => ({ label: m.label, index: i }));
         const selected = await choices.chooseN(
-          `Choose ${spellAbility.chooseCount} mode(s)`,
+          `Choose ${spell.chooseCount} mode(s)`,
           modeLabels,
-          spellAbility.chooseCount,
+          spell.chooseCount,
           (m) => m.label,
-          { allowDuplicates: spellAbility.allowRepeatedModes },
+          { allowDuplicates: spell.allowRepeatedModes },
         );
         selectedModeChoices = selected.map(m => m.index);
       }
-      chosenTargetSpecs = selectedModeChoices.flatMap((modeIndex) => spellAbility.modes[modeIndex]?.targets ?? []);
+      chosenTargetSpecs = selectedModeChoices.flatMap((modeIndex) => spell.modes[modeIndex]?.targets ?? []);
     } else if (castMethod === 'overload') {
       chosenTargetSpecs = [];
     }
@@ -1932,7 +1911,7 @@ export class GameEngineImpl implements IGameEngine {
       return;
     }
 
-    if (card.definition.attachmentType === 'Aura') {
+    if (effectiveDef.attachment?.type === 'Aura') {
       const targetId = resolvedTargets[0];
       if (typeof targetId === 'string' && !targetId.startsWith('player')) {
         card.attachedTo = targetId;
@@ -1997,17 +1976,15 @@ export class GameEngineImpl implements IGameEngine {
     }
 
     // --- Modal spell handling ---
-    if (spellAbility) {
+    if (spell?.kind === 'modal') {
       stackEntry.modeChoices = selectedModeChoices;
-      stackEntry.ability = spellAbility;
       stackEntry.targetSpecs = chosenTargetSpecs;
     } else if (castMethod === 'overload') {
       stackEntry.targetSpecs = [];
     } else {
-      const spellEffect = effectiveDef.abilities.find((ability) => ability.kind === 'spell');
-      stackEntry.targetSpecs = spellEffect?.kind === 'spell'
-        ? spellEffect.targets
-        : (effectiveDef.attachmentType === 'Aura' && effectiveDef.attachTarget ? [effectiveDef.attachTarget] : undefined);
+      stackEntry.targetSpecs = effectiveDef.spell?.kind === 'simple'
+        ? effectiveDef.spell.targets
+        : (effectiveDef.attachment?.type === 'Aura' ? [effectiveDef.attachment.target] : undefined);
     }
     stackEntry.targetGroupCounts = targetGroupCounts;
 
@@ -2261,7 +2238,11 @@ export class GameEngineImpl implements IGameEngine {
 
   private getMaximumHandSize(playerId: PlayerId): number | null {
     const battlefield = this.state.zones[playerId].BATTLEFIELD;
-    if (battlefield.some((card) => card.definition.tags?.includes('no-max-hand-size'))) {
+    if (battlefield.some((card) =>
+      getEffectiveAbilities(card).some((ability) =>
+        ability.kind === 'static' && ability.effect.type === 'no-max-hand-size'
+      )
+    )) {
       return null;
     }
     return 7;
@@ -2299,6 +2280,12 @@ export class GameEngineImpl implements IGameEngine {
     );
     this.state.replacementEffects = this.state.replacementEffects.filter(
       effect => !this.effectBelongsToPlayer(effect.sourceId, playerId)
+    );
+    this.state.wouldEnterBattlefieldReplacementEffects = this.state.wouldEnterBattlefieldReplacementEffects.filter(
+      effect => !this.effectBelongsToPlayer(effect.sourceId, playerId)
+    );
+    this.state.interactionHooks = this.state.interactionHooks.filter(
+      hook => !this.effectBelongsToPlayer(hook.sourceId, playerId)
     );
 
     this.combatManager.removePlayerFromCombat(this.state, playerId);
@@ -2826,16 +2813,16 @@ export class GameEngineImpl implements IGameEngine {
     definition: CardDefinition,
     stackEntry: StackEntry,
   ): Promise<void> {
-    const tags = definition.tags ?? [];
+    const behaviors = definition.spellCastBehaviors ?? [];
 
-    if (tags.includes('storm')) {
+    if (behaviors.some((behavior) => behavior.kind === 'storm')) {
       const stormCount = Math.max(0, (this.state.players[playerId].spellsCastThisTurn ?? 1) - 1);
       for (let i = 0; i < stormCount; i++) {
         this.copySpellOnStack(stackEntry.id, playerId);
       }
     }
 
-    if (tags.includes('cascade')) {
+    if (behaviors.some((behavior) => behavior.kind === 'cascade')) {
       await this.handleCascade(playerId, definition);
     }
   }
@@ -2988,9 +2975,9 @@ export class GameEngineImpl implements IGameEngine {
     source: CardInstance,
     cost: ManaCost,
   ): Promise<boolean> {
-    const tags = source.definition.tags ?? [];
+    const mechanics = source.definition.spellCostMechanics ?? [];
 
-    if (tags.includes('delve') && cost.generic > 0) {
+    if (mechanics.some((mechanic) => mechanic.kind === 'delve') && cost.generic > 0) {
       const graveyard = this.state.zones[playerId].GRAVEYARD.filter(card => card.objectId !== source.objectId);
       if (graveyard.length > 0) {
         const helper = this.createChoiceHelper(playerId);
@@ -3007,7 +2994,7 @@ export class GameEngineImpl implements IGameEngine {
       }
     }
 
-    if (tags.includes('convoke')) {
+    if (mechanics.some((mechanic) => mechanic.kind === 'convoke')) {
       const creatures = this.state.zones[playerId].BATTLEFIELD.filter(card =>
         !card.phasedOut &&
         !card.tapped &&
@@ -3080,26 +3067,21 @@ export class GameEngineImpl implements IGameEngine {
     );
   }
 
-  private buildWaterbendSubstitution(card: CardInstance): Cost['genericTapSubstitution'] | undefined {
-    if (!card.definition.waterbend || card.definition.waterbend <= 0) {
+  private getGenericTapSubstitutionFromMechanics(card: CardInstance): Cost['genericTapSubstitution'] | undefined {
+    const mechanic = card.definition.spellCostMechanics?.find(
+      (entry) => entry.kind === 'generic-tap-substitution'
+    );
+    if (!mechanic || mechanic.kind !== 'generic-tap-substitution') {
       return undefined;
     }
-
-    return {
-      amount: card.definition.waterbend,
-      filter: {
-        types: [CardType.ARTIFACT, CardType.CREATURE],
-        controller: 'you',
-      },
-      ignoreSummoningSickness: true,
-    };
+    return mechanic.substitution;
   }
 
   private getEffectiveGenericTapSubstitution(
     source: CardInstance,
     cost: Cost,
   ): Cost['genericTapSubstitution'] | undefined {
-    return cost.genericTapSubstitution ?? this.buildWaterbendSubstitution(source);
+    return cost.genericTapSubstitution ?? this.getGenericTapSubstitutionFromMechanics(source);
   }
 
   private getGenericTapSubstitutionCandidates(
@@ -3522,18 +3504,25 @@ export class GameEngineImpl implements IGameEngine {
     source: CardInstance,
     targets: (ObjectId | PlayerId)[],
   ): Promise<boolean> {
+    const targetObjects: CardInstance[] = [];
     const seen = new Set<string>();
     for (const targetId of targets) {
-      if (typeof targetId !== 'string' || targetId.startsWith('player')) continue;
-      if (seen.has(targetId)) continue;
+      if (typeof targetId !== 'string' || targetId.startsWith('player') || seen.has(targetId)) continue;
       seen.add(targetId);
 
       const target = findCard(this.state, targetId);
       if (!target || target.zone !== 'BATTLEFIELD' || target.phasedOut) continue;
-      if (target.controller === playerId) continue;
-      const wardCost = target.wardCost ?? target.definition.wardCost;
-      if (!wardCost) continue;
-      if (!await this.payAuxiliaryCost(playerId, source, wardCost, `Pay ward for ${target.definition.name}?`)) {
+      targetObjects.push(target);
+    }
+
+    const requirements = this.interactionEngine.collectTargetRequirements(
+      this.state,
+      source,
+      playerId,
+      targetObjects,
+    );
+    for (const requirement of requirements) {
+      if (!await this.payAuxiliaryCost(playerId, source, requirement.cost, requirement.prompt)) {
         return false;
       }
     }
@@ -3626,7 +3615,7 @@ export class GameEngineImpl implements IGameEngine {
     return choices.chooseTargets({
       ...spec,
       custom: (candidate, game) => {
-        if (!this.canTargetObject(controller, source, candidate)) return false;
+        if (!this.canTargetObject(controller, source, candidate, spec)) return false;
         return spec.custom ? spec.custom(candidate, game) : true;
       },
     });
@@ -3689,7 +3678,7 @@ export class GameEngineImpl implements IGameEngine {
             valid = false;
             break;
           }
-          if (!this.canTargetObject(controller, source, targetObj)) {
+          if (!this.canTargetObject(controller, source, targetObj, spec)) {
             valid = false;
             break;
           }
@@ -3731,16 +3720,15 @@ export class GameEngineImpl implements IGameEngine {
     definitionOrAbility: CardDefinition | AbilityDefinition,
   ): import('./types').TargetSpec[] | undefined {
     if ('types' in definitionOrAbility) {
-      const spellAbility = definitionOrAbility.abilities.find(ability => ability.kind === 'spell');
-      const modalAbility = definitionOrAbility.abilities.find(ability => ability.kind === 'modal');
-      if (spellAbility?.kind === 'spell' && spellAbility.targets) {
-        return spellAbility.targets;
+      const spell = definitionOrAbility.spell;
+      if (spell?.kind === 'simple' && spell.targets) {
+        return spell.targets;
       }
-      if (modalAbility?.kind === 'modal') {
-        return modalAbility.modes[0]?.targets;
+      if (spell?.kind === 'modal') {
+        return spell.modes[0]?.targets;
       }
-      if (definitionOrAbility.attachmentType === 'Aura' && definitionOrAbility.attachTarget) {
-        return [definitionOrAbility.attachTarget];
+      if (definitionOrAbility.attachment?.type === 'Aura') {
+        return [definitionOrAbility.attachment.target];
       }
       return undefined;
     }
@@ -3784,18 +3772,14 @@ export class GameEngineImpl implements IGameEngine {
     controller: PlayerId,
     source: CardInstance,
     candidate: CardInstance | PlayerId,
+    spec?: import('./types').TargetSpec,
   ): boolean {
     if (typeof candidate === 'string') {
       return !this.state.players[candidate].hasLost;
     }
 
     if (candidate.zone === 'BATTLEFIELD' && candidate.phasedOut) return false;
-    if (candidate.controller !== controller && candidate.cantBeTargetedByOpponents) return false;
-    const keywords = candidate.modifiedKeywords ?? candidate.definition.keywords;
-    if (keywords.includes(Keyword.SHROUD)) return false;
-    if (candidate.controller !== controller && keywords.includes(Keyword.HEXPROOF)) return false;
-    if (this.hasProtectionFrom(candidate, source)) return false;
-    return true;
+    return this.interactionEngine.canChooseTarget(this.state, source, controller, candidate, spec);
   }
 
   private getEffectiveSpellDefinition(
@@ -3812,11 +3796,11 @@ export class GameEngineImpl implements IGameEngine {
         name: card.definition.adventure.name,
         manaCost: { ...card.definition.adventure.manaCost },
         types: [...card.definition.adventure.types],
-        abilities: [{
-          kind: 'spell',
+        spell: {
+          kind: 'simple',
           effect: card.definition.adventure.effect,
           description: card.definition.adventure.name,
-        }],
+        },
         keywords: [],
       };
     }
@@ -3863,24 +3847,6 @@ export class GameEngineImpl implements IGameEngine {
     }
     if (filter.custom && !filter.custom(card, this.state)) return false;
     return true;
-  }
-
-  /** Check if `protectedCard` has protection from a quality that `source` possesses. */
-  private hasProtectionFrom(protectedCard: CardInstance, source: CardInstance): boolean {
-    const protections: ProtectionFrom[] = protectedCard.protectionFrom ?? protectedCard.definition.protectionFrom ?? [];
-    if (protections.length === 0) return false;
-
-    for (const prot of protections) {
-      if (prot.colors && prot.colors.length > 0) {
-        if (prot.colors.some(c => source.definition.colorIdentity.includes(c))) return true;
-      }
-      if (prot.types && prot.types.length > 0) {
-        if (prot.types.some(t => hasType(source, t))) return true;
-      }
-      if (prot.custom && prot.custom(source)) return true;
-    }
-
-    return false;
   }
 
   private notifyStateChange(): void {

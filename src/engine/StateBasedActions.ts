@@ -3,6 +3,7 @@ import { CardType, GameEventType, Keyword } from './types';
 import { findCard, getEffectiveSubtypes, getEffectiveSupertypes, hasType, getNextTimestamp } from './GameState';
 import type { ZoneManager } from './ZoneManager';
 import type { EventBus } from './EventBus';
+import type { InteractionEngine } from './InteractionEngine';
 
 interface SBAAction {
   type: 'player-loses' | 'destroy' | 'graveyard' | 'sacrifice' | 'remove-counters' | 'legend-rule';
@@ -14,10 +15,12 @@ interface SBAAction {
 export class StateBasedActions {
   private zoneManager: ZoneManager;
   private eventBus: EventBus;
+  private interactionEngine: InteractionEngine;
 
-  constructor(zoneManager: ZoneManager, eventBus: EventBus) {
+  constructor(zoneManager: ZoneManager, eventBus: EventBus, interactionEngine: InteractionEngine) {
     this.zoneManager = zoneManager;
     this.eventBus = eventBus;
+    this.interactionEngine = interactionEngine;
   }
 
   /**
@@ -111,20 +114,20 @@ export class StateBasedActions {
         }
 
         // 704.5m: Aura not attached to a legal permanent
-        if (def.attachmentType === 'Aura' || def.subtypes.includes('Aura')) {
+        if (def.attachment?.type === 'Aura' || def.subtypes.includes('Aura')) {
           if (!card.attachedTo) {
             actions.push({ type: 'graveyard', objectId: card.objectId });
           } else {
             const host = findCard(state, card.attachedTo);
-            if (!host || host.zone !== 'BATTLEFIELD' || host.phasedOut || !this.isLegalAttachment(card, host)) {
+            if (!host || host.zone !== 'BATTLEFIELD' || host.phasedOut || !this.isLegalAttachment(state, card, host)) {
               actions.push({ type: 'graveyard', objectId: card.objectId });
             }
           }
         }
 
-        if (def.attachmentType === 'Equipment' && card.attachedTo) {
+        if (def.attachment?.type === 'Equipment' && card.attachedTo) {
           const host = findCard(state, card.attachedTo);
-          if (!host || host.zone !== 'BATTLEFIELD' || host.phasedOut || !this.isLegalAttachment(card, host)) {
+          if (!host || host.zone !== 'BATTLEFIELD' || host.phasedOut || !this.isLegalAttachment(state, card, host)) {
             if (host) {
               host.attachments = host.attachments.filter(id => id !== card.objectId);
             }
@@ -132,8 +135,9 @@ export class StateBasedActions {
           }
         }
 
-        // 714.4: Saga with lore counters >= totalChapters is sacrificed
-        if (def.sagaChapters && def.totalChapters) {
+        // 714.4: Saga with lore counters >= its final chapter is sacrificed.
+        const totalChapters = def.sagaChapters ? Math.max(...def.sagaChapters.map((chapter) => chapter.chapter)) : 0;
+        if (def.sagaChapters && totalChapters > 0) {
           const loreCounters = card.counters['lore'] ?? 0;
           const chapterStillOnStack = state.stack.some(entry =>
             entry.entryType === 'TRIGGERED_ABILITY' &&
@@ -141,7 +145,7 @@ export class StateBasedActions {
             entry.ability?.kind === 'triggered' &&
             entry.ability.description.startsWith('Chapter ')
           );
-          if (loreCounters >= def.totalChapters && !chapterStillOnStack) {
+          if (loreCounters >= totalChapters && !chapterStillOnStack) {
             actions.push({ type: 'sacrifice', objectId: card.objectId, playerId: card.controller });
           }
         }
@@ -320,13 +324,13 @@ export class StateBasedActions {
     }
   }
 
-  private isLegalAttachment(attachment: CardInstance, host: CardInstance): boolean {
-    const attachmentType = attachment.definition.attachmentType;
-    if (attachmentType === 'Equipment' && !hasType(host, CardType.CREATURE)) {
+  private isLegalAttachment(state: GameState, attachment: CardInstance, host: CardInstance): boolean {
+    const attachmentDef = attachment.definition.attachment;
+    if (attachmentDef?.type === 'Equipment' && !hasType(host, CardType.CREATURE)) {
       return false;
     }
-    if (attachmentType === 'Aura' && attachment.definition.attachTarget) {
-      const targetSpec = attachment.definition.attachTarget;
+    if (attachmentDef?.type === 'Aura') {
+      const targetSpec = attachmentDef.target;
       if (targetSpec.what === 'creature' && !hasType(host, CardType.CREATURE)) {
         return false;
       }
@@ -342,13 +346,7 @@ export class StateBasedActions {
         }
       }
     }
-    const protections = host.protectionFrom ?? host.definition.protectionFrom ?? [];
-    if (protections.some(protection => {
-      if (protection.types?.some(type => attachment.definition.types.includes(type))) return true;
-      if (protection.colors?.some(color => attachment.definition.colorIdentity.includes(color))) return true;
-      if (protection.custom?.(attachment)) return true;
-      return false;
-    })) {
+    if (this.interactionEngine.preventsAttachment(state, attachment, host)) {
       return false;
     }
     return true;

@@ -13,15 +13,24 @@ function makeTaggedCommander(
   color: ManaColor,
   tags: string[] = [],
 ) {
+  const commanderOptions = {
+    partner: tags.includes('partner') || undefined,
+    friendsForever: tags.includes('friends-forever') || undefined,
+    partnerWith: tags.find((tag) => tag.startsWith('partner-with:'))?.slice('partner-with:'.length),
+    chooseABackground: tags.includes('choose-a-background') || undefined,
+  };
+  const builder = CardBuilder.create(name)
+    .cost(manaCost)
+    .types(CardType.CREATURE)
+    .supertypes('Legendary')
+    .colors(color)
+    .stats(3, 3);
+  if (tags.includes('background')) {
+    builder.subtypes('Background');
+  }
   return {
-    ...CardBuilder.create(name)
-      .cost(manaCost)
-      .types(CardType.CREATURE)
-      .supertypes('Legendary')
-      .colors(color)
-      .stats(3, 3)
-      .build(),
-    tags,
+    ...builder.build(),
+    commanderOptions,
   };
 }
 
