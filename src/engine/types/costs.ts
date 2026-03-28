@@ -4,8 +4,10 @@ import type { CardFilter } from './filters';
 import type { ManaCost } from './mana';
 import type { GameState } from './state';
 
-export interface Cost {
+export interface PlainCost {
   mana?: ManaCost;
+  convoke?: boolean;
+  delve?: boolean;
   tap?: boolean;
   genericTapSubstitution?: GenericTapSubstitution;
   sacrifice?: CardFilter;
@@ -21,3 +23,6 @@ export interface GenericTapSubstitution {
   filter: CardFilter;
   ignoreSummoningSickness?: boolean;
 }
+
+/** @deprecated Use PlainCost for data declarations or Cost class for runtime. */
+export type Cost = PlainCost;

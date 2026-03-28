@@ -1,12 +1,13 @@
 import { CardBuilder } from '../../CardBuilder';
 import { createFirebendingTriggeredAbility } from '../../firebending';
 import { findCard, getEffectiveSubtypes, hasType } from '../../../engine/GameState';
-import { CardType, GameEventType, ManaColor, Step } from '../../../engine/types';
+import { CardType, GameEventType, ManaColor, Step, emptyManaCost } from '../../../engine/types';
 import {
   createHexproofAbilities,
   createVigilanceAbilities,
 } from '../../../engine/AbilityPrimitives';
 import type { ActivatedAbilityDef } from '../../../engine/types';
+import { Cost } from '../../../engine/costs';
 
 // --- White Creatures ---
 
@@ -28,10 +29,7 @@ export const SunTitan = CardBuilder.create('Sun Titan')
   .etbEffect(async (ctx) => {
     const graveyard = ctx.game.getGraveyard(ctx.controller);
     const targets = graveyard.filter(c => {
-      const cmc = c.definition.spellCost.mana.generic + c.definition.spellCost.mana.W +
-        c.definition.spellCost.mana.U + c.definition.spellCost.mana.B +
-        c.definition.spellCost.mana.R + c.definition.spellCost.mana.G;
-      return cmc <= 3;
+      return Cost.from(c.definition.cost).getManaValue() <= 3;
     });
     if (targets.length > 0) {
       const chosen = await ctx.choices.chooseUpToN('Return a permanent with mana value 3 or less from graveyard to battlefield', targets, 1, c => c.definition.name);

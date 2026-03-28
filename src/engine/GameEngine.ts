@@ -4,8 +4,9 @@ import type {
   StackEntry, GameEvent, PlayerAction,
   GameEngine as IGameEngine, CardType as CardTypeEnum,
   AbilityDefinition, EffectDuration, ContinuousEffect, TrackedMana,
-  Layer as LayerType, Cost, DelayedTrigger, PredefinedTokenType, SearchLibraryOptions, CastPermission, PendingTrigger,
+  Layer as LayerType, DelayedTrigger, PredefinedTokenType, SearchLibraryOptions, CastPermission, PendingTrigger,
 } from './types';
+import { Cost, type CostContext } from './costs';
 import {
   GameEventType, ActionType, CardType, Step, Zone,
   StackEntryType, manaCostTotal, Layer, emptyManaCost,
@@ -361,7 +362,11 @@ export class GameEngineImpl implements IGameEngine {
       if (card.definition.types.includes(CardType.LAND)) continue;
 
       if (this.canCastWithCurrentTiming(playerId, card, card.zone)) {
-        const castCost = this.getCastCostForLegalAction(playerId, card, { mana: { ...card.definition.spellCost.mana } });
+        const castCost = this.getCastCostForLegalAction(
+          playerId,
+          card,
+          this.mergePlainCosts(card.definition.cost),
+        );
         if (castCost && this.canAffordCostWithTapSubstitution(playerId, card, castCost)) {
           actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId });
         }
@@ -371,7 +376,7 @@ export class GameEngineImpl implements IGameEngine {
         const adventure = card.definition.adventure;
         const adventureDefinition = this.getEffectiveSpellDefinition(card, { castAsAdventure: true });
         const adventureCastCost = adventureDefinition
-          ? this.getCastCostForLegalAction(playerId, card, { mana: { ...adventure.spellCost.mana } }, adventureDefinition)
+          ? this.getCastCostForLegalAction(playerId, card, this.mergePlainCosts(adventure.cost), adventureDefinition)
           : null;
         if (adventureDefinition && this.canCastWithCurrentTiming(playerId, adventureDefinition, card.zone) && adventureCastCost &&
           this.canAffordCostWithTapSubstitution(playerId, card, adventureCastCost)) {
@@ -395,7 +400,12 @@ export class GameEngineImpl implements IGameEngine {
         } else {
           // Back face is a spell
           if (this.canCastWithCurrentTiming(playerId, back, card.zone)) {
-            const backFaceCost = this.getCastCostForLegalAction(playerId, card, { mana: { ...back.spellCost.mana } }, back);
+            const backFaceCost = this.getCastCostForLegalAction(
+              playerId,
+              card,
+              this.mergePlainCosts(back.cost),
+              back,
+            );
             if (backFaceCost && this.canAffordCostWithTapSubstitution(playerId, card, backFaceCost)) {
               actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId, chosenFace: 'back' });
             }
@@ -405,7 +415,11 @@ export class GameEngineImpl implements IGameEngine {
 
       for (const altCost of card.definition.alternativeCosts ?? []) {
         if (altCost.zone && altCost.zone !== card.zone) continue;
-        const alternateCastCost = this.getCastCostForLegalAction(playerId, card, altCost.cost);
+        const alternateCastCost = this.getCastCostForLegalAction(
+          playerId,
+          card,
+          this.mergePlainCosts(card.definition.cost, altCost.cost),
+        );
         if (alternateCastCost && this.canAffordCostWithTapSubstitution(playerId, card, alternateCastCost)) {
           actions.push({
             type: ActionType.CAST_SPELL,
@@ -424,7 +438,12 @@ export class GameEngineImpl implements IGameEngine {
 
       // Right half
       if (this.canCastWithCurrentTiming(playerId, right, card.zone)) {
-        const rightHalfCost = this.getCastCostForLegalAction(playerId, card, { mana: { ...right.spellCost.mana } }, right);
+        const rightHalfCost = this.getCastCostForLegalAction(
+          playerId,
+          card,
+          this.mergePlainCosts(right.cost),
+          right,
+        );
         if (rightHalfCost && this.canAffordCostWithTapSubstitution(playerId, card, rightHalfCost)) {
           actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId, chosenHalf: 'right' });
         }
@@ -432,17 +451,12 @@ export class GameEngineImpl implements IGameEngine {
 
       // Fuse: cast both halves as one spell (sorcery speed only)
       if (card.definition.hasFuse && isSorcerySpeed) {
-        const fusedCost: ManaCost = {
-          generic: card.definition.spellCost.mana.generic + right.spellCost.mana.generic,
-          W: card.definition.spellCost.mana.W + right.spellCost.mana.W,
-          U: card.definition.spellCost.mana.U + right.spellCost.mana.U,
-          B: card.definition.spellCost.mana.B + right.spellCost.mana.B,
-          R: card.definition.spellCost.mana.R + right.spellCost.mana.R,
-          G: card.definition.spellCost.mana.G + right.spellCost.mana.G,
-          C: card.definition.spellCost.mana.C + right.spellCost.mana.C,
-          X: card.definition.spellCost.mana.X + right.spellCost.mana.X,
-        };
-        const fusedCastCost = this.getCastCostForLegalAction(playerId, card, { mana: fusedCost });
+        const fusedCost = Cost.from(card.definition.cost).combineWith(Cost.from(right.cost));
+        const fusedCastCost = this.getCastCostForLegalAction(
+          playerId,
+          card,
+          fusedCost,
+        );
         if (fusedCastCost && this.canAffordCostWithTapSubstitution(playerId, card, fusedCastCost)) {
           actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId, chosenHalf: 'fused' });
         }
@@ -458,7 +472,11 @@ export class GameEngineImpl implements IGameEngine {
 
         if (!this.canCastWithCurrentTiming(playerId, card, card.zone)) continue;
 
-        const graveyardCastCost = this.getCastCostForLegalAction(playerId, card, altCost.cost);
+        const graveyardCastCost = this.getCastCostForLegalAction(
+          playerId,
+          card,
+          this.mergePlainCosts(card.definition.cost, altCost.cost),
+        );
         if (graveyardCastCost && this.canAffordCostWithTapSubstitution(playerId, card, graveyardCastCost)) {
           actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId, castMethod: altCost.id });
         }
@@ -470,8 +488,13 @@ export class GameEngineImpl implements IGameEngine {
     for (const card of commandZone) {
       if (player.commanderIds.includes(card.cardId)) {
         const tax = (player.commanderTimesCast[card.cardId] ?? 0) * 2;
-        const totalCost = { ...card.definition.spellCost.mana, generic: card.definition.spellCost.mana.generic + tax };
-        const commanderCastCost = this.getCastCostForLegalAction(playerId, card, { mana: totalCost });
+        const commanderBaseCost = Cost.from(card.definition.cost);
+        commanderBaseCost.addManaTax({ generic: tax });
+        const commanderCastCost = this.getCastCostForLegalAction(
+          playerId,
+          card,
+          commanderBaseCost,
+        );
         if (this.canCastWithCurrentTiming(playerId, card, card.zone) && commanderCastCost && this.canAffordCostWithTapSubstitution(playerId, card, commanderCastCost)) {
           actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId });
         }
@@ -483,7 +506,11 @@ export class GameEngineImpl implements IGameEngine {
     for (const card of exile) {
       if (card.castAsAdventure && card.definition.adventure) {
         // Can cast the creature portion from exile
-        const exileAdventureCost = this.getCastCostForLegalAction(playerId, card, { mana: { ...card.definition.spellCost.mana } });
+        const exileAdventureCost = this.getCastCostForLegalAction(
+          playerId,
+          card,
+          this.mergePlainCosts(card.definition.cost),
+        );
         if (this.canCastWithCurrentTiming(playerId, card, card.zone) && exileAdventureCost && this.canAffordCostWithTapSubstitution(playerId, card, exileAdventureCost)) {
           actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId });
         }
@@ -498,7 +525,11 @@ export class GameEngineImpl implements IGameEngine {
         continue;
       }
 
-      const permissionCastCost = this.getCastCostForLegalAction(playerId, card, permission.alternativeCost);
+      const permissionCastCost = this.getCastCostForLegalAction(
+        playerId,
+        card,
+        this.mergePlainCosts(card.definition.cost, permission.alternativeCost),
+      );
       if (permissionCastCost && this.canAffordCostWithTapSubstitution(playerId, card, permissionCastCost)) {
         actions.push({
           type: ActionType.CAST_SPELL,
@@ -526,11 +557,12 @@ export class GameEngineImpl implements IGameEngine {
           if (ability.kind !== 'activated') continue;
           if ((ability.activationZone ?? Zone.BATTLEFIELD) !== zone) continue;
           if (!this.canActivateActivatedAbility(card, ability, playerId, i)) continue;
+          const abilCost = Cost.from(ability.cost);
           if (!this.canAffordCostWithTapSubstitution(
             playerId,
             card,
-            ability.cost,
-            ability.cost.tap ? new Set([card.objectId]) : new Set(),
+            abilCost,
+            abilCost.requiresTap() ? new Set([card.objectId]) : new Set(),
           )) continue;
           if (isPlaneswalker && loyaltyUsed) continue;
 
@@ -1021,7 +1053,7 @@ export class GameEngineImpl implements IGameEngine {
     this.priorityManager.playerTookAction(this.state, controller);
   }
 
-  airbendObject(objectId: ObjectId, cost: Cost, actingPlayer: PlayerId): void {
+  airbendObject(objectId: ObjectId, cost: import('./types').PlainCost, actingPlayer: PlayerId): void {
     void actingPlayer;
     const card = findCard(this.state, objectId);
     if (!card) return;
@@ -1048,16 +1080,7 @@ export class GameEngineImpl implements IGameEngine {
       zone: Zone.EXILE,
       castBy: exiledCard.owner,
       owner: exiledCard.owner,
-      alternativeCost: {
-        ...cost,
-        mana: cost.mana ? { ...cost.mana } : undefined,
-        genericTapSubstitution: cost.genericTapSubstitution
-          ? {
-            ...cost.genericTapSubstitution,
-            filter: { ...cost.genericTapSubstitution.filter },
-          }
-          : undefined,
-      },
+      alternativeCost: Cost.from(cost).toPlainCost(),
       reason: 'airbend',
       timing: 'normal',
       castOnly: true,
@@ -1217,7 +1240,6 @@ export class GameEngineImpl implements IGameEngine {
     const emblemDef: CardDefinition = {
       id: `emblem-${description.toLowerCase().replace(/\s/g, '-')}-${Date.now()}`,
       name: description,
-      spellCost: { mana: emptyManaCost() },
       colorIdentity: [],
       types: [],
       supertypes: [],
@@ -1481,7 +1503,7 @@ export class GameEngineImpl implements IGameEngine {
     this.state.delayedTriggers.push(trigger);
   }
 
-  async unlessPlayerPays(player: PlayerId, sourceId: ObjectId, cost: Cost, prompt: string): Promise<boolean> {
+  async unlessPlayerPays(player: PlayerId, sourceId: ObjectId, cost: import('./types').PlainCost, prompt: string): Promise<boolean> {
     const source = findCard(this.state, sourceId);
     if (!source) return false;
     return this.payAuxiliaryCost(player, source, cost, prompt);
@@ -1728,48 +1750,34 @@ export class GameEngineImpl implements IGameEngine {
       )
       : undefined;
 
-    let cost: ManaCost;
-    if (castPermission && castPermission.alternativeCost.mana) {
-      cost = { ...castPermission.alternativeCost.mana };
+    // Build the payment cost using the Cost class
+    let paymentCost: Cost;
+    if (castPermission) {
+      paymentCost = this.mergePlainCosts(effectiveDef.cost, castPermission.alternativeCost);
       castMethod = this.getCastPermissionMethod(castPermission);
-    } else if (matchingAltCost && matchingAltCost.cost.mana) {
-      cost = { ...matchingAltCost.cost.mana };
+    } else if (matchingAltCost) {
+      paymentCost = this.mergePlainCosts(effectiveDef.cost, matchingAltCost.cost);
     } else if (chosenHalf === 'fused' && card.definition.splitHalf) {
-      // Fuse: pay both halves' costs combined
-      const left = card.definition.spellCost.mana;
-      const right = card.definition.splitHalf.spellCost.mana;
-      cost = {
-        generic: left.generic + right.generic,
-        W: left.W + right.W, U: left.U + right.U, B: left.B + right.B,
-        R: left.R + right.R, G: left.G + right.G, C: left.C + right.C,
-        X: left.X + right.X,
-      };
+      paymentCost = Cost.from(card.definition.cost).combineWith(Cost.from(card.definition.splitHalf.cost));
     } else if (castAsAdventure && card.definition.adventure) {
-      cost = { ...card.definition.adventure.spellCost.mana };
+      paymentCost = Cost.from(card.definition.adventure.cost);
     } else {
-      cost = { ...effectiveDef.spellCost.mana };
+      paymentCost = Cost.from(effectiveDef.cost);
     }
 
     const isCommanderCast = card.zone === 'COMMAND' && player.commanderIds.includes(card.cardId);
     if (isCommanderCast) {
       const tax = (player.commanderTimesCast[card.cardId] ?? 0) * 2;
-      cost.generic += tax;
+      paymentCost.addManaTax({ generic: tax });
     }
-
-    const paymentCost: Cost = {
-      ...(castPermission?.alternativeCost ?? matchingAltCost?.cost ?? {}),
-      mana: cost,
-    };
 
     // --- X Spell handling ---
     let resolvedX = xValue;
-    if (cost.X > 0) {
+    const xManaSnapshot = paymentCost.getManaCostSnapshot();
+    if (xManaSnapshot && xManaSnapshot.X > 0) {
       if (resolvedX === undefined) {
-        // Calculate the non-X base cost
-        const baseCost = manaCostTotal({ ...cost, X: 0 });
-        // Calculate max X: total available mana minus base cost
+        const baseCost = manaCostTotal({ ...xManaSnapshot, X: 0 });
         const totalAvail = this.manaManager.totalAvailable(this.state, playerId);
-        // Also consider untapped mana sources
         const battlefield = this.getBattlefield(undefined, playerId);
         let potentialMana = totalAvail;
         for (const c of battlefield) {
@@ -1790,9 +1798,7 @@ export class GameEngineImpl implements IGameEngine {
           (n) => String(n)
         );
       }
-      // Add X * (number of X symbols) to generic cost
-      cost.generic += (resolvedX ?? 0) * cost.X;
-      cost.X = 0; // X is now accounted for in generic
+      paymentCost.resolveX(resolvedX ?? 0);
     }
 
     let additionalCostsPaid: string[] = [];
@@ -1804,23 +1810,25 @@ export class GameEngineImpl implements IGameEngine {
         return;
       }
       additionalCostsPaid = additionalCostResult.paidIds;
-      cost = this.addManaCosts(cost, additionalCostResult.extraManaCost);
+      paymentCost.addManaCostFrom(additionalCostResult.extraManaCost);
     }
-    this.applyCastCostAdjustments(playerId, card, effectiveDef, cost);
-    paymentCost.mana = cost;
+    this.applyCastCostAdjustments(playerId, card, effectiveDef, paymentCost);
 
-    const alternateCost = castPermission?.alternativeCost ?? matchingAltCost?.cost;
-    if (alternateCost && !await this.payNonManaCostParts(playerId, card, alternateCost, {
-      excludeSourceFromHandDiscard: true,
-    })) {
+    // Pay non-mana parts of alternative cost (e.g., flashback exile)
+    const alternatePlainCost = castPermission?.alternativeCost ?? matchingAltCost?.cost;
+    if (alternatePlainCost) {
+      const altCost = Cost.from(alternatePlainCost);
+      const altCtx = this.createCostContext(playerId, card, { excludeSourceFromHandDiscard: true });
+      if (!await altCost.payNonMana(altCtx)) {
+        return;
+      }
+    }
+
+    // Apply delve/convoke/generic tap substitution
+    const modCtx = this.createCostContext(playerId, card);
+    if (!await paymentCost.applyModifiers(modCtx)) {
       return;
     }
-
-    if (!await this.applyTagBasedCastAdjustments(playerId, card, cost)) {
-      return;
-    }
-
-    await this.applyGenericTapSubstitution(playerId, card, paymentCost);
 
     if (!this.canAffordCostWithTapSubstitution(playerId, card, paymentCost)) {
       return;
@@ -1874,18 +1882,10 @@ export class GameEngineImpl implements IGameEngine {
       }
     }
 
-    // Auto-tap lands and pay mana
-    const battlefield = this.getBattlefield(undefined, playerId);
-    const landsToTap = this.manaManager.autoTapForCost(this.state, playerId, paymentCost.mana!, battlefield);
-    this.applyAutoTapPlan(playerId, landsToTap);
-
-    const manaPaymentResult = this.manaManager.payManaWithContext(
-      this.state,
-      playerId,
-      paymentCost.mana!,
-      { spellDefinition: effectiveDef },
-    );
-    if (!manaPaymentResult) return;
+    // Pay mana via Cost class
+    const payCtx = this.createCostContext(playerId, card, { spellDefinition: effectiveDef });
+    const manaPaymentResult = paymentCost.payMana(payCtx);
+    if (manaPaymentResult === false) return;
 
     if (resolvedTargets.length > 0) {
       const wardPaid = await this.payWardCostsIfNeeded(playerId, card, resolvedTargets);
@@ -1912,7 +1912,9 @@ export class GameEngineImpl implements IGameEngine {
       resolvedX,
       effectiveDef,
     );
-    this.applyTrackedManaToSpell(stackEntry, effectiveDef, manaPaymentResult.spentTrackedMana);
+    if (manaPaymentResult) {
+      this.applyTrackedManaToSpell(stackEntry, effectiveDef, manaPaymentResult.spentTrackedMana);
+    }
 
     // Store alternative cost method and MDFC face on the stack entry
     if (castMethod) {
@@ -1963,17 +1965,8 @@ export class GameEngineImpl implements IGameEngine {
     if (!this.canActivateActivatedAbility(card, ability, playerId, abilityIndex)) {
       return;
     }
-    const paymentCost: Cost = {
-      ...ability.cost,
-      mana: ability.cost.mana ? { ...ability.cost.mana } : undefined,
-      genericTapSubstitution: ability.cost.genericTapSubstitution
-        ? {
-          ...ability.cost.genericTapSubstitution,
-          filter: { ...ability.cost.genericTapSubstitution.filter },
-        }
-        : undefined,
-    };
-    const reservedTapSourceIds = paymentCost.tap ? new Set<ObjectId>([card.objectId]) : new Set<ObjectId>();
+    const paymentCost = Cost.from(ability.cost);
+    const reservedTapSourceIds = paymentCost.requiresTap() ? new Set<ObjectId>([card.objectId]) : new Set<ObjectId>();
 
     if (targets && targets.length > 0) {
       if (!this.areChosenTargetsLegal(playerId, card, ability, targets)) {
@@ -1988,21 +1981,10 @@ export class GameEngineImpl implements IGameEngine {
     }
 
     // Pay costs
-    if (paymentCost.tap) {
-      this.zoneManager.tapPermanent(this.state, sourceId);
-    }
-    await this.applyGenericTapSubstitution(playerId, card, paymentCost, reservedTapSourceIds);
-    if (paymentCost.mana) {
-      const battlefield = this.getBattlefield(undefined, playerId);
-      const landsToTap = this.manaManager.autoTapForCost(this.state, playerId, paymentCost.mana, battlefield);
-      this.applyAutoTapPlan(playerId, landsToTap);
-      if (!this.manaManager.payMana(this.state, playerId, paymentCost.mana)) return;
-    }
-    if (!await this.payNonManaCostParts(playerId, card, {
-      ...paymentCost,
-      mana: undefined,
-      tap: undefined,
-    })) return;
+    const ctx = this.createCostContext(playerId, card, { reservedTapSourceIds });
+    await paymentCost.applyModifiers(ctx);
+    const payResult = await paymentCost.pay(ctx);
+    if (!payResult.success) return;
 
     if (ability.isExhaust) {
       if (!card.exhaustedAbilityZoneChangeCounters) {
@@ -2042,7 +2024,7 @@ export class GameEngineImpl implements IGameEngine {
       });
       ctx.source = card;
       await ability.effect(ctx);
-      if (paymentCost.tap && hasType(card, CardType.CREATURE)) {
+      if (paymentCost.requiresTap() && hasType(card, CardType.CREATURE)) {
         this.emitTappedForManaEvent(playerId, card);
       }
     } else {
@@ -2739,24 +2721,28 @@ export class GameEngineImpl implements IGameEngine {
     source: CardInstance,
     costs: import('./types').AdditionalCost[],
     options: { excludeSourceFromHandDiscard?: boolean } = {},
-  ): Promise<{ paidIds: string[]; extraManaCost: ManaCost } | null> {
+  ): Promise<{ paidIds: string[]; extraManaCost: Cost } | null> {
     const helper = this.createChoiceHelper(playerId);
     const paidIds: string[] = [];
-    let extraManaCost = emptyManaCost();
+    let extraManaCost = Cost.empty();
 
     for (const additionalCost of costs) {
       if (additionalCost.optional) {
         const payIt = await helper.chooseYesNo(`Pay additional cost ${additionalCost.description}?`);
         if (!payIt) continue;
       }
-      const paid = await this.payNonManaCostParts(playerId, source, additionalCost.cost, options);
+      const addCost = Cost.from(additionalCost.cost);
+      const ctx = this.createCostContext(playerId, source, {
+        excludeSourceFromHandDiscard: options.excludeSourceFromHandDiscard,
+      });
+      const paid = await addCost.payNonMana(ctx);
       if (!paid) {
         if (additionalCost.optional) {
           continue;
         }
         return null;
       }
-      extraManaCost = this.addManaCosts(extraManaCost, additionalCost.cost.mana);
+      extraManaCost.addManaCostFrom(addCost);
       paidIds.push(additionalCost.id);
     }
 
@@ -2787,7 +2773,7 @@ export class GameEngineImpl implements IGameEngine {
     const library = this.state.zones[playerId].LIBRARY;
     const exiled: CardInstance[] = [];
     let found: CardInstance | null = null;
-    const sourceManaValue = this.getManaValue(sourceDefinition.spellCost.mana);
+    const sourceManaValue = Cost.from(sourceDefinition.cost).getManaValue();
 
     while (library.length > 0) {
       const card = library[library.length - 1];
@@ -2797,7 +2783,7 @@ export class GameEngineImpl implements IGameEngine {
       if (card.definition.types.includes(CardType.LAND as CardTypeEnum)) {
         continue;
       }
-      if (this.getManaValue(card.definition.spellCost.mana) < sourceManaValue) {
+      if (Cost.from(card.definition.cost).getManaValue() < sourceManaValue) {
         found = card;
         break;
       }
@@ -2820,181 +2806,6 @@ export class GameEngineImpl implements IGameEngine {
     if (moved) {
       library.unshift(moved);
     }
-  }
-
-  private getManaValue(cost: ManaCost): number {
-    return (
-      cost.generic +
-      cost.W +
-      cost.U +
-      cost.B +
-      cost.R +
-      cost.G +
-      cost.C +
-      (cost.hybrid?.length ?? 0) +
-      (cost.phyrexian?.length ?? 0)
-    );
-  }
-
-  private async payNonManaCostParts(
-    playerId: PlayerId,
-    source: CardInstance,
-    cost: import('./types').Cost,
-    options: { excludeSourceFromHandDiscard?: boolean } = {},
-  ): Promise<boolean> {
-    if (cost.payLife) {
-      this.loseLife(playerId, cost.payLife);
-    }
-
-    if (cost.exileFromGraveyard) {
-      const graveyard = this.state.zones[playerId].GRAVEYARD.filter(card => card.objectId !== source.objectId);
-      const helper = this.createChoiceHelper(playerId);
-      if (typeof cost.exileFromGraveyard === 'number') {
-        if (graveyard.length < cost.exileFromGraveyard) return false;
-        const selected = await helper.chooseN(
-          `Choose ${cost.exileFromGraveyard} card(s) to exile from your graveyard`,
-          graveyard,
-          cost.exileFromGraveyard,
-          card => card.definition.name,
-        );
-        for (const card of selected) {
-          this.zoneManager.moveCard(this.state, card.objectId, 'EXILE', playerId);
-        }
-      } else {
-        const matching = graveyard.filter(card => this.matchesFilter(card, cost.exileFromGraveyard as CardFilter, playerId));
-        if (matching.length === 0) return false;
-        const selected = await helper.chooseOne(
-          'Choose a card to exile from your graveyard',
-          matching,
-          card => card.definition.name,
-        );
-        this.zoneManager.moveCard(this.state, selected.objectId, 'EXILE', playerId);
-      }
-    }
-
-    if (typeof cost.discard === 'number' && cost.discard > 0) {
-      const hand = this.getDiscardCandidates(playerId, source, options);
-      if (hand.length < cost.discard) return false;
-      const helper = this.createChoiceHelper(playerId);
-      const selected = await helper.chooseN(
-        `Choose ${cost.discard} card(s) to discard`,
-        hand,
-        cost.discard,
-        card => card.definition.name,
-      );
-      for (const card of selected) {
-        this.zoneManager.discardCard(this.state, playerId, card.objectId);
-      }
-    } else if (cost.discard) {
-      const matching = this.getDiscardCandidates(playerId, source, options).filter(card =>
-        this.matchesFilter(card, cost.discard as CardFilter, playerId)
-      );
-      if (matching.length === 0) return false;
-      const helper = this.createChoiceHelper(playerId);
-      const selected = await helper.chooseOne(
-        'Choose a card to discard',
-        matching,
-        card => card.definition.name,
-      );
-      this.zoneManager.discardCard(this.state, playerId, selected.objectId);
-    }
-
-    if (cost.removeCounters) {
-      const currentCount = source.counters[cost.removeCounters.type] ?? 0;
-      if (currentCount < cost.removeCounters.count) return false;
-      this.removeCounters(source.objectId, cost.removeCounters.type, cost.removeCounters.count);
-    }
-
-    if (cost.sacrifice) {
-      if (cost.sacrifice.self) {
-        this.sacrificePermanent(source.objectId, playerId);
-      } else {
-        const selected = await this.sacrificePermanents(
-          playerId,
-          cost.sacrifice as CardFilter,
-          1,
-          'Choose a permanent to sacrifice',
-        );
-        if (selected.length === 0) return false;
-      }
-    }
-
-    if (cost.custom && !cost.custom(this.state, source, playerId)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  private async applyTagBasedCastAdjustments(
-    playerId: PlayerId,
-    source: CardInstance,
-    cost: ManaCost,
-  ): Promise<boolean> {
-    const mechanics = source.definition.spellCost.mechanics ?? [];
-
-    if (mechanics.some((mechanic) => mechanic.kind === 'delve') && cost.generic > 0) {
-      const graveyard = this.state.zones[playerId].GRAVEYARD.filter(card => card.objectId !== source.objectId);
-      if (graveyard.length > 0) {
-        const helper = this.createChoiceHelper(playerId);
-        const selected = await helper.chooseUpToN(
-          `Choose up to ${cost.generic} card(s) to exile for delve`,
-          graveyard,
-          Math.min(cost.generic, graveyard.length),
-          card => card.definition.name,
-        );
-        for (const card of selected) {
-          this.zoneManager.moveCard(this.state, card.objectId, 'EXILE', playerId);
-        }
-        cost.generic = Math.max(0, cost.generic - selected.length);
-      }
-    }
-
-    if (mechanics.some((mechanic) => mechanic.kind === 'convoke')) {
-      const creatures = this.state.zones[playerId].BATTLEFIELD.filter(card =>
-        !card.phasedOut &&
-        !card.tapped &&
-        hasType(card, CardType.CREATURE as CardTypeEnum),
-      );
-      const maxConvoke = Math.min(manaCostTotal(cost), creatures.length);
-      if (maxConvoke > 0) {
-        const helper = this.createChoiceHelper(playerId);
-        const selected = await helper.chooseUpToN(
-          `Choose up to ${maxConvoke} creature(s) to tap for convoke`,
-          creatures,
-          maxConvoke,
-          card => card.definition.name,
-        );
-        for (const creature of selected) {
-          this.zoneManager.tapPermanent(this.state, creature.objectId);
-          const colors = creature.definition.colorIdentity;
-          const payableColor = colors.find(color => cost[color] > 0);
-          if (payableColor) {
-            cost[payableColor] = Math.max(0, cost[payableColor] - 1);
-          } else {
-            cost.generic = Math.max(0, cost.generic - 1);
-          }
-        }
-      }
-    }
-
-    return true;
-  }
-
-  private addManaCosts(base: ManaCost, extra?: ManaCost): ManaCost {
-    if (!extra) return { ...base };
-    return {
-      generic: base.generic + extra.generic,
-      W: base.W + extra.W,
-      U: base.U + extra.U,
-      B: base.B + extra.B,
-      R: base.R + extra.R,
-      G: base.G + extra.G,
-      C: base.C + extra.C,
-      X: base.X + extra.X,
-      hybrid: [...(base.hybrid ?? []), ...(extra.hybrid ?? [])],
-      phyrexian: [...(base.phyrexian ?? []), ...(extra.phyrexian ?? [])],
-    };
   }
 
   private canCastWithCurrentTiming(
@@ -3034,71 +2845,12 @@ export class GameEngineImpl implements IGameEngine {
     );
   }
 
-  private getGenericTapSubstitutionFromMechanics(card: CardInstance): Cost['genericTapSubstitution'] | undefined {
-    const mechanic = card.definition.spellCost.mechanics?.find(
-      (entry) => entry.kind === 'generic-tap-substitution'
-    );
-    if (!mechanic || mechanic.kind !== 'generic-tap-substitution') {
-      return undefined;
+  private mergePlainCosts(base?: import('./types').PlainCost, override?: import('./types').PlainCost): Cost {
+    const baseCost = Cost.from(base);
+    if (!override) {
+      return baseCost;
     }
-    return mechanic.substitution;
-  }
-
-  private getEffectiveGenericTapSubstitution(
-    source: CardInstance,
-    cost: Cost,
-  ): Cost['genericTapSubstitution'] | undefined {
-    return cost.genericTapSubstitution ?? this.getGenericTapSubstitutionFromMechanics(source);
-  }
-
-  private getGenericTapSubstitutionCandidates(
-    playerId: PlayerId,
-    source: CardInstance,
-    substitution: NonNullable<Cost['genericTapSubstitution']>,
-    reservedTapSourceIds: Set<ObjectId>,
-  ): CardInstance[] {
-    return this.state.zones[playerId].BATTLEFIELD.filter((card) => {
-      if (card.phasedOut || card.tapped) return false;
-      if (reservedTapSourceIds.has(card.objectId)) return false;
-      if (!this.matchesFilter(card, substitution.filter, source.controller)) return false;
-      if (
-        !substitution.ignoreSummoningSickness &&
-        hasType(card, CardType.CREATURE) &&
-        card.summoningSick &&
-        !getActivationRuleProfile(card, this.state).ignoreTapSummoningSickness
-      ) {
-        return false;
-      }
-      return true;
-    });
-  }
-
-  private cloneManaCost(cost: ManaCost): ManaCost {
-    return {
-      generic: cost.generic,
-      W: cost.W,
-      U: cost.U,
-      B: cost.B,
-      R: cost.R,
-      G: cost.G,
-      C: cost.C,
-      X: cost.X,
-      hybrid: [...(cost.hybrid ?? [])],
-      phyrexian: [...(cost.phyrexian ?? [])],
-    };
-  }
-
-  private cloneCost(cost: Cost): Cost {
-    return {
-      ...cost,
-      mana: cost.mana ? this.cloneManaCost(cost.mana) : undefined,
-      genericTapSubstitution: cost.genericTapSubstitution
-        ? {
-          ...cost.genericTapSubstitution,
-          filter: { ...cost.genericTapSubstitution.filter },
-        }
-        : undefined,
-    };
+    return Cost.merge(baseCost, Cost.from(override));
   }
 
   private getCastCostForLegalAction(
@@ -3124,87 +2876,24 @@ export class GameEngineImpl implements IGameEngine {
   private getMandatoryAdditionalCostPreview(
     playerId: PlayerId,
     source: CardInstance,
-  ): { extraManaCost: ManaCost } | null {
-    let extraManaCost = emptyManaCost();
+  ): { extraManaCost: Cost } | null {
+    let extraManaCost = Cost.empty();
 
     for (const additionalCost of source.definition.additionalCosts ?? []) {
       if (additionalCost.optional) {
         continue;
       }
-      if (!this.canPayNonManaCostParts(playerId, source, additionalCost.cost, {
+      const addCost = Cost.from(additionalCost.cost);
+      const ctx = this.createCostContext(playerId, source, {
         excludeSourceFromHandDiscard: true,
-      })) {
+      });
+      if (!addCost.canPay(ctx)) {
         return null;
       }
-      extraManaCost = this.addManaCosts(extraManaCost, additionalCost.cost.mana);
+      extraManaCost.addManaCostFrom(addCost);
     }
 
     return { extraManaCost };
-  }
-
-  private canPayNonManaCostParts(
-    playerId: PlayerId,
-    source: CardInstance,
-    cost: Cost,
-    options: { excludeSourceFromHandDiscard?: boolean } = {},
-  ): boolean {
-    if (cost.exileFromGraveyard) {
-      const graveyard = this.state.zones[playerId].GRAVEYARD.filter(card => card.objectId !== source.objectId);
-      if (typeof cost.exileFromGraveyard === 'number') {
-        if (graveyard.length < cost.exileFromGraveyard) return false;
-      } else {
-        const matching = graveyard.filter(card => this.matchesFilter(card, cost.exileFromGraveyard as CardFilter, playerId));
-        if (matching.length === 0) return false;
-      }
-    }
-
-    if (typeof cost.discard === 'number' && cost.discard > 0) {
-      if (this.getDiscardCandidates(playerId, source, options).length < cost.discard) return false;
-    } else if (cost.discard) {
-      const matching = this.getDiscardCandidates(playerId, source, options).filter(card =>
-        this.matchesFilter(card, cost.discard as CardFilter, playerId),
-      );
-      if (matching.length === 0) return false;
-    }
-
-    if (cost.removeCounters) {
-      const currentCount = source.counters[cost.removeCounters.type] ?? 0;
-      if (currentCount < cost.removeCounters.count) return false;
-    }
-
-    if (cost.sacrifice) {
-      if (cost.sacrifice.self) {
-        if (source.zone !== Zone.BATTLEFIELD) {
-          return false;
-        }
-      } else {
-        const battlefield = this.state.zones[playerId].BATTLEFIELD.filter(card =>
-          !card.phasedOut && this.matchesFilter(card, cost.sacrifice as CardFilter, playerId),
-        );
-        if (battlefield.length === 0) {
-          return false;
-        }
-      }
-    }
-
-    if (cost.custom && !cost.custom(this.state, source, playerId)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  private getDiscardCandidates(
-    playerId: PlayerId,
-    source: CardInstance,
-    options: { excludeSourceFromHandDiscard?: boolean } = {},
-  ): CardInstance[] {
-    return this.state.zones[playerId].HAND.filter((card) => {
-      if (!options.excludeSourceFromHandDiscard) {
-        return true;
-      }
-      return card.objectId !== source.objectId;
-    });
   }
 
   private canActivateActivatedAbility(
@@ -3229,13 +2918,14 @@ export class GameEngineImpl implements IGameEngine {
       return false;
     }
 
-    if (card.zone === Zone.BATTLEFIELD && ability.cost.tap && card.tapped) {
+    const abilityCost = Cost.from(ability.cost);
+    if (card.zone === Zone.BATTLEFIELD && abilityCost.requiresTap() && card.tapped) {
       return false;
     }
 
     if (
       card.zone === Zone.BATTLEFIELD &&
-      ability.cost.tap &&
+      abilityCost.requiresTap() &&
       hasType(card, CardType.CREATURE as CardTypeEnum) &&
       card.summoningSick &&
       !getActivationRuleProfile(card, this.state).ignoreTapSummoningSickness
@@ -3243,7 +2933,10 @@ export class GameEngineImpl implements IGameEngine {
       return false;
     }
 
-    if (ability.cost.custom && !ability.cost.custom(this.state, card, playerId)) {
+    // Only check non-mana preconditions here; mana affordability is checked
+    // separately via canAffordCostWithTapSubstitution in the legal actions loop.
+    const ctx = this.createCostContext(playerId, card);
+    if (!abilityCost.canPayNonMana(ctx)) {
       return false;
     }
 
@@ -3257,17 +2950,15 @@ export class GameEngineImpl implements IGameEngine {
   private getAdjustedCastCost(
     playerId: PlayerId,
     source: CardInstance,
-    cost: Cost,
+    baseCost: Cost,
     definition: CardDefinition = source.definition,
-    extraManaCost?: ManaCost,
+    extraManaCost?: Cost,
   ): Cost {
-    const adjusted = this.cloneCost(cost);
+    const adjusted = baseCost.clone();
     if (extraManaCost) {
-      adjusted.mana = this.addManaCosts(adjusted.mana ?? emptyManaCost(), extraManaCost);
+      adjusted.addManaCostFrom(extraManaCost);
     }
-    if (adjusted.mana) {
-      this.applyCastCostAdjustments(playerId, source, definition, adjusted.mana);
-    }
+    this.applyCastCostAdjustments(playerId, source, definition, adjusted);
     return adjusted;
   }
 
@@ -3275,14 +2966,14 @@ export class GameEngineImpl implements IGameEngine {
     playerId: PlayerId,
     source: CardInstance,
     definition: CardDefinition,
-    cost: ManaCost,
+    cost: Cost,
   ): void {
     for (const adjustment of definition.castCostAdjustments ?? []) {
       if (adjustment.kind !== 'affinity') continue;
       const matching = this.getBattlefield(undefined).filter((candidate) =>
         this.matchesFilter(candidate, adjustment.filter, playerId),
       ).length;
-      cost.generic = Math.max(0, cost.generic - matching * adjustment.amount);
+      cost.applyReduction({ generic: matching * adjustment.amount });
     }
 
     for (const permanent of this.getBattlefield(undefined)) {
@@ -3298,7 +2989,7 @@ export class GameEngineImpl implements IGameEngine {
           modifiedSupertypes: [...definition.supertypes],
         };
         if (!this.matchesSpellFilter(spellReference, ability.effect.filter, playerId, permanent.controller)) continue;
-        this.applyManaCostDelta(cost, ability.effect.costDelta);
+        cost.addManaTax(ability.effect.costDelta);
       }
     }
   }
@@ -3319,17 +3010,6 @@ export class GameEngineImpl implements IGameEngine {
       { ...filter, controller: undefined, types: undefined },
       sourceController,
     );
-  }
-
-  private applyManaCostDelta(cost: ManaCost, delta: Partial<ManaCost>): void {
-    cost.generic = Math.max(0, cost.generic + (delta.generic ?? 0));
-    cost.W = Math.max(0, cost.W + (delta.W ?? 0));
-    cost.U = Math.max(0, cost.U + (delta.U ?? 0));
-    cost.B = Math.max(0, cost.B + (delta.B ?? 0));
-    cost.R = Math.max(0, cost.R + (delta.R ?? 0));
-    cost.G = Math.max(0, cost.G + (delta.G ?? 0));
-    cost.C = Math.max(0, cost.C + (delta.C ?? 0));
-    cost.X = Math.max(0, cost.X + (delta.X ?? 0));
   }
 
   private applyTrackedManaToSpell(
@@ -3364,19 +3044,19 @@ export class GameEngineImpl implements IGameEngine {
     cost: Cost,
     reservedTapSourceIds: Set<ObjectId> = new Set(),
   ): boolean {
-    if (!cost.mana) {
+    const manaSnapshot = cost.getManaCostSnapshot();
+    if (!manaSnapshot) {
       return true;
     }
 
-    const substitution = this.getEffectiveGenericTapSubstitution(source, cost);
-    if (!substitution || cost.mana.generic <= 0 || substitution.amount <= 0) {
-      const battlefield = this.getBattlefield(undefined, playerId).filter(
-        (card) => !reservedTapSourceIds.has(card.objectId),
-      );
-      return this.manaManager.canAffordWithManaProduction(this.state, playerId, cost.mana, battlefield);
+    const substitution = cost.getGenericTapSubstitution();
+    if (!substitution || manaSnapshot.generic <= 0 || substitution.amount <= 0) {
+      const ctx = this.createCostContext(playerId, source, { reservedTapSourceIds });
+      return cost.canAffordMana(ctx);
     }
 
-    const maxSubstitutions = Math.min(substitution.amount, cost.mana.generic);
+    const maxSubstitutions = Math.min(substitution.amount, manaSnapshot.generic);
+    const ctx = this.createCostContext(playerId, source, { reservedTapSourceIds });
     const candidates = this.getGenericTapSubstitutionCandidates(
       playerId,
       source,
@@ -3387,10 +3067,7 @@ export class GameEngineImpl implements IGameEngine {
     const tappedForSubstitution = new Set<ObjectId>();
 
     const search = (index: number, tappedCount: number): boolean => {
-      const adjustedCost = {
-        ...cost.mana!,
-        generic: Math.max(0, cost.mana!.generic - tappedCount),
-      };
+      const adjustedCost = cost.withReducedGeneric(tappedCount);
       const availableBattlefield = battlefield.filter(
         (card) => !reservedTapSourceIds.has(card.objectId) && !tappedForSubstitution.has(card.objectId),
       );
@@ -3415,45 +3092,27 @@ export class GameEngineImpl implements IGameEngine {
     return search(0, 0);
   }
 
-  private async applyGenericTapSubstitution(
+  private getGenericTapSubstitutionCandidates(
     playerId: PlayerId,
     source: CardInstance,
-    cost: Cost,
+    substitution: import('./types/costs').GenericTapSubstitution,
     reservedTapSourceIds: Set<ObjectId> = new Set(),
-  ): Promise<void> {
-    if (!cost.mana) return;
-
-    const substitution = this.getEffectiveGenericTapSubstitution(source, cost);
-    if (!substitution || substitution.amount <= 0 || cost.mana.generic <= 0) {
-      return;
-    }
-
-    const candidates = this.getGenericTapSubstitutionCandidates(
-      playerId,
-      source,
-      substitution,
-      reservedTapSourceIds,
-    );
-    const maxSelections = Math.min(substitution.amount, cost.mana.generic, candidates.length);
-    if (maxSelections <= 0) {
-      return;
-    }
-
-    const helper = this.createChoiceHelper(playerId);
-    const selected = await helper.chooseUpToN(
-      `Choose up to ${maxSelections} artifact(s) and/or creature(s) to tap for generic mana`,
-      candidates,
-      maxSelections,
-      (card) => card.definition.name,
-    );
-
-    const uniqueSelections = selected.filter((card, index) =>
-      selected.findIndex(candidate => candidate.objectId === card.objectId) === index,
-    );
-    for (const card of uniqueSelections) {
-      this.zoneManager.tapPermanent(this.state, card.objectId);
-    }
-    cost.mana.generic = Math.max(0, cost.mana.generic - uniqueSelections.length);
+  ): CardInstance[] {
+    return this.state.zones[playerId].BATTLEFIELD.filter((card) => {
+      if (card.phasedOut || card.tapped) return false;
+      if (card.objectId === source.objectId) return false;
+      if (reservedTapSourceIds.has(card.objectId)) return false;
+      if (!this.matchesFilter(card, substitution.filter, source.controller)) return false;
+      if (
+        !substitution.ignoreSummoningSickness &&
+        hasType(card, CardType.CREATURE) &&
+        card.summoningSick &&
+        !getActivationRuleProfile(card, this.state).ignoreTapSummoningSickness
+      ) {
+        return false;
+      }
+      return true;
+    });
   }
 
   private payAttackTaxesIfNeeded(
@@ -3461,12 +3120,13 @@ export class GameEngineImpl implements IGameEngine {
     declarations: Array<{ attackerId: ObjectId; defendingPlayer: PlayerId }>,
   ): boolean {
     const attackTaxCost = this.getAttackTaxCost(declarations);
-    if (manaCostTotal(attackTaxCost) === 0 && (attackTaxCost.hybrid?.length ?? 0) === 0 && (attackTaxCost.phyrexian?.length ?? 0) === 0) {
+    if (attackTaxCost.isEmpty()) {
       return true;
     }
 
+    const taxMana = attackTaxCost.getDisplayMana();
     const battlefield = this.getBattlefield(undefined, playerId);
-    const plan = this.manaManager.autoTapForCost(this.state, playerId, attackTaxCost, battlefield);
+    const plan = this.manaManager.autoTapForCost(this.state, playerId, taxMana, battlefield);
     if (!plan) {
       return false;
     }
@@ -3476,8 +3136,8 @@ export class GameEngineImpl implements IGameEngine {
 
   private getAttackTaxCost(
     declarations: Array<{ attackerId: ObjectId; defendingPlayer: PlayerId }>,
-  ): ManaCost {
-    let totalCost = emptyManaCost();
+  ): Cost {
+    let totalCost = Cost.empty();
 
     for (const declaration of declarations) {
       const attacker = findCard(this.state, declaration.attackerId);
@@ -3485,7 +3145,7 @@ export class GameEngineImpl implements IGameEngine {
 
       for (const tax of attacker.attackTaxes ?? []) {
         if (tax.defender !== declaration.defendingPlayer) continue;
-        totalCost = this.addManaCosts(totalCost, tax.cost.mana);
+        totalCost.addManaCostFrom(Cost.from(tax.cost));
       }
     }
 
@@ -3533,33 +3193,12 @@ export class GameEngineImpl implements IGameEngine {
       const confirmed = await helper.chooseYesNo(prompt);
       if (!confirmed) return false;
     }
-    const paymentCost: Cost = {
-      ...cost,
-      mana: cost.mana ? { ...cost.mana } : undefined,
-      genericTapSubstitution: cost.genericTapSubstitution
-        ? {
-          ...cost.genericTapSubstitution,
-          filter: { ...cost.genericTapSubstitution.filter },
-        }
-        : undefined,
-    };
-    if (!await this.payNonManaCostParts(playerId, source, paymentCost)) return false;
-    if (paymentCost.mana && !await this.payExtraManaCost(playerId, source, paymentCost)) return false;
-    return true;
-  }
-
-  private async payExtraManaCost(playerId: PlayerId, source: CardInstance, cost: Cost): Promise<boolean> {
-    if (!cost.mana) {
-      return true;
-    }
-    if (!this.canAffordCostWithTapSubstitution(playerId, source, cost)) {
-      return false;
-    }
-    await this.applyGenericTapSubstitution(playerId, source, cost);
-    const battlefield = this.getBattlefield(undefined, playerId);
-    const landsToTap = this.manaManager.autoTapForCost(this.state, playerId, cost.mana, battlefield);
-    this.applyAutoTapPlan(playerId, landsToTap);
-    return this.manaManager.payMana(this.state, playerId, cost.mana);
+    const paymentCost = Cost.from(cost);
+    const ctx = this.createCostContext(playerId, source);
+    if (!paymentCost.canAffordMana(ctx)) return false;
+    await paymentCost.applyModifiers(ctx);
+    const result = await paymentCost.pay(ctx);
+    return result.success;
   }
 
   private applyAutoTapPlan(
@@ -3787,12 +3426,7 @@ export class GameEngineImpl implements IGameEngine {
       return {
         ...card.definition,
         name: card.definition.adventure.name,
-        spellCost: {
-          mana: { ...card.definition.adventure.spellCost.mana },
-          mechanics: card.definition.adventure.spellCost.mechanics
-            ? [...card.definition.adventure.spellCost.mechanics]
-            : undefined,
-        },
+        cost: Cost.from(card.definition.adventure.cost).toPlainCost(),
         types: [...card.definition.adventure.types],
         spell: {
           kind: 'simple',
@@ -3843,6 +3477,42 @@ export class GameEngineImpl implements IGameEngine {
     }
     if (filter.custom && !filter.custom(card, this.state)) return false;
     return true;
+  }
+
+  private createCostContext(
+    playerId: PlayerId,
+    source: CardInstance,
+    options?: {
+      reservedTapSourceIds?: Set<ObjectId>;
+      excludeSourceFromHandDiscard?: boolean;
+      spellDefinition?: CardDefinition;
+    },
+  ): CostContext {
+    return {
+      game: this.state,
+      source,
+      playerId,
+      choices: this.createChoiceHelper(playerId),
+      loseLife: (player, amount) => this.loseLife(player, amount),
+      sacrificePermanent: (objectId, controller) => this.sacrificePermanent(objectId, controller),
+      sacrificePermanents: (player, filter, count, prompt) => this.sacrificePermanents(player, filter, count, prompt),
+      removeCounters: (objectId, counterType, amount) => this.removeCounters(objectId, counterType, amount),
+      moveCard: (objectId, toZone, toOwner) => this.zoneManager.moveCard(this.state, objectId, toZone as any, toOwner),
+      discardCard: (player, objectId) => this.zoneManager.discardCard(this.state, player, objectId),
+      tapPermanent: (objectId) => this.zoneManager.tapPermanent(this.state, objectId),
+      matchesFilter: (card, filter, controller) => this.matchesFilter(card, filter, controller),
+      getBattlefield: (filter, controller) => this.getBattlefield(filter, controller),
+      hasType: (card, type) => hasType(card, type),
+      canPayMana: (player, cost) => this.manaManager.canPayMana(this.state, player, cost),
+      payMana: (player, cost) => this.manaManager.payMana(this.state, player, cost),
+      payManaWithContext: (player, cost, context) => this.manaManager.payManaWithContext(this.state, player, cost, context),
+      autoTapForCost: (player, cost, battlefield) => this.manaManager.autoTapForCost(this.state, player, cost, battlefield),
+      canAffordWithManaProduction: (player, cost, battlefield) => this.manaManager.canAffordWithManaProduction(this.state, player, cost, battlefield),
+      applyAutoTapPlan: (pid, plan) => this.applyAutoTapPlan(pid, plan),
+      reservedTapSourceIds: options?.reservedTapSourceIds,
+      excludeSourceFromHandDiscard: options?.excludeSourceFromHandDiscard,
+      spellDefinition: options?.spellDefinition,
+    };
   }
 
   private notifyStateChange(): void {

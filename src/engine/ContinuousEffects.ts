@@ -12,6 +12,7 @@ import type {
 import { CardType, GameEventType, Layer } from './types';
 import { getEffectiveSubtypes, getEffectiveSupertypes, getEffectiveTypes, hasType } from './GameState';
 import { matchesInteractionSource } from './InteractionEngine';
+import { Cost } from './costs';
 
 /**
  * Implements the MTG Layer System (rule 613) for applying continuous effects.
@@ -377,10 +378,7 @@ export class ContinuousEffectsEngine {
             permanent.attackTaxes.push({
               sourceId: source.objectId,
               defender: effect.defender === 'source-controller' ? source.controller : source.controller,
-              cost: {
-                ...effect.cost,
-                mana: effect.cost.mana ? { ...effect.cost.mana } : undefined,
-              },
+              cost: Cost.from(effect.cost).toPlainCost(),
             });
           },
         };
@@ -437,7 +435,7 @@ export class ContinuousEffectsEngine {
           requirement: {
             id: requirementId,
             prompt: hook.prompt ?? `Pay for ${ctx.object.definition.name}?`,
-            cost: cloneCost(hook.cost),
+            cost: Cost.from(hook.cost).toPlainCost(),
             onFailure: hook.onFailure,
           },
         };
@@ -554,15 +552,3 @@ export class ContinuousEffectsEngine {
   }
 }
 
-function cloneCost(cost: import('./types').Cost): import('./types').Cost {
-  return {
-    ...cost,
-    mana: cost.mana ? { ...cost.mana } : undefined,
-    genericTapSubstitution: cost.genericTapSubstitution
-      ? {
-        ...cost.genericTapSubstitution,
-        filter: { ...cost.genericTapSubstitution.filter },
-      }
-      : undefined,
-  };
-}

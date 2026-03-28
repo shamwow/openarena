@@ -1,7 +1,6 @@
 import type {
   GameState, PlayerId, ObjectId, CardInstance, DamageAssignment, GameEvent,
   AttackTarget,
-  ManaCost,
   CardFilter,
 } from './types';
 import { CardType, GameEventType } from './types';
@@ -16,6 +15,7 @@ import type { EventBus } from './EventBus';
 import type { ZoneManager } from './ZoneManager';
 import type { ManaManager } from './ManaManager';
 import type { InteractionEngine } from './InteractionEngine';
+import { Cost } from './costs';
 
 export class CombatManager {
   private eventBus: EventBus;
@@ -647,44 +647,22 @@ export class CombatManager {
     const defendingPlayer = this.getDefendingPlayer(target, state);
     if (!defendingPlayer) return false;
     const taxCost = this.getAttackTaxCostForDefender(card, defendingPlayer);
-    if (
-      taxCost.generic === 0 &&
-      taxCost.W === 0 &&
-      taxCost.U === 0 &&
-      taxCost.B === 0 &&
-      taxCost.R === 0 &&
-      taxCost.G === 0 &&
-      taxCost.C === 0 &&
-      (taxCost.hybrid?.length ?? 0) === 0 &&
-      (taxCost.phyrexian?.length ?? 0) === 0
-    ) {
+    if (taxCost.isEmpty()) {
       return true;
     }
 
+    const taxMana = taxCost.getDisplayMana();
     const battlefield = state.zones[card.controller].BATTLEFIELD.filter((permanent) => !permanent.phasedOut);
-    return this.manaManager.autoTapForCost(state, card.controller, taxCost, battlefield) != null;
+    return this.manaManager.autoTapForCost(state, card.controller, taxMana, battlefield) != null;
   }
 
-  private getAttackTaxCostForDefender(card: CardInstance, defendingPlayer: PlayerId): ManaCost {
-    const total: ManaCost = { generic: 0, W: 0, U: 0, B: 0, R: 0, G: 0, C: 0, X: 0 };
+  private getAttackTaxCostForDefender(card: CardInstance, defendingPlayer: PlayerId): Cost {
+    let totalCost = Cost.empty();
     for (const tax of card.attackTaxes ?? []) {
-      if (tax.defender !== defendingPlayer || !tax.cost.mana) continue;
-      total.generic += tax.cost.mana.generic;
-      total.W += tax.cost.mana.W;
-      total.U += tax.cost.mana.U;
-      total.B += tax.cost.mana.B;
-      total.R += tax.cost.mana.R;
-      total.G += tax.cost.mana.G;
-      total.C += tax.cost.mana.C;
-      total.X += tax.cost.mana.X;
-      if (tax.cost.mana.hybrid?.length) {
-        total.hybrid = [...(total.hybrid ?? []), ...tax.cost.mana.hybrid];
-      }
-      if (tax.cost.mana.phyrexian?.length) {
-        total.phyrexian = [...(total.phyrexian ?? []), ...tax.cost.mana.phyrexian];
-      }
+      if (tax.defender !== defendingPlayer) continue;
+      totalCost.addManaCostFrom(Cost.from(tax.cost));
     }
-    return total;
+    return totalCost;
   }
 
   private matchesFilter(

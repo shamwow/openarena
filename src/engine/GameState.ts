@@ -3,7 +3,8 @@ import type {
   GameState, PlayerId, CardDefinition, CardInstance,
   LastKnownInformation, ManaColor, Zone, PlayerState, CardType,
 } from './types';
-import { Phase, Step, emptyManaPool } from './types';
+import { Phase, Step, emptyManaCost, emptyManaPool } from './types';
+import { Cost } from './costs';
 
 export interface DeckConfig {
   commander: CardDefinition;
@@ -170,10 +171,7 @@ export function cloneCardInstance(card: CardInstance): CardInstance {
     attackTaxes: card.attackTaxes ? card.attackTaxes.map(tax => ({
       sourceId: tax.sourceId,
       defender: tax.defender,
-      cost: {
-        ...tax.cost,
-        mana: tax.cost.mana ? { ...tax.cost.mana } : undefined,
-      },
+      cost: Cost.from(tax.cost).toPlainCost(),
     })) : undefined,
   };
 }
@@ -316,7 +314,7 @@ export function drawOneCard(state: GameState, player: PlayerId): CardInstance | 
 
 function deriveColorIdentity(card: CardDefinition): ManaColor[] {
   const colors = new Set<ManaColor>();
-  const cost = card.spellCost.mana;
+  const cost = card.cost?.mana ?? emptyManaCost();
   if (cost.W > 0) colors.add('W' as ManaColor);
   if (cost.U > 0) colors.add('U' as ManaColor);
   if (cost.B > 0) colors.add('B' as ManaColor);
