@@ -691,6 +691,56 @@ export type WouldEnterBattlefieldReplacementEffectDef = {
   selfReplacement?: boolean;
 };
 
+export interface TimingPermissionEffectDef {
+  type: 'timing-permission';
+  scope: 'spell' | 'activated-ability' | 'all';
+  anyTimeCouldCastInstant?: boolean;
+  zones?: Zone[];
+}
+
+export interface AttackRuleEffectDef {
+  type: 'attack-rule';
+  canAttack?: boolean;
+  ignoreSummoningSickness?: boolean;
+  attacksWithoutTapping?: boolean;
+}
+
+export interface ActivationRuleEffectDef {
+  type: 'activation-rule';
+  ignoreTapSummoningSickness?: boolean;
+}
+
+export interface BlockRuleEffectDef {
+  type: 'block-rule';
+  canBlock?: boolean;
+  canBeBlocked?: boolean;
+  minBlockers?: number;
+  evasion?: 'requires-flying-or-reach';
+  canBlockIfAttackerHas?: 'flying';
+  landwalkSubtypes?: string[];
+}
+
+export interface CombatDamageRuleEffectDef {
+  type: 'combat-damage-rule';
+  combatDamageStep?: 'first-strike' | 'double-strike';
+  lethalDamageIsOne?: boolean;
+  marksDeathtouchDamage?: boolean;
+  excessToDefender?: boolean;
+  controllerGainsLifeFromDamage?: boolean;
+}
+
+export interface SurvivalRuleEffectDef {
+  type: 'survival-rule';
+  ignoreDestroy?: boolean;
+  ignoreLethalDamage?: boolean;
+}
+
+export interface PhaseRuleEffectDef {
+  type: 'phase-rule';
+  phasesInDuringUntap?: boolean;
+  phasesOutDuringUntap?: boolean;
+}
+
 export type StaticEffectDef =
   | { type: 'pump'; power: number; toughness: number; filter: CardFilter; duration?: EffectDuration }
   | { type: 'attached-pump'; power: number | ((game: GameState, source: CardInstance) => number); toughness: number | ((game: GameState, source: CardInstance) => number) }
@@ -706,6 +756,13 @@ export type StaticEffectDef =
   | { type: 'grant-abilities'; abilities: AbilityDefinition[]; filter: CardFilter }
   | { type: 'cost-modification'; costDelta: Partial<ManaCost>; filter: SpellFilter }
   | { type: 'attack-tax'; filter: CardFilter; cost: Cost; defender: 'source-controller' }
+  | TimingPermissionEffectDef
+  | AttackRuleEffectDef
+  | ActivationRuleEffectDef
+  | BlockRuleEffectDef
+  | CombatDamageRuleEffectDef
+  | SurvivalRuleEffectDef
+  | PhaseRuleEffectDef
   | { type: 'cant-attack'; filter: CardFilter }
   | { type: 'cant-block'; filter: CardFilter }
   | { type: 'no-max-hand-size' }

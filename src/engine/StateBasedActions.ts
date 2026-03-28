@@ -1,6 +1,7 @@
 import type { GameState, PlayerId, ObjectId, CardInstance, GameEvent } from './types';
-import { CardType, GameEventType, Keyword } from './types';
+import { CardType, GameEventType } from './types';
 import { findCard, getEffectiveSubtypes, getEffectiveSupertypes, hasType, getNextTimestamp } from './GameState';
+import { getSurvivalRuleProfile } from './AbilityPrimitives';
 import type { ZoneManager } from './ZoneManager';
 import type { EventBus } from './EventBus';
 import type { InteractionEngine } from './InteractionEngine';
@@ -90,16 +91,14 @@ export class StateBasedActions {
 
           // 704.5g: Creature with lethal damage
           if (toughness > 0 && card.markedDamage >= toughness) {
-            const hasIndestructible = this.hasKeyword(card, Keyword.INDESTRUCTIBLE);
-            if (!hasIndestructible) {
+            if (!getSurvivalRuleProfile(card, state).ignoreLethalDamage) {
               actions.push({ type: 'destroy', objectId: card.objectId });
             }
           }
 
           // 704.5h: Creature with deathtouch damage
           if ((card.counters['deathtouch-damage'] ?? 0) > 0) {
-            const hasIndestructible = this.hasKeyword(card, Keyword.INDESTRUCTIBLE);
-            if (!hasIndestructible) {
+            if (!getSurvivalRuleProfile(card, state).ignoreLethalDamage) {
               actions.push({ type: 'destroy', objectId: card.objectId });
             }
           }
@@ -277,13 +276,6 @@ export class StateBasedActions {
         // Already handled inline during check
         break;
     }
-  }
-
-  private hasKeyword(card: CardInstance, keyword: Keyword): boolean {
-    if (card.modifiedKeywords) {
-      return card.modifiedKeywords.includes(keyword);
-    }
-    return card.definition.keywords.includes(keyword);
   }
 
   private applyRegenerationShield(state: GameState, card: CardInstance): boolean {

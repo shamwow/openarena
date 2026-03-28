@@ -4,8 +4,14 @@ import type {
   ManaCost,
   CardFilter,
 } from './types';
-import { CardType, Keyword, GameEventType } from './types';
+import { CardType, GameEventType } from './types';
 import { findCard, getEffectiveSubtypes, getEffectiveSupertypes, hasSubtype, hasType, getNextTimestamp } from './GameState';
+import {
+  type BlockRuleProfile,
+  getAttackRuleProfile,
+  getBlockRuleProfile,
+  getCombatDamageRuleProfile,
+} from './AbilityPrimitives';
 import type { EventBus } from './EventBus';
 import type { ZoneManager } from './ZoneManager';
 import type { ManaManager } from './ManaManager';
@@ -60,7 +66,7 @@ export class CombatManager {
       if (!this.canAttack(card, state, decl.defender, taxesPaid)) continue;
 
       // Tap the attacker (unless it has vigilance)
-      if (!this.hasKeyword(card, Keyword.VIGILANCE)) {
+      if (!getAttackRuleProfile(card, state).attacksWithoutTapping) {
         card.tapped = true;
         const tapEvent: GameEvent = {
           type: GameEventType.TAPPED,
@@ -129,7 +135,9 @@ export class CombatManager {
     // Remove illegal blocking assignments where a menace creature has only 1 blocker.
     for (const [attackerId] of state.combat.attackers) {
       const attacker = findCard(state, attackerId);
-      if (!attacker || !this.hasKeyword(attacker, Keyword.MENACE)) continue;
+      if (!attacker) continue;
+      const minBlockers = getBlockRuleProfile(attacker, state).minBlockers;
+      if (minBlockers <= 1) continue;
 
       const blockersForThis: ObjectId[] = [];
       for (const [blockerId, blockedAttackerId] of state.combat.blockers) {
@@ -137,9 +145,10 @@ export class CombatManager {
           blockersForThis.push(blockerId);
         }
       }
-      if (blockersForThis.length === 1) {
-        // Illegal — menace requires 2+ blockers; remove the single blocker assignment
-        state.combat.blockers.delete(blockersForThis[0]);
+      if (blockersForThis.length > 0 && blockersForThis.length < minBlockers) {
+        for (const blockerId of blockersForThis) {
+          state.combat.blockers.delete(blockerId);
+        }
       }
     }
 
@@ -165,14 +174,14 @@ export class CombatManager {
 
     for (const [attackerId] of state.combat.attackers) {
       const card = findCard(state, attackerId);
-      if (card && (this.hasKeyword(card, Keyword.FIRST_STRIKE) || this.hasKeyword(card, Keyword.DOUBLE_STRIKE))) {
+      if (card && getCombatDamageRuleProfile(card, state).hasFirstStrike) {
         return true;
       }
     }
 
     for (const [blockerId] of state.combat.blockers) {
       const card = findCard(state, blockerId);
-      if (card && (this.hasKeyword(card, Keyword.FIRST_STRIKE) || this.hasKeyword(card, Keyword.DOUBLE_STRIKE))) {
+      if (card && getCombatDamageRuleProfile(card, state).hasFirstStrike) {
         return true;
       }
     }
@@ -193,13 +202,12 @@ export class CombatManager {
       const power = attacker.modifiedPower ?? attacker.definition.power ?? 0;
       if (power <= 0) continue;
 
-      const hasFirstStrike = this.hasKeyword(attacker, Keyword.FIRST_STRIKE);
-      const hasDoubleStrike = this.hasKeyword(attacker, Keyword.DOUBLE_STRIKE);
+      const combatProfile = getCombatDamageRuleProfile(attacker, state);
 
       // First-strike step: only first strike and double strike creatures deal damage
-      if (isFirstStrike && !hasFirstStrike && !hasDoubleStrike) continue;
+      if (isFirstStrike && !combatProfile.hasFirstStrike) continue;
       // Regular step: skip first-strike-only creatures (they already dealt damage)
-      if (!isFirstStrike && hasFirstStrike && !hasDoubleStrike && state.combat.firstStrikeDamageDealt) continue;
+      if (!isFirstStrike && combatProfile.hasFirstStrike && !combatProfile.hasDoubleStrike && state.combat.firstStrikeDamageDealt) continue;
 
       const blockerIds = state.combat.blockerOrder.get(attackerId);
 
@@ -213,15 +221,15 @@ export class CombatManager {
       } else {
         // Blocked — distribute damage among blockers
         let remainingDamage = power;
-        const hasTrample = this.hasKeyword(attacker, Keyword.TRAMPLE);
-        const hasDeathtouch = this.hasKeyword(attacker, Keyword.DEATHTOUCH);
 
         for (const blockerId of blockerIds) {
           const blocker = findCard(state, blockerId);
           if (!blocker || blocker.zone !== 'BATTLEFIELD') continue;
 
           const blockerToughness = blocker.modifiedToughness ?? blocker.definition.toughness ?? 0;
-          const lethalDamage = hasDeathtouch ? 1 : Math.max(0, blockerToughness - blocker.markedDamage);
+          const lethalDamage = combatProfile.lethalDamageIsOne
+            ? 1
+            : Math.max(0, blockerToughness - blocker.markedDamage);
           const damageToBlocker = Math.min(remainingDamage, lethalDamage);
 
           if (damageToBlocker > 0) {
@@ -235,7 +243,7 @@ export class CombatManager {
         }
 
         // Trample: remaining damage goes to defending player
-        if (hasTrample && remainingDamage > 0) {
+        if (combatProfile.excessToDefender && remainingDamage > 0) {
           assignments.push({
             sourceId: attackerId,
             targetId: target.id,
@@ -253,11 +261,10 @@ export class CombatManager {
       const power = blocker.modifiedPower ?? blocker.definition.power ?? 0;
       if (power <= 0) continue;
 
-      const hasFirstStrike = this.hasKeyword(blocker, Keyword.FIRST_STRIKE);
-      const hasDoubleStrike = this.hasKeyword(blocker, Keyword.DOUBLE_STRIKE);
+      const combatProfile = getCombatDamageRuleProfile(blocker, state);
 
-      if (isFirstStrike && !hasFirstStrike && !hasDoubleStrike) continue;
-      if (!isFirstStrike && hasFirstStrike && !hasDoubleStrike && state.combat.firstStrikeDamageDealt) continue;
+      if (isFirstStrike && !combatProfile.hasFirstStrike) continue;
+      if (!isFirstStrike && combatProfile.hasFirstStrike && !combatProfile.hasDoubleStrike && state.combat.firstStrikeDamageDealt) continue;
 
       assignments.push({
         sourceId: blockerId,
@@ -341,10 +348,11 @@ export class CombatManager {
     if (!hasType(card, CardType.CREATURE)) return false;
     if (card.tapped) return false;
     if (card.controller !== state.activePlayer) return false;
-    if (this.hasKeyword(card, Keyword.DEFENDER)) return false;
+    const attackProfile = getAttackRuleProfile(card, state);
+    if (!attackProfile.canAttack) return false;
 
     // Summoning sickness: can't attack unless has haste
-    if (card.summoningSick && !this.hasKeyword(card, Keyword.HASTE)) return false;
+    if (card.summoningSick && !attackProfile.ignoreSummoningSickness) return false;
 
     const legalTargets = this.getLegalAttackTargets(card, state, taxesPaid);
     if (legalTargets.length === 0) return false;
@@ -361,22 +369,23 @@ export class CombatManager {
     if (blocker.phasedOut || attacker.phasedOut) return false;
     if (!hasType(blocker, CardType.CREATURE)) return false;
     if (blocker.tapped) return false;
+    const blockerProfile = getBlockRuleProfile(blocker, state);
+    if (!blockerProfile.canBlock) return false;
+    const attackerProfile = getBlockRuleProfile(attacker, state);
 
     // Unblockable: creature with this keyword can't be blocked
-    if (this.hasKeyword(attacker, Keyword.UNBLOCKABLE)) return false;
+    if (!attackerProfile.canBeBlocked) return false;
 
     // Flying: can only be blocked by creatures with flying or reach
-    if (this.hasKeyword(attacker, Keyword.FLYING)) {
-      if (!this.hasKeyword(blocker, Keyword.FLYING) && !this.hasKeyword(blocker, Keyword.REACH)) {
-        return false;
-      }
+    if (attackerProfile.hasFlying && !(blockerProfile.hasFlying || blockerProfile.canBlockFlying)) {
+      return false;
     }
 
     // Landwalk: if attacker has a landwalk keyword and defending player controls that land type,
     // the attacker can't be blocked
     if (state) {
       const defendingPlayer = blocker.controller;
-      if (this.hasLandwalkEvasion(attacker, defendingPlayer, state)) {
+      if (this.hasLandwalkEvasion(attackerProfile, defendingPlayer, state)) {
         return false;
       }
     }
@@ -434,7 +443,7 @@ export class CombatManager {
       }
 
       // Lifelink
-      if (source && this.hasKeyword(source, Keyword.LIFELINK)) {
+      if (source && getCombatDamageRuleProfile(source, state).controllerGainsLifeFromDamage) {
         state.players[source.controller].life += assignment.amount;
         const lifeEvent: GameEvent = {
           type: GameEventType.LIFE_GAINED,
@@ -478,19 +487,15 @@ export class CombatManager {
         target.counters['loyalty'] = (target.counters['loyalty'] ?? 0) - assignment.amount;
       } else {
         target.markedDamage += assignment.amount;
-        if (source && this.hasKeyword(source, Keyword.DEATHTOUCH) && assignment.amount > 0) {
+        const sourceCombatProfile = source ? getCombatDamageRuleProfile(source, state) : null;
+        if (sourceCombatProfile?.marksDeathtouchDamage && assignment.amount > 0) {
           target.counters['deathtouch-damage'] = 1;
         }
       }
 
       // Lifelink
-      if (source && this.hasKeyword(source, Keyword.LIFELINK)) {
+      if (source && getCombatDamageRuleProfile(source, state).controllerGainsLifeFromDamage) {
         state.players[source.controller].life += assignment.amount;
-      }
-
-      // Deathtouch
-      if (source && this.hasKeyword(source, Keyword.DEATHTOUCH)) {
-        // Any damage from deathtouch source is lethal — SBAs will handle destruction
       }
 
       const event: GameEvent = {
@@ -517,41 +522,23 @@ export class CombatManager {
     return player.commanderIds.includes(card.cardId);
   }
 
-  private hasKeyword(card: CardInstance, keyword: Keyword): boolean {
-    if (card.modifiedKeywords) return card.modifiedKeywords.includes(keyword);
-    return card.definition.keywords.includes(keyword);
-  }
-
-  /** Landwalk map: keyword -> basic land subtype */
-  private static readonly LANDWALK_MAP: Record<string, string> = {
-    'Plainswalk': 'Plains',
-    'Islandwalk': 'Island',
-    'Swampwalk': 'Swamp',
-    'Mountainwalk': 'Mountain',
-    'Forestwalk': 'Forest',
-  };
-
   /**
    * Check if attacker has a landwalk keyword and the defending player controls
    * a land with the corresponding basic land subtype.
    */
   private hasLandwalkEvasion(
-    attacker: CardInstance,
+    attackerProfile: BlockRuleProfile,
     defendingPlayer: PlayerId,
     state: GameState
   ): boolean {
-    const keywords = attacker.modifiedKeywords ?? attacker.definition.keywords;
     const defenderBattlefield = state.zones[defendingPlayer].BATTLEFIELD;
 
-    for (const [walkKeyword, landSubtype] of Object.entries(CombatManager.LANDWALK_MAP)) {
-      if (keywords.includes(walkKeyword as Keyword)) {
-        // Check if defending player controls a land with that subtype
-        const hasMatchingLand = defenderBattlefield.some(card =>
-          hasType(card, CardType.LAND) &&
-          hasSubtype(card, landSubtype)
-        );
-        if (hasMatchingLand) return true;
-      }
+    for (const landSubtype of attackerProfile.landwalkSubtypes) {
+      const hasMatchingLand = defenderBattlefield.some(card =>
+        hasType(card, CardType.LAND) &&
+        hasSubtype(card, landSubtype)
+      );
+      if (hasMatchingLand) return true;
     }
 
     return false;
@@ -563,8 +550,9 @@ export class CombatManager {
     if (!hasType(card, CardType.CREATURE)) return false;
     if (card.tapped) return false;
     if (card.controller !== state.activePlayer) return false;
-    if (this.hasKeyword(card, Keyword.DEFENDER)) return false;
-    if (card.summoningSick && !this.hasKeyword(card, Keyword.HASTE)) return false;
+    const attackProfile = getAttackRuleProfile(card, state);
+    if (!attackProfile.canAttack) return false;
+    if (card.summoningSick && !attackProfile.ignoreSummoningSickness) return false;
     if (
       state.currentCombatAttackRestriction &&
       !this.matchesFilter(card, state.currentCombatAttackRestriction, state.activePlayer, state)

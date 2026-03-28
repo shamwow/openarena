@@ -5,6 +5,7 @@ import type {
   CardDefinition,
   GameEvent,
   GameState,
+  Keyword as KeywordValue,
   ManaColor,
   ManaCost,
   ManaPool,
@@ -14,8 +15,9 @@ import type {
   TrackedMana,
   TrackedManaEffect,
 } from './types';
-import { GameEventType, Keyword, emptyManaPool } from './types';
+import { GameEventType, emptyManaPool } from './types';
 import { getEffectiveAbilities, getEffectiveSubtypes, getEffectiveSupertypes, getNextTimestamp, hasType } from './GameState';
+import { getActivationRuleProfile } from './AbilityPrimitives';
 import type { EventBus } from './EventBus';
 
 export interface AutoTapPlanEntry {
@@ -188,7 +190,7 @@ export class ManaManager {
         }
 
         const options = abilities.flatMap((ability) => {
-          if (!this.canActivateManaAbility(card, ability)) {
+          if (!this.canActivateManaAbility(card, ability, state)) {
             return [];
           }
 
@@ -226,7 +228,7 @@ export class ManaManager {
       });
   }
 
-  private canActivateManaAbility(card: CardInstance, ability: { cost: { tap?: boolean } }): boolean {
+  private canActivateManaAbility(card: CardInstance, ability: { cost: { tap?: boolean } }, state: GameState): boolean {
     if (!ability.cost.tap) {
       return true;
     }
@@ -236,7 +238,7 @@ export class ManaManager {
     if (!card.summoningSick) {
       return true;
     }
-    return (card.modifiedKeywords ?? card.definition.keywords).includes(Keyword.HASTE);
+    return getActivationRuleProfile(card, state).ignoreTapSummoningSickness;
   }
 
   private getManaProductions(
@@ -427,7 +429,7 @@ export class ManaManager {
     if (filter.subtypes && !filter.subtypes.some(subtype => getEffectiveSubtypes(card).includes(subtype))) return false;
     if (filter.supertypes && !filter.supertypes.some(supertype => getEffectiveSupertypes(card).includes(supertype))) return false;
     if (filter.colors && !filter.colors.some(color => card.definition.colorIdentity.includes(color))) return false;
-    if (filter.keywords && !filter.keywords.some(keyword => (card.modifiedKeywords ?? card.definition.keywords).includes(keyword as Keyword))) return false;
+    if (filter.keywords && !filter.keywords.some(keyword => (card.modifiedKeywords ?? card.definition.keywords).includes(keyword as KeywordValue))) return false;
     if (filter.controller === 'you' && card.controller !== sourceController) return false;
     if (filter.controller === 'opponent' && card.controller === sourceController) return false;
     if (filter.name && card.definition.name !== filter.name) return false;

@@ -13,6 +13,7 @@ import {
   CardType as CardTypeConst,
 } from '../engine/types';
 import { getEffectiveSubtypes, getEffectiveSupertypes, hasType } from '../engine/GameState';
+import { getPrimitiveAbilitiesForKeyword } from '../engine/AbilityPrimitives';
 import { createFirebendingTriggeredAbility } from './firebending';
 
 function matchesCardFilter(
@@ -146,9 +147,9 @@ export class CardBuilder {
   doubleStrike(): this { return this.keyword('Double Strike' as Keyword); }
 
   keyword(kw: Keyword): this {
-    if (!this.def.keywords.includes(kw)) {
-      this.def.keywords.push(kw);
-    }
+    if (this.def.keywords.includes(kw)) return this;
+    this.def.keywords.push(kw);
+    this.def.abilities.push(...getPrimitiveAbilitiesForKeyword(kw));
     return this;
   }
 

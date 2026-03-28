@@ -1,6 +1,7 @@
 import type { GameState, PlayerId, GameEvent, CardInstance } from './types';
-import { Phase, Step, GameEventType, Keyword } from './types';
+import { Phase, Step, GameEventType } from './types';
 import { clearExileInsteadOfDyingThisTurn, getNextTimestamp } from './GameState';
+import { getCombatDamageRuleProfile, getPhaseRuleProfile } from './AbilityPrimitives';
 import type { EventBus } from './EventBus';
 import type { ZoneManager } from './ZoneManager';
 import type { ManaManager } from './ManaManager';
@@ -244,6 +245,9 @@ export class TurnManager {
   /** Phasing: phase out permanents with Phasing keyword, phase in previously phased-out permanents */
   private handlePhasing(state: GameState, player: PlayerId): void {
     const battlefield = state.zones[player].BATTLEFIELD;
+    const phasedOutAtStart = new Set(
+      battlefield.filter((card) => card.phasedOut).map((card) => card.objectId),
+    );
 
     // Phase in: all phased-out permanents controlled by active player phase in
     for (const card of battlefield) {
@@ -254,8 +258,7 @@ export class TurnManager {
 
     // Phase out: all permanents with the Phasing keyword phase out
     for (const card of battlefield) {
-      const keywords = card.modifiedKeywords ?? card.definition.keywords;
-      if (keywords.includes(Keyword.PHASING)) {
+      if (!phasedOutAtStart.has(card.objectId) && getPhaseRuleProfile(card, state).phasesOutDuringUntap) {
         card.phasedOut = true;
       }
     }
@@ -389,14 +392,14 @@ export class TurnManager {
 
     for (const [attackerId] of state.combat.attackers) {
       const attacker = this.findCombatCard(state, attackerId);
-      if (attacker && this.hasFirstStrikeCapability(attacker)) {
+      if (attacker && this.hasFirstStrikeCapability(attacker, state)) {
         return true;
       }
     }
 
     for (const [blockerId] of state.combat.blockers) {
       const blocker = this.findCombatCard(state, blockerId);
-      if (blocker && this.hasFirstStrikeCapability(blocker)) {
+      if (blocker && this.hasFirstStrikeCapability(blocker, state)) {
         return true;
       }
     }
@@ -404,9 +407,8 @@ export class TurnManager {
     return false;
   }
 
-  private hasFirstStrikeCapability(card: CardInstance): boolean {
-    const keywords = card.modifiedKeywords ?? card.definition.keywords;
-    return keywords.includes(Keyword.FIRST_STRIKE) || keywords.includes(Keyword.DOUBLE_STRIKE);
+  private hasFirstStrikeCapability(card: CardInstance, state: GameState): boolean {
+    return getCombatDamageRuleProfile(card, state).hasFirstStrike;
   }
 
   private findCombatCard(state: GameState, objectId: string): CardInstance | undefined {

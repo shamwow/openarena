@@ -35,6 +35,12 @@ import { StateBasedActions } from './StateBasedActions';
 import { CombatManager } from './CombatManager';
 import { ContinuousEffectsEngine } from './ContinuousEffects';
 import { InteractionEngine } from './InteractionEngine';
+import {
+  getActivationRuleProfile,
+  getCombatDamageRuleProfile,
+  getSurvivalRuleProfile,
+  getTimingPermissionProfile,
+} from './AbilityPrimitives';
 import type { ChoiceHelper } from './types';
 
 export type GameEventCallback = (event: GameEvent) => void;
@@ -357,10 +363,7 @@ export class GameEngineImpl implements IGameEngine {
     for (const card of hand) {
       if (card.definition.types.includes(CardType.LAND)) continue;
 
-      const isInstant = card.definition.types.includes(CardType.INSTANT);
-      const hasFlash = card.definition.keywords.includes('Flash' as Keyword);
-
-      if (isInstant || hasFlash || isSorcerySpeed) {
+      if (this.canCastWithCurrentTiming(playerId, card, card.zone)) {
         const castCost = this.getCastCostForLegalAction(playerId, card, { mana: { ...card.definition.manaCost } });
         if (castCost && this.canAffordCostWithTapSubstitution(playerId, card, castCost)) {
           actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId });
@@ -369,12 +372,11 @@ export class GameEngineImpl implements IGameEngine {
 
       if (card.definition.adventure) {
         const adventure = card.definition.adventure;
-        const adventureIsInstant = adventure.types.includes(CardType.INSTANT);
         const adventureDefinition = this.getEffectiveSpellDefinition(card, { castAsAdventure: true });
         const adventureCastCost = adventureDefinition
           ? this.getCastCostForLegalAction(playerId, card, { mana: { ...adventure.manaCost } }, adventureDefinition)
           : null;
-        if ((adventureIsInstant || isSorcerySpeed) && adventureCastCost &&
+        if (adventureDefinition && this.canCastWithCurrentTiming(playerId, adventureDefinition, card.zone) && adventureCastCost &&
           this.canAffordCostWithTapSubstitution(playerId, card, adventureCastCost)) {
           actions.push({
             type: ActionType.CAST_SPELL,
@@ -395,9 +397,7 @@ export class GameEngineImpl implements IGameEngine {
           }
         } else {
           // Back face is a spell
-          const backIsInstant = back.types.includes(CardType.INSTANT);
-          const backHasFlash = back.keywords.includes('Flash' as Keyword);
-          if (backIsInstant || backHasFlash || isSorcerySpeed) {
+          if (this.canCastWithCurrentTiming(playerId, back, card.zone)) {
             const backFaceCost = this.getCastCostForLegalAction(playerId, card, { mana: { ...back.manaCost } }, back);
             if (backFaceCost && this.canAffordCostWithTapSubstitution(playerId, card, backFaceCost)) {
               actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId, chosenFace: 'back' });
@@ -426,9 +426,7 @@ export class GameEngineImpl implements IGameEngine {
       const right = card.definition.splitHalf;
 
       // Right half
-      const rightIsInstant = right.types.includes(CardType.INSTANT);
-      const rightHasFlash = right.keywords.includes('Flash' as Keyword);
-      if (rightIsInstant || rightHasFlash || isSorcerySpeed) {
+      if (this.canCastWithCurrentTiming(playerId, right, card.zone)) {
         const rightHalfCost = this.getCastCostForLegalAction(playerId, card, { mana: { ...right.manaCost } }, right);
         if (rightHalfCost && this.canAffordCostWithTapSubstitution(playerId, card, rightHalfCost)) {
           actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId, chosenHalf: 'right' });
@@ -461,9 +459,7 @@ export class GameEngineImpl implements IGameEngine {
       for (const altCost of card.definition.alternativeCosts) {
         if (altCost.zone !== 'GRAVEYARD') continue;
 
-        const isInstant = card.definition.types.includes(CardType.INSTANT);
-        const hasFlash = card.definition.keywords.includes('Flash' as Keyword);
-        if (!isInstant && !hasFlash && !isSorcerySpeed) continue;
+        if (!this.canCastWithCurrentTiming(playerId, card, card.zone)) continue;
 
         const graveyardCastCost = this.getCastCostForLegalAction(playerId, card, altCost.cost);
         if (graveyardCastCost && this.canAffordCostWithTapSubstitution(playerId, card, graveyardCastCost)) {
@@ -479,7 +475,7 @@ export class GameEngineImpl implements IGameEngine {
         const tax = (player.commanderTimesCast[card.cardId] ?? 0) * 2;
         const totalCost = { ...card.definition.manaCost, generic: card.definition.manaCost.generic + tax };
         const commanderCastCost = this.getCastCostForLegalAction(playerId, card, { mana: totalCost });
-        if (isSorcerySpeed && commanderCastCost && this.canAffordCostWithTapSubstitution(playerId, card, commanderCastCost)) {
+        if (this.canCastWithCurrentTiming(playerId, card, card.zone) && commanderCastCost && this.canAffordCostWithTapSubstitution(playerId, card, commanderCastCost)) {
           actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId });
         }
       }
@@ -491,7 +487,7 @@ export class GameEngineImpl implements IGameEngine {
       if (card.castAsAdventure && card.definition.adventure) {
         // Can cast the creature portion from exile
         const exileAdventureCost = this.getCastCostForLegalAction(playerId, card, { mana: { ...card.definition.manaCost } });
-        if (isSorcerySpeed && exileAdventureCost && this.canAffordCostWithTapSubstitution(playerId, card, exileAdventureCost)) {
+        if (this.canCastWithCurrentTiming(playerId, card, card.zone) && exileAdventureCost && this.canAffordCostWithTapSubstitution(playerId, card, exileAdventureCost)) {
           actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId });
         }
       }
@@ -501,9 +497,7 @@ export class GameEngineImpl implements IGameEngine {
         continue;
       }
 
-      const isInstant = card.definition.types.includes(CardType.INSTANT);
-      const hasFlash = card.definition.keywords.includes('Flash' as Keyword);
-      if (!isInstant && !hasFlash && !isSorcerySpeed) {
+      if (!this.canCastWithCurrentTiming(playerId, card, card.zone)) {
         continue;
       }
 
@@ -534,15 +528,6 @@ export class GameEngineImpl implements IGameEngine {
           const ability = abilities[i];
           if (ability.kind !== 'activated') continue;
           if ((ability.activationZone ?? Zone.BATTLEFIELD) !== zone) continue;
-          if (ability.timing === 'sorcery' && !isSorcerySpeed) continue;
-          if (zone === Zone.BATTLEFIELD && ability.cost.tap && card.tapped) continue;
-          if (
-            zone === Zone.BATTLEFIELD &&
-            ability.cost.tap &&
-            hasType(card, CardType.CREATURE as CardTypeEnum) &&
-            card.summoningSick &&
-            !this.hasKeyword(card, Keyword.HASTE)
-          ) continue;
           if (!this.canActivateActivatedAbility(card, ability, playerId, i)) continue;
           if (!this.canAffordCostWithTapSubstitution(
             playerId,
@@ -673,6 +658,7 @@ export class GameEngineImpl implements IGameEngine {
     if (amount <= 0) return;
 
     const source = findCard(this.state, sourceId);
+    const combatDamageProfile = source ? getCombatDamageRuleProfile(source, this.state) : null;
 
     if (source) {
       const isPlayerTarget = typeof targetId === 'string' && targetId.startsWith('player');
@@ -712,7 +698,7 @@ export class GameEngineImpl implements IGameEngine {
           (player.commanderDamageReceived[source.cardId] ?? 0) + finalAmount;
       }
 
-      if (source && this.hasKeyword(source, Keyword.LIFELINK)) {
+      if (source && combatDamageProfile?.controllerGainsLifeFromDamage) {
         this.gainLife(source.controller, finalAmount);
       }
     } else {
@@ -722,12 +708,12 @@ export class GameEngineImpl implements IGameEngine {
         target.counters['loyalty'] = (target.counters['loyalty'] ?? target.definition.loyalty ?? 0) - finalAmount;
       } else {
         target.markedDamage += finalAmount;
-        if (source && this.hasKeyword(source, Keyword.DEATHTOUCH)) {
+        if (combatDamageProfile?.marksDeathtouchDamage) {
           target.counters['deathtouch-damage'] = 1;
         }
       }
 
-      if (source && this.hasKeyword(source, Keyword.LIFELINK)) {
+      if (source && combatDamageProfile?.controllerGainsLifeFromDamage) {
         this.gainLife(source.controller, finalAmount);
       }
     }
@@ -752,7 +738,7 @@ export class GameEngineImpl implements IGameEngine {
   destroyPermanent(objectId: ObjectId): void {
     const card = findCard(this.state, objectId);
     if (!card || card.zone !== 'BATTLEFIELD') return;
-    if (this.hasKeyword(card, Keyword.INDESTRUCTIBLE)) return;
+    if (getSurvivalRuleProfile(card, this.state).ignoreDestroy) return;
     if ((card.counters['regeneration-shield'] ?? 0) > 0 && (card.counters['cant-regenerate'] ?? 0) === 0) {
       card.counters['regeneration-shield'] -= 1;
       if (card.counters['regeneration-shield'] <= 0) {
@@ -1760,6 +1746,7 @@ export class GameEngineImpl implements IGameEngine {
     });
     if (!effectiveDef) return;
     if (card.zone === Zone.EXILE && effectiveDef.types.includes(CardType.LAND)) return;
+    if (!this.canCastWithCurrentTiming(playerId, effectiveDef, card.zone)) return;
 
     // Calculate cost (including commander tax and alternative costs)
     const player = this.state.players[playerId];
@@ -3041,8 +3028,19 @@ export class GameEngineImpl implements IGameEngine {
     };
   }
 
-  private hasKeyword(card: CardInstance, keyword: Keyword): boolean {
-    return (card.modifiedKeywords ?? card.definition.keywords).includes(keyword);
+  private canCastWithCurrentTiming(
+    playerId: PlayerId,
+    source: CardInstance | CardDefinition,
+    zone: Zone,
+  ): boolean {
+    const definition = 'definitionId' in source ? source.definition : source;
+    if (definition.types.includes(CardType.INSTANT)) {
+      return true;
+    }
+    if (getTimingPermissionProfile(source, this.state, zone).canCastAsInstant) {
+      return true;
+    }
+    return this.turnManager.canPlaySorcerySpeed(this.state, playerId);
   }
 
   private getCastPermissionMethod(permission: CastPermission): string {
@@ -3098,7 +3096,7 @@ export class GameEngineImpl implements IGameEngine {
         !substitution.ignoreSummoningSickness &&
         hasType(card, CardType.CREATURE) &&
         card.summoningSick &&
-        !this.hasKeyword(card, Keyword.HASTE)
+        !getActivationRuleProfile(card, this.state).ignoreTapSummoningSickness
       ) {
         return false;
       }
@@ -3246,7 +3244,33 @@ export class GameEngineImpl implements IGameEngine {
     playerId: PlayerId,
     abilityIndex: number,
   ): boolean {
+    if ((ability.activationZone ?? Zone.BATTLEFIELD) !== card.zone) {
+      return false;
+    }
+
     if (ability.activateOnlyDuringYourTurn && this.state.activePlayer !== playerId) {
+      return false;
+    }
+
+    if (
+      ability.timing === 'sorcery' &&
+      !this.turnManager.canPlaySorcerySpeed(this.state, playerId) &&
+      !getTimingPermissionProfile(card, this.state, card.zone).canActivateAsInstant
+    ) {
+      return false;
+    }
+
+    if (card.zone === Zone.BATTLEFIELD && ability.cost.tap && card.tapped) {
+      return false;
+    }
+
+    if (
+      card.zone === Zone.BATTLEFIELD &&
+      ability.cost.tap &&
+      hasType(card, CardType.CREATURE as CardTypeEnum) &&
+      card.summoningSick &&
+      !getActivationRuleProfile(card, this.state).ignoreTapSummoningSickness
+    ) {
       return false;
     }
 
