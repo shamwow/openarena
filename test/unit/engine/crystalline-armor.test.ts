@@ -3,7 +3,8 @@ import test from 'node:test';
 
 import { CardBuilder } from '../../../src/cards/CardBuilder.ts';
 import { CrystallineArmor } from '../../../src/cards/sets/starter/enchantments.ts';
-import { ActionType, CardType, Keyword, Phase, Step, Zone } from '../../../src/engine/types.ts';
+import { hasAbilityDescription } from '../../../src/engine/AbilityPrimitives.ts';
+import { ActionType, CardType, Phase, Step, Zone } from '../../../src/engine/types.ts';
 import {
   createHarness,
   getCard,
@@ -86,7 +87,7 @@ test('Crystalline Armor attaches, grants trample, and counts only lands you cont
 
   assert.equal(armor.attachedTo, host.objectId);
   assert.ok(host.attachments.includes(armor.objectId));
-  assert.ok((host.modifiedKeywords ?? []).includes(Keyword.TRAMPLE));
+  assert.ok(hasAbilityDescription(host, 'Trample'));
   assert.equal(host.modifiedPower, 3);
   assert.equal(host.modifiedToughness, 3);
 

@@ -3,8 +3,9 @@ import test from 'node:test';
 
 import { CardBuilder } from '../../../src/cards/CardBuilder.ts';
 import { EarthbenderAscension } from '../../../src/cards/sets/starter/enchantments.ts';
+import { hasAbilityDescription } from '../../../src/engine/AbilityPrimitives.ts';
 import { hasType } from '../../../src/engine/GameState.ts';
-import { ActionType, CardType, Keyword, Phase, Step, Zone } from '../../../src/engine/types.ts';
+import { ActionType, CardType, Phase, Step, Zone } from '../../../src/engine/types.ts';
 import { createHarness, getCard, makeCommander, settleEngine } from './helpers.ts';
 
 function makeLand(name: string, subtype: string, isBasic = false) {
@@ -75,7 +76,7 @@ test('Earthbender Ascension earthbends an existing land first, then fetches a ta
   assert.equal(earthbendedLand.modifiedPower, 2);
   assert.equal(earthbendedLand.modifiedToughness, 2);
   assert.equal(hasType(earthbendedLand, CardType.CREATURE), true);
-  assert.equal((earthbendedLand.modifiedKeywords ?? []).includes(Keyword.HASTE), true);
+  assert.equal(hasAbilityDescription(earthbendedLand, 'Haste'), true);
 
   assert.equal(searchedLand.tapped, true);
   assert.equal(searchedLand.counters['+1/+1'] ?? 0, 0);
@@ -131,5 +132,5 @@ test('Earthbender Ascension keeps quest counters at four and rewards the landfal
   assert.equal(creature.counters['+1/+1'], 1);
   assert.equal(creature.modifiedPower, 3);
   assert.equal(creature.modifiedToughness, 3);
-  assert.equal((creature.modifiedKeywords ?? []).includes(Keyword.TRAMPLE), true);
+  assert.equal(hasAbilityDescription(creature, 'Trample'), true);
 });

@@ -4,7 +4,8 @@ import test from 'node:test';
 import { CardBuilder } from '../../../src/cards/CardBuilder.ts';
 import { prebuiltDecks } from '../../../src/cards/decks.ts';
 import { SwiftfootBoots } from '../../../src/cards/sets/starter/artifacts.ts';
-import { ActionType, CardType, Keyword, ManaColor, Phase, Step, Zone } from '../../../src/engine/types.ts';
+import { hasAbilityDescription } from '../../../src/engine/AbilityPrimitives.ts';
+import { ActionType, CardType, ManaColor, Phase, Step, Zone } from '../../../src/engine/types.ts';
 import {
   battlefieldNames,
   createHarness,
@@ -469,8 +470,8 @@ test('Swiftfoot Boots equips and grants haste plus hexproof through shared attac
   const hostCreature = getCard(state, 'player1', Zone.BATTLEFIELD, 'Boots Bear');
   assert.equal(boots.attachedTo, hostCreature.objectId);
   assert.ok(hostCreature.attachments.includes(boots.objectId));
-  assert.ok((hostCreature.modifiedKeywords ?? []).includes(Keyword.HASTE));
-  assert.ok((hostCreature.modifiedKeywords ?? []).includes(Keyword.HEXPROOF));
+  assert.ok(hasAbilityDescription(hostCreature, 'Haste'));
+  assert.ok(hasAbilityDescription(hostCreature, 'Hexproof'));
 
   state.priorityPlayer = 'player2';
   engine.addMana('player2', 'W', 1);
@@ -532,7 +533,7 @@ test('attached cant-be-targeted effects block opposing removal without a compati
   await settleEngine();
 
   const hostCreature = getCard(state, 'player1', Zone.BATTLEFIELD, 'Cloaked Bear');
-  assert.ok((hostCreature.modifiedKeywords ?? []).includes(Keyword.HEXPROOF));
+  assert.ok(hasAbilityDescription(hostCreature, 'Hexproof'));
 
   state.priorityPlayer = 'player2';
   engine.addMana('player2', 'W', 1);

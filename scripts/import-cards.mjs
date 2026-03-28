@@ -261,7 +261,6 @@ async function fetchSetCards(setCode, language, includeDigital, includeTokens) {
           c."printedText" as printed_text,
           c."printings",
           c."otherFaceIds" as other_face_ids,
-          c."keywords",
           s."name" as set_name,
           s."releaseDate" as release_date,
           s."type" as set_type,
@@ -420,7 +419,7 @@ function buildLogicPrompt(card, promptContext) {
   return [
     'You generate OpenArena card logic scripts.',
     'Return only a JavaScript function body with no markdown fences.',
-    'The function body runs with these identifiers already in scope: CardBuilder, CardType, ManaColor, Keyword.',
+    'The function body runs with these identifiers already in scope: CardBuilder, CardType, ManaColor.',
     'The body must end with `return ...build();` and must not contain import or export statements.',
     'Prefer the CardBuilder fluent style already used in the repo.',
     'Preserve the exact printed card name.',
@@ -479,7 +478,7 @@ function validateLogicScript(content, card) {
   }
 
   // Parse-only validation of the generated function body.
-  new Function('CardBuilder', 'CardType', 'ManaColor', 'Keyword', content);
+  new Function('CardBuilder', 'CardType', 'ManaColor', content);
 
   if (!content.includes(card.name)) {
     throw new Error(`Generated logic did not reference card name ${card.name}.`);

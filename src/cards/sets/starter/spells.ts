@@ -5,7 +5,12 @@ import {
   hasType,
   markExileInsteadOfDyingThisTurn,
 } from '../../../engine/GameState';
-import { CardType, GameEventType, Keyword, ManaColor, parseManaCost } from '../../../engine/types';
+import { CardType, GameEventType, ManaColor, parseManaCost } from '../../../engine/types';
+import {
+  createHexproofAbilities,
+  createIndestructibleAbilities,
+  createMenaceAbilities,
+} from '../../../engine/AbilityPrimitives';
 
 // --- White Spells ---
 
@@ -504,8 +509,12 @@ export const HeroicIntervention = CardBuilder.create('Heroic Intervention')
   .spellEffect((ctx) => {
     const permanents = ctx.game.getBattlefield(undefined, ctx.controller);
     for (const permanent of permanents) {
-      ctx.game.grantKeywordUntilEndOfTurn(permanent.objectId, Keyword.HEXPROOF);
-      ctx.game.grantKeywordUntilEndOfTurn(permanent.objectId, Keyword.INDESTRUCTIBLE);
+      ctx.game.grantAbilitiesUntilEndOfTurn(
+        ctx.source.objectId,
+        permanent.objectId,
+        permanent.zoneChangeCounter,
+        [...createHexproofAbilities(), ...createIndestructibleAbilities()],
+      );
     }
   }, { description: 'Permanents you control gain hexproof and indestructible until end of turn.' })
   .oracleText('Permanents you control gain hexproof and indestructible until end of turn.')
@@ -522,7 +531,12 @@ export const InspiringCall = CardBuilder.create('Inspiring Call')
     ctx.game.drawCards(ctx.controller, creaturesWithCounters.length);
 
     for (const creature of creaturesWithCounters) {
-      ctx.game.grantKeywordUntilEndOfTurn(creature.objectId, Keyword.INDESTRUCTIBLE);
+      ctx.game.grantAbilitiesUntilEndOfTurn(
+        ctx.source.objectId,
+        creature.objectId,
+        creature.zoneChangeCounter,
+        createIndestructibleAbilities(),
+      );
     }
   }, { description: 'Draw a card for each creature you control with a +1/+1 counter on it. Those creatures gain indestructible until end of turn.' })
   .oracleText('Draw a card for each creature you control with a +1/+1 counter on it. Those creatures gain indestructible until end of turn.')
@@ -535,7 +549,12 @@ export const HowToStartARiot = CardBuilder.create('How to Start a Riot')
   .spellEffect((ctx) => {
     const targetCreature = ctx.targets[0];
     if (targetCreature && typeof targetCreature !== 'string') {
-      ctx.game.grantKeywordUntilEndOfTurn(targetCreature.objectId, Keyword.MENACE);
+      ctx.game.grantAbilitiesUntilEndOfTurn(
+        ctx.source.objectId,
+        targetCreature.objectId,
+        targetCreature.zoneChangeCounter,
+        createMenaceAbilities(),
+      );
     }
 
     const targetPlayer = ctx.targets[1];

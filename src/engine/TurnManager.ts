@@ -242,7 +242,7 @@ export class TurnManager {
     this.performCleanup(state, state.activePlayer, discardToHandSize);
   }
 
-  /** Phasing: phase out permanents with Phasing keyword, phase in previously phased-out permanents */
+  /** Phasing: phase out permanents with phasing abilities, phase in previously phased-out permanents */
   private handlePhasing(state: GameState, player: PlayerId): void {
     const battlefield = state.zones[player].BATTLEFIELD;
     const phasedOutAtStart = new Set(
@@ -256,7 +256,7 @@ export class TurnManager {
       }
     }
 
-    // Phase out: all permanents with the Phasing keyword phase out
+    // Phase out: all permanents with phasing abilities phase out
     for (const card of battlefield) {
       if (!phasedOutAtStart.has(card.objectId) && getPhaseRuleProfile(card, state).phasesOutDuringUntap) {
         card.phasedOut = true;

@@ -3,7 +3,8 @@ import test from 'node:test';
 
 import { CardBuilder } from '../../../src/cards/CardBuilder.ts';
 import { HowToStartARiot } from '../../../src/cards/sets/starter/spells.ts';
-import { ActionType, CardType, Keyword, Phase, Step, Zone } from '../../../src/engine/types.ts';
+import { hasAbilityDescription } from '../../../src/engine/AbilityPrimitives.ts';
+import { ActionType, CardType, Phase, Step, Zone } from '../../../src/engine/types.ts';
 import { createHarness, getCard, makeCommander, settleEngine } from './helpers.ts';
 
 function makeCreature(name: string, power = 2, toughness = 2) {
@@ -84,7 +85,7 @@ test('How to Start a Riot grants menace and pumps the chosen player\'s creatures
   const playerTwoBodyAAfter = getCard(state, 'player2', Zone.BATTLEFIELD, 'Player Two Body A');
   const playerTwoBodyBAfter = getCard(state, 'player2', Zone.BATTLEFIELD, 'Player Two Body B');
 
-  assert.ok((riotTarget.modifiedKeywords ?? []).includes(Keyword.MENACE));
+  assert.ok(hasAbilityDescription(riotTarget, 'Menace'));
   assert.equal(playerOneBodyAfter.modifiedPower ?? playerOneBodyAfter.definition.power ?? 0, 2);
   assert.equal(playerTwoBodyAAfter.modifiedPower ?? playerTwoBodyAAfter.definition.power ?? 0, 4);
   assert.equal(playerTwoBodyBAfter.modifiedPower ?? playerTwoBodyBAfter.definition.power ?? 0, 4);
@@ -108,7 +109,7 @@ test('How to Start a Riot grants menace and pumps the chosen player\'s creatures
   const playerTwoBodyAAfterCleanup = getCard(state, 'player2', Zone.BATTLEFIELD, 'Player Two Body A');
   const playerTwoBodyBAfterCleanup = getCard(state, 'player2', Zone.BATTLEFIELD, 'Player Two Body B');
 
-  assert.ok(!(riotTargetAfterCleanup.modifiedKeywords ?? []).includes(Keyword.MENACE));
+  assert.ok(!hasAbilityDescription(riotTargetAfterCleanup, 'Menace'));
   assert.equal(playerTwoBodyAAfterCleanup.modifiedPower ?? playerTwoBodyAAfterCleanup.definition.power ?? 0, 2);
   assert.equal(playerTwoBodyBAfterCleanup.modifiedPower ?? playerTwoBodyBAfterCleanup.definition.power ?? 0, 2);
 });

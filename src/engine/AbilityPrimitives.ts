@@ -3,12 +3,10 @@ import type {
   CardDefinition,
   CardInstance,
   GameState,
-  Keyword as KeywordValue,
   StaticAbilityDef,
   StaticEffectDef,
   Zone,
 } from './types';
-import { Keyword } from './types';
 import { getEffectiveAbilities } from './GameState';
 
 type AbilitySource = CardDefinition | CardInstance;
@@ -56,166 +54,166 @@ export interface PhaseRuleProfile {
   phasesOutDuringUntap: boolean;
 }
 
-export function getPrimitiveAbilitiesForKeyword(keyword: KeywordValue): AbilityDefinition[] {
-  switch (keyword) {
-    case Keyword.HEXPROOF:
-      return [makeStaticAbility({
-        type: 'interaction-hook',
-        hook: {
-          type: 'forbid',
-          interactions: ['target'],
-          phases: ['candidate', 'revalidate'],
-          filter: { self: true },
-          source: { controller: 'opponents' },
-          reason: 'hexproof',
-        },
-      }, 'Hexproof')];
+export function createHexproofAbilities(): AbilityDefinition[] {
+  return [makeStaticAbility({
+    type: 'interaction-hook',
+    hook: {
+      type: 'forbid',
+      interactions: ['target'],
+      phases: ['candidate', 'revalidate'],
+      filter: { self: true },
+      source: { controller: 'opponents' },
+      reason: 'hexproof',
+    },
+  }, 'Hexproof')];
+}
 
-    case Keyword.SHROUD:
-      return [makeStaticAbility({
-        type: 'interaction-hook',
-        hook: {
-          type: 'forbid',
-          interactions: ['target'],
-          phases: ['candidate', 'revalidate'],
-          filter: { self: true },
-          reason: 'shroud',
-        },
-      }, 'Shroud')];
+export function createShroudAbilities(): AbilityDefinition[] {
+  return [makeStaticAbility({
+    type: 'interaction-hook',
+    hook: {
+      type: 'forbid',
+      interactions: ['target'],
+      phases: ['candidate', 'revalidate'],
+      filter: { self: true },
+      reason: 'shroud',
+    },
+  }, 'Shroud')];
+}
 
-    case Keyword.FLASH:
-      return [makeStaticAbility({
-        type: 'timing-permission',
-        scope: 'spell',
-        anyTimeCouldCastInstant: true,
-      }, 'Flash')];
+export function createFlashAbilities(): AbilityDefinition[] {
+  return [makeStaticAbility({
+    type: 'timing-permission',
+    scope: 'spell',
+    anyTimeCouldCastInstant: true,
+  }, 'Flash')];
+}
 
-    case Keyword.HASTE:
-      return [
-        makeStaticAbility({
-          type: 'attack-rule',
-          ignoreSummoningSickness: true,
-        }, 'Haste'),
-        makeStaticAbility({
-          type: 'activation-rule',
-          ignoreTapSummoningSickness: true,
-        }, 'Haste'),
-      ];
+export function createHasteAbilities(): AbilityDefinition[] {
+  return [
+    makeStaticAbility({
+      type: 'attack-rule',
+      ignoreSummoningSickness: true,
+    }, 'Haste'),
+    makeStaticAbility({
+      type: 'activation-rule',
+      ignoreTapSummoningSickness: true,
+    }, 'Haste'),
+  ];
+}
 
-    case Keyword.VIGILANCE:
-      return [makeStaticAbility({
-        type: 'attack-rule',
-        attacksWithoutTapping: true,
-      }, 'Vigilance')];
+export function createVigilanceAbilities(): AbilityDefinition[] {
+  return [makeStaticAbility({
+    type: 'attack-rule',
+    attacksWithoutTapping: true,
+  }, 'Vigilance')];
+}
 
-    case Keyword.DEFENDER:
-      return [makeStaticAbility({
-        type: 'attack-rule',
-        canAttack: false,
-      }, 'Defender')];
+export function createDefenderAbilities(): AbilityDefinition[] {
+  return [makeStaticAbility({
+    type: 'attack-rule',
+    canAttack: false,
+  }, 'Defender')];
+}
 
-    case Keyword.FLYING:
-      return [makeStaticAbility({
-        type: 'block-rule',
-        evasion: 'requires-flying-or-reach',
-      }, 'Flying')];
+export function createFlyingAbilities(): AbilityDefinition[] {
+  return [makeStaticAbility({
+    type: 'block-rule',
+    evasion: 'requires-flying-or-reach',
+  }, 'Flying')];
+}
 
-    case Keyword.REACH:
-      return [makeStaticAbility({
-        type: 'block-rule',
-        canBlockIfAttackerHas: 'flying',
-      }, 'Reach')];
+export function createReachAbilities(): AbilityDefinition[] {
+  return [makeStaticAbility({
+    type: 'block-rule',
+    canBlockIfAttackerHas: 'flying',
+  }, 'Reach')];
+}
 
-    case Keyword.MENACE:
-      return [makeStaticAbility({
-        type: 'block-rule',
-        minBlockers: 2,
-      }, 'Menace')];
+export function createMenaceAbilities(): AbilityDefinition[] {
+  return [makeStaticAbility({
+    type: 'block-rule',
+    minBlockers: 2,
+  }, 'Menace')];
+}
 
-    case Keyword.UNBLOCKABLE:
-      return [makeStaticAbility({
-        type: 'block-rule',
-        canBeBlocked: false,
-      }, 'Unblockable')];
+export function createUnblockableAbilities(): AbilityDefinition[] {
+  return [makeStaticAbility({
+    type: 'block-rule',
+    canBeBlocked: false,
+  }, 'Unblockable')];
+}
 
-    case Keyword.PLAINSWALK:
-      return [makeStaticAbility({
-        type: 'block-rule',
-        landwalkSubtypes: ['Plains'],
-      }, 'Plainswalk')];
+export function createPlainswalkAbilities(): AbilityDefinition[] {
+  return createLandwalkAbilities('Plains', 'Plainswalk');
+}
 
-    case Keyword.ISLANDWALK:
-      return [makeStaticAbility({
-        type: 'block-rule',
-        landwalkSubtypes: ['Island'],
-      }, 'Islandwalk')];
+export function createIslandwalkAbilities(): AbilityDefinition[] {
+  return createLandwalkAbilities('Island', 'Islandwalk');
+}
 
-    case Keyword.SWAMPWALK:
-      return [makeStaticAbility({
-        type: 'block-rule',
-        landwalkSubtypes: ['Swamp'],
-      }, 'Swampwalk')];
+export function createSwampwalkAbilities(): AbilityDefinition[] {
+  return createLandwalkAbilities('Swamp', 'Swampwalk');
+}
 
-    case Keyword.MOUNTAINWALK:
-      return [makeStaticAbility({
-        type: 'block-rule',
-        landwalkSubtypes: ['Mountain'],
-      }, 'Mountainwalk')];
+export function createMountainwalkAbilities(): AbilityDefinition[] {
+  return createLandwalkAbilities('Mountain', 'Mountainwalk');
+}
 
-    case Keyword.FORESTWALK:
-      return [makeStaticAbility({
-        type: 'block-rule',
-        landwalkSubtypes: ['Forest'],
-      }, 'Forestwalk')];
+export function createForestwalkAbilities(): AbilityDefinition[] {
+  return createLandwalkAbilities('Forest', 'Forestwalk');
+}
 
-    case Keyword.FIRST_STRIKE:
-      return [makeStaticAbility({
-        type: 'combat-damage-rule',
-        combatDamageStep: 'first-strike',
-      }, 'First Strike')];
+export function createFirstStrikeAbilities(): AbilityDefinition[] {
+  return [makeStaticAbility({
+    type: 'combat-damage-rule',
+    combatDamageStep: 'first-strike',
+  }, 'First Strike')];
+}
 
-    case Keyword.DOUBLE_STRIKE:
-      return [makeStaticAbility({
-        type: 'combat-damage-rule',
-        combatDamageStep: 'double-strike',
-      }, 'Double Strike')];
+export function createDoubleStrikeAbilities(): AbilityDefinition[] {
+  return [makeStaticAbility({
+    type: 'combat-damage-rule',
+    combatDamageStep: 'double-strike',
+  }, 'Double Strike')];
+}
 
-    case Keyword.DEATHTOUCH:
-      return [makeStaticAbility({
-        type: 'combat-damage-rule',
-        lethalDamageIsOne: true,
-        marksDeathtouchDamage: true,
-      }, 'Deathtouch')];
+export function createDeathtouchAbilities(): AbilityDefinition[] {
+  return [makeStaticAbility({
+    type: 'combat-damage-rule',
+    lethalDamageIsOne: true,
+    marksDeathtouchDamage: true,
+  }, 'Deathtouch')];
+}
 
-    case Keyword.TRAMPLE:
-      return [makeStaticAbility({
-        type: 'combat-damage-rule',
-        excessToDefender: true,
-      }, 'Trample')];
+export function createTrampleAbilities(): AbilityDefinition[] {
+  return [makeStaticAbility({
+    type: 'combat-damage-rule',
+    excessToDefender: true,
+  }, 'Trample')];
+}
 
-    case Keyword.LIFELINK:
-      return [makeStaticAbility({
-        type: 'combat-damage-rule',
-        controllerGainsLifeFromDamage: true,
-      }, 'Lifelink')];
+export function createLifelinkAbilities(): AbilityDefinition[] {
+  return [makeStaticAbility({
+    type: 'combat-damage-rule',
+    controllerGainsLifeFromDamage: true,
+  }, 'Lifelink')];
+}
 
-    case Keyword.INDESTRUCTIBLE:
-      return [makeStaticAbility({
-        type: 'survival-rule',
-        ignoreDestroy: true,
-        ignoreLethalDamage: true,
-      }, 'Indestructible')];
+export function createIndestructibleAbilities(): AbilityDefinition[] {
+  return [makeStaticAbility({
+    type: 'survival-rule',
+    ignoreDestroy: true,
+    ignoreLethalDamage: true,
+  }, 'Indestructible')];
+}
 
-    case Keyword.PHASING:
-      return [makeStaticAbility({
-        type: 'phase-rule',
-        phasesInDuringUntap: true,
-        phasesOutDuringUntap: true,
-      }, 'Phasing')];
-
-    default:
-      return [];
-  }
+export function createPhasingAbilities(): AbilityDefinition[] {
+  return [makeStaticAbility({
+    type: 'phase-rule',
+    phasesInDuringUntap: true,
+    phasesOutDuringUntap: true,
+  }, 'Phasing')];
 }
 
 export function getTimingPermissionProfile(
@@ -224,7 +222,7 @@ export function getTimingPermissionProfile(
   zone?: Zone,
 ): TimingPermissionProfile {
   const profile: TimingPermissionProfile = {
-    canCastAsInstant: hasKeyword(source, Keyword.FLASH),
+    canCastAsInstant: false,
     canActivateAsInstant: false,
   };
 
@@ -249,9 +247,9 @@ export function getAttackRuleProfile(
   state?: GameState,
 ): AttackRuleProfile {
   const profile: AttackRuleProfile = {
-    canAttack: !hasKeyword(source, Keyword.DEFENDER),
-    ignoreSummoningSickness: hasKeyword(source, Keyword.HASTE),
-    attacksWithoutTapping: hasKeyword(source, Keyword.VIGILANCE),
+    canAttack: true,
+    ignoreSummoningSickness: false,
+    attacksWithoutTapping: false,
   };
 
   for (const effect of getStaticEffects(source, state)) {
@@ -275,7 +273,7 @@ export function getActivationRuleProfile(
   state?: GameState,
 ): ActivationRuleProfile {
   const profile: ActivationRuleProfile = {
-    ignoreTapSummoningSickness: hasKeyword(source, Keyword.HASTE),
+    ignoreTapSummoningSickness: false,
   };
 
   for (const effect of getStaticEffects(source, state)) {
@@ -293,19 +291,13 @@ export function getBlockRuleProfile(
   state?: GameState,
 ): BlockRuleProfile {
   const landwalkSubtypes = new Set<string>();
-  if (hasKeyword(source, Keyword.PLAINSWALK)) landwalkSubtypes.add('Plains');
-  if (hasKeyword(source, Keyword.ISLANDWALK)) landwalkSubtypes.add('Island');
-  if (hasKeyword(source, Keyword.SWAMPWALK)) landwalkSubtypes.add('Swamp');
-  if (hasKeyword(source, Keyword.MOUNTAINWALK)) landwalkSubtypes.add('Mountain');
-  if (hasKeyword(source, Keyword.FORESTWALK)) landwalkSubtypes.add('Forest');
-
   const profile: BlockRuleProfile = {
     canBlock: true,
-    canBeBlocked: !hasKeyword(source, Keyword.UNBLOCKABLE),
-    minBlockers: hasKeyword(source, Keyword.MENACE) ? 2 : 1,
-    hasFlying: hasKeyword(source, Keyword.FLYING),
-    canBlockFlying: hasKeyword(source, Keyword.FLYING) || hasKeyword(source, Keyword.REACH),
-    landwalkSubtypes: [...landwalkSubtypes],
+    canBeBlocked: true,
+    minBlockers: 1,
+    hasFlying: false,
+    canBlockFlying: false,
+    landwalkSubtypes: [],
   };
 
   for (const effect of getStaticEffects(source, state)) {
@@ -340,12 +332,12 @@ export function getCombatDamageRuleProfile(
   state?: GameState,
 ): CombatDamageRuleProfile {
   const profile: CombatDamageRuleProfile = {
-    hasFirstStrike: hasKeyword(source, Keyword.FIRST_STRIKE) || hasKeyword(source, Keyword.DOUBLE_STRIKE),
-    hasDoubleStrike: hasKeyword(source, Keyword.DOUBLE_STRIKE),
-    lethalDamageIsOne: hasKeyword(source, Keyword.DEATHTOUCH),
-    marksDeathtouchDamage: hasKeyword(source, Keyword.DEATHTOUCH),
-    excessToDefender: hasKeyword(source, Keyword.TRAMPLE),
-    controllerGainsLifeFromDamage: hasKeyword(source, Keyword.LIFELINK),
+    hasFirstStrike: false,
+    hasDoubleStrike: false,
+    lethalDamageIsOne: false,
+    marksDeathtouchDamage: false,
+    excessToDefender: false,
+    controllerGainsLifeFromDamage: false,
   };
 
   for (const effect of getStaticEffects(source, state)) {
@@ -379,8 +371,8 @@ export function getSurvivalRuleProfile(
   state?: GameState,
 ): SurvivalRuleProfile {
   const profile: SurvivalRuleProfile = {
-    ignoreDestroy: hasKeyword(source, Keyword.INDESTRUCTIBLE),
-    ignoreLethalDamage: hasKeyword(source, Keyword.INDESTRUCTIBLE),
+    ignoreDestroy: false,
+    ignoreLethalDamage: false,
   };
 
   for (const effect of getStaticEffects(source, state)) {
@@ -401,8 +393,8 @@ export function getPhaseRuleProfile(
   state?: GameState,
 ): PhaseRuleProfile {
   const profile: PhaseRuleProfile = {
-    phasesInDuringUntap: hasKeyword(source, Keyword.PHASING),
-    phasesOutDuringUntap: hasKeyword(source, Keyword.PHASING),
+    phasesInDuringUntap: false,
+    phasesOutDuringUntap: false,
   };
 
   for (const effect of getStaticEffects(source, state)) {
@@ -418,11 +410,26 @@ export function getPhaseRuleProfile(
   return profile;
 }
 
-function hasKeyword(source: AbilitySource, keyword: KeywordValue): boolean {
-  if (isCardInstance(source)) {
-    return (source.modifiedKeywords ?? source.definition.keywords).includes(keyword);
-  }
-  return source.keywords.includes(keyword);
+export function hasAbilityDescription(
+  source: AbilitySource,
+  description: string,
+  state?: GameState,
+): boolean {
+  const abilities = isCardInstance(source) ? getEffectiveAbilities(source) : source.abilities;
+  return abilities.some((ability) => {
+    if (ability.description !== description) return false;
+    if (!isCardInstance(source) || !state || ability.kind !== 'static' || !ability.condition) {
+      return true;
+    }
+    return ability.condition(state, source);
+  });
+}
+
+function createLandwalkAbilities(subtype: string, description: string): AbilityDefinition[] {
+  return [makeStaticAbility({
+    type: 'block-rule',
+    landwalkSubtypes: [subtype],
+  }, description)];
 }
 
 function getStaticEffects(source: AbilitySource, state?: GameState): StaticEffectDef[] {

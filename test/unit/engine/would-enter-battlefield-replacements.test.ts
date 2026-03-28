@@ -145,7 +145,6 @@ test('would-enter-battlefield replacements can prevent token entry without leavi
     power: 1,
     toughness: 1,
     subtypes: ['Spirit'],
-    keywords: [],
     abilities: [],
   });
 

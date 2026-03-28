@@ -1,5 +1,5 @@
 import type {
-  CardDefinition, CardFilter, CardType, ManaColor, Keyword,
+  CardDefinition, CardFilter, CardType, ManaColor,
   AbilityDefinition, ActivatedAbilityDef, TriggeredAbilityDef,
   StaticAbilityDef, SimpleSpellDef, ModalSpellDef, Cost, TriggerCondition,
   EffectFn, TargetSpec, StaticEffectDef, ManaPool, ProtectionFrom,
@@ -13,7 +13,23 @@ import {
   CardType as CardTypeConst,
 } from '../engine/types';
 import { getEffectiveSubtypes, getEffectiveSupertypes, hasType } from '../engine/GameState';
-import { getPrimitiveAbilitiesForKeyword } from '../engine/AbilityPrimitives';
+import {
+  createDeathtouchAbilities,
+  createDefenderAbilities,
+  createDoubleStrikeAbilities,
+  createFirstStrikeAbilities,
+  createFlashAbilities,
+  createFlyingAbilities,
+  createHasteAbilities,
+  createHexproofAbilities,
+  createIndestructibleAbilities,
+  createLifelinkAbilities,
+  createMenaceAbilities,
+  createReachAbilities,
+  createShroudAbilities,
+  createTrampleAbilities,
+  createVigilanceAbilities,
+} from '../engine/AbilityPrimitives';
 import { createFirebendingTriggeredAbility } from './firebending';
 
 function matchesCardFilter(
@@ -27,7 +43,6 @@ function matchesCardFilter(
   if (filter.subtypes && !filter.subtypes.some(subtype => getEffectiveSubtypes(card).includes(subtype))) return false;
   if (filter.supertypes && !filter.supertypes.some(supertype => getEffectiveSupertypes(card).includes(supertype))) return false;
   if (filter.colors && !filter.colors.some(color => card.definition.colorIdentity.includes(color))) return false;
-  if (filter.keywords && !filter.keywords.some(keyword => (card.modifiedKeywords ?? card.definition.keywords).includes(keyword))) return false;
   if (filter.controller === 'you' && sourceController && card.controller !== sourceController) return false;
   if (filter.controller === 'opponent' && sourceController && card.controller === sourceController) return false;
   if (filter.name && card.definition.name !== filter.name) return false;
@@ -55,7 +70,6 @@ export class CardBuilder {
   private deferredAbilities: AbilityDefinition[];
   private def: Partial<CardDefinition> & {
     abilities: AbilityDefinition[];
-    keywords: Keyword[];
     types: CardType[];
     supertypes: string[];
     subtypes: string[];
@@ -73,7 +87,6 @@ export class CardBuilder {
       supertypes: [],
       subtypes: [],
       abilities: [],
-      keywords: [],
     };
   }
 
@@ -128,34 +141,31 @@ export class CardBuilder {
     return this;
   }
 
-  // --- Keywords ---
-
-  flying(): this { return this.keyword('Flying' as Keyword); }
-  trample(): this { return this.keyword('Trample' as Keyword); }
-  haste(): this { return this.keyword('Haste' as Keyword); }
-  vigilance(): this { return this.keyword('Vigilance' as Keyword); }
-  deathtouch(): this { return this.keyword('Deathtouch' as Keyword); }
-  lifelink(): this { return this.keyword('Lifelink' as Keyword); }
-  flash(): this { return this.keyword('Flash' as Keyword); }
-  hexproof(): this { return this.keyword('Hexproof' as Keyword); }
-  shroud(): this { return this.keyword('Shroud' as Keyword); }
-  indestructible(): this { return this.keyword('Indestructible' as Keyword); }
-  menace(): this { return this.keyword('Menace' as Keyword); }
-  defender(): this { return this.keyword('Defender' as Keyword); }
-  reach(): this { return this.keyword('Reach' as Keyword); }
-  firstStrike(): this { return this.keyword('First Strike' as Keyword); }
-  doubleStrike(): this { return this.keyword('Double Strike' as Keyword); }
-
-  keyword(kw: Keyword): this {
-    if (this.def.keywords.includes(kw)) return this;
-    this.def.keywords.push(kw);
-    this.def.abilities.push(...getPrimitiveAbilitiesForKeyword(kw));
+  private addAbilities(abilities: AbilityDefinition[]): this {
+    this.def.abilities.push(...abilities);
     return this;
   }
 
+  // --- Primitive ability shortcuts ---
+
+  flying(): this { return this.addAbilities(createFlyingAbilities()); }
+  trample(): this { return this.addAbilities(createTrampleAbilities()); }
+  haste(): this { return this.addAbilities(createHasteAbilities()); }
+  vigilance(): this { return this.addAbilities(createVigilanceAbilities()); }
+  deathtouch(): this { return this.addAbilities(createDeathtouchAbilities()); }
+  lifelink(): this { return this.addAbilities(createLifelinkAbilities()); }
+  flash(): this { return this.addAbilities(createFlashAbilities()); }
+  hexproof(): this { return this.addAbilities(createHexproofAbilities()); }
+  shroud(): this { return this.addAbilities(createShroudAbilities()); }
+  indestructible(): this { return this.addAbilities(createIndestructibleAbilities()); }
+  menace(): this { return this.addAbilities(createMenaceAbilities()); }
+  defender(): this { return this.addAbilities(createDefenderAbilities()); }
+  reach(): this { return this.addAbilities(createReachAbilities()); }
+  firstStrike(): this { return this.addAbilities(createFirstStrikeAbilities()); }
+  doubleStrike(): this { return this.addAbilities(createDoubleStrikeAbilities()); }
+
   /** Add protection from the specified qualities */
   protection(from: ProtectionFrom): this {
-    this.keyword('Protection' as Keyword);
     this.staticAbility({
       type: 'interaction-hook',
       hook: {
@@ -181,7 +191,6 @@ export class CardBuilder {
   /** Add ward with a cost. If string, treated as mana cost (e.g. "{2}"). */
   ward(cost: Cost | string): this {
     const parsedCost = typeof cost === 'string' ? { mana: parseManaCost(cost) } : cost;
-    this.keyword('Ward' as Keyword);
     this.staticAbility({
       type: 'interaction-hook',
       hook: {
@@ -584,18 +593,14 @@ export class CardBuilder {
               if (underlyingEffect.type === 'pump') {
                 card.modifiedPower = (card.modifiedPower ?? card.definition.power ?? 0) + underlyingEffect.power;
                 card.modifiedToughness = (card.modifiedToughness ?? card.definition.toughness ?? 0) + underlyingEffect.toughness;
-              } else if (underlyingEffect.type === 'grant-keyword') {
-                const keywords = card.modifiedKeywords ?? [...card.definition.keywords];
-                if (!keywords.includes(underlyingEffect.keyword)) {
-                  keywords.push(underlyingEffect.keyword);
-                }
-                card.modifiedKeywords = keywords;
+              } else if (underlyingEffect.type === 'grant-abilities') {
+                const abilities = card.modifiedAbilities ?? [...card.definition.abilities];
+                abilities.push(...underlyingEffect.abilities);
+                card.modifiedAbilities = abilities;
               } else if (underlyingEffect.type === 'cant-be-targeted' && underlyingEffect.by === 'opponents') {
-                const keywords = card.modifiedKeywords ?? [...card.definition.keywords];
-                if (!keywords.includes('Hexproof' as Keyword)) {
-                  keywords.push('Hexproof' as Keyword);
-                }
-                card.modifiedKeywords = keywords;
+                const abilities = card.modifiedAbilities ?? [...card.definition.abilities];
+                abilities.push(...createHexproofAbilities());
+                card.modifiedAbilities = abilities;
               }
               return;
             }
@@ -878,7 +883,6 @@ export class CardBuilder {
       spellCastBehaviors: this.def.spellCastBehaviors,
       spellCostMechanics: this.def.spellCostMechanics,
       abilities: [...this.def.abilities, ...this.deferredAbilities],
-      keywords: this.def.keywords,
       attachment: this.def.attachment,
       alternativeCosts: this.def.alternativeCosts,
       additionalCosts: this.def.additionalCosts,

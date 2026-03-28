@@ -117,8 +117,7 @@ async function createStagingSchema(databaseUrl) {
         "originalText" text,
         "printedText" text,
         "printings" text,
-        "otherFaceIds" text,
-        "keywords" text
+        "otherFaceIds" text
       );
 
       create table "cardIdentifiers" (
@@ -147,20 +146,20 @@ async function seedStagingData(databaseUrl) {
           "uuid", "name", "setCode", "number", "language", "manaCost", "manaValue", "type", "text",
           "power", "toughness", "loyalty", "rarity", "colorIdentity", "types", "supertypes", "subtypes",
           "side", "layout", "isOnlineOnly", "isFunny", "isPromo", "isRebalanced", "isFullArt", "isTextless",
-          "originalText", "printedText", "printings", "otherFaceIds", "keywords"
+          "originalText", "printedText", "printings", "otherFaceIds"
         )
         values
         (
           '11111111-1111-1111-1111-111111111111', 'Test Wall', 'TST', '1', 'English', '{1}{W}', 2, 'Creature — Wall', 'Defender',
           '0', '4', null, 'common', 'W', 'Creature', '', 'Wall',
           null, 'normal', false, false, false, false, false, false,
-          null, null, null, null, null
+          null, null, null, null
         ),
         (
           '22222222-2222-2222-2222-222222222222', 'Test Wrath', 'TST', '2', 'English', '{2}{W}{W}', 4, 'Sorcery', 'Destroy all creatures.',
           null, null, null, 'rare', 'W', 'Sorcery', '', '',
           null, 'normal', false, false, false, false, false, false,
-          null, null, null, null, null
+          null, null, null, null
         )
       `
     );

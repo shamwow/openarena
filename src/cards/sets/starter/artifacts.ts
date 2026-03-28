@@ -1,5 +1,10 @@
 import { CardBuilder } from '../../CardBuilder';
-import { CardType, Keyword } from '../../../engine/types';
+import { CardType } from '../../../engine/types';
+import {
+  createHasteAbilities,
+  createHexproofAbilities,
+  createShroudAbilities,
+} from '../../../engine/AbilityPrimitives';
 
 export const SolRing = CardBuilder.create('Sol Ring')
   .cost('{1}')
@@ -45,8 +50,8 @@ export const LightningGreaves = CardBuilder.create('Lightning Greaves')
   .cost('{2}')
   .types(CardType.ARTIFACT)
   .subtypes('Equipment')
-  .grantToAttached({ type: 'grant-keyword', keyword: Keyword.SHROUD, filter: { self: true } })
-  .grantToAttached({ type: 'grant-keyword', keyword: Keyword.HASTE, filter: { self: true } })
+  .grantToAttached({ type: 'grant-abilities', abilities: createShroudAbilities(), filter: { self: true } })
+  .grantToAttached({ type: 'grant-abilities', abilities: createHasteAbilities(), filter: { self: true } })
   .equip('{0}')
   .oracleText('Equipped creature has haste and shroud.\nEquip {0}')
   .build();
@@ -55,8 +60,8 @@ export const SwiftfootBoots = CardBuilder.create('Swiftfoot Boots')
   .cost('{2}')
   .types(CardType.ARTIFACT)
   .subtypes('Equipment')
-  .grantToAttached({ type: 'grant-keyword', keyword: Keyword.HEXPROOF, filter: { self: true } })
-  .grantToAttached({ type: 'grant-keyword', keyword: Keyword.HASTE, filter: { self: true } })
+  .grantToAttached({ type: 'grant-abilities', abilities: createHexproofAbilities(), filter: { self: true } })
+  .grantToAttached({ type: 'grant-abilities', abilities: createHasteAbilities(), filter: { self: true } })
   .equip('{1}')
   .oracleText('Equipped creature has hexproof and haste.\nEquip {1}')
   .build();

@@ -8,7 +8,6 @@ import type {
   PlayerId,
   TargetSpec,
 } from './types';
-import { Keyword } from './types';
 import { hasType } from './GameState';
 
 export class InteractionEngine {
@@ -128,7 +127,7 @@ export class InteractionEngine {
   }
 
   private evaluate(state: GameState, ctx: InteractionContext) {
-    const verdicts: InteractionVerdict[] = [...this.getKeywordVerdicts(ctx)];
+    const verdicts: InteractionVerdict[] = [];
 
     for (const hook of state.interactionHooks) {
       if (!hook.appliesTo(ctx.object, state)) continue;
@@ -142,26 +141,6 @@ export class InteractionEngine {
     }
 
     return verdicts;
-  }
-
-  private getKeywordVerdicts(ctx: InteractionContext): InteractionVerdict[] {
-    if (ctx.kind !== 'target') {
-      return [];
-    }
-
-    if (ctx.phase !== 'candidate' && ctx.phase !== 'revalidate') {
-      return [];
-    }
-
-    const keywords = ctx.object.modifiedKeywords ?? ctx.object.definition.keywords;
-    if (keywords.includes(Keyword.SHROUD)) {
-      return [{ kind: 'forbid' as const, reason: 'shroud' }];
-    }
-    if (ctx.object.controller !== ctx.actorController && keywords.includes(Keyword.HEXPROOF)) {
-      return [{ kind: 'forbid' as const, reason: 'hexproof' }];
-    }
-
-    return [];
   }
 
   private hasForbiddenVerdict(

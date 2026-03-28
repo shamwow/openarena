@@ -178,7 +178,6 @@ export function makeSmotheringTithe() {
               isManaAbility: true,
               description: '{T}, Sacrifice: Add one mana of any color.',
             }],
-            keywords: [],
           });
         }
       },

@@ -3,7 +3,8 @@ import test from 'node:test';
 
 import { CardBuilder } from '../../../src/cards/CardBuilder.ts';
 import { InspiringCall } from '../../../src/cards/sets/starter/spells.ts';
-import { ActionType, CardType, Keyword, Phase, Step, Zone } from '../../../src/engine/types.ts';
+import { hasAbilityDescription } from '../../../src/engine/AbilityPrimitives.ts';
+import { ActionType, CardType, Phase, Step, Zone } from '../../../src/engine/types.ts';
 import { createHarness, getCard, handNames, makeCommander, settleEngine } from './helpers.ts';
 
 function makeCreature(name: string) {
@@ -74,9 +75,9 @@ test('Inspiring Call snapshots the creatures with +1/+1 counters on resolution',
   const counteredBearBAfter = getCard(state, 'player1', Zone.BATTLEFIELD, 'Countered Bear B');
   const freshBearAfterCast = getCard(state, 'player1', Zone.BATTLEFIELD, 'Fresh Bear');
 
-  assert.ok((counteredBearAAfter.modifiedKeywords ?? []).includes(Keyword.INDESTRUCTIBLE));
-  assert.ok((counteredBearBAfter.modifiedKeywords ?? []).includes(Keyword.INDESTRUCTIBLE));
-  assert.ok(!(freshBearAfterCast.modifiedKeywords ?? []).includes(Keyword.INDESTRUCTIBLE));
+  assert.ok(hasAbilityDescription(counteredBearAAfter, 'Indestructible'));
+  assert.ok(hasAbilityDescription(counteredBearBAfter, 'Indestructible'));
+  assert.ok(!hasAbilityDescription(freshBearAfterCast, 'Indestructible'));
 
   engine.addCounters(freshBearAfterCast.objectId, '+1/+1', 1, { player: 'player1' });
   await settleEngine();
@@ -85,5 +86,5 @@ test('Inspiring Call snapshots the creatures with +1/+1 counters on resolution',
 
   const freshBearAfterCounter = getCard(state, 'player1', Zone.BATTLEFIELD, 'Fresh Bear');
   assert.equal(freshBearAfterCounter.counters['+1/+1'], 1);
-  assert.ok(!(freshBearAfterCounter.modifiedKeywords ?? []).includes(Keyword.INDESTRUCTIBLE));
+  assert.ok(!hasAbilityDescription(freshBearAfterCounter, 'Indestructible'));
 });

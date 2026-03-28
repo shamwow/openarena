@@ -5,7 +5,6 @@ import type {
   CardDefinition,
   GameEvent,
   GameState,
-  Keyword as KeywordValue,
   ManaColor,
   ManaCost,
   ManaPool,
@@ -429,7 +428,6 @@ export class ManaManager {
     if (filter.subtypes && !filter.subtypes.some(subtype => getEffectiveSubtypes(card).includes(subtype))) return false;
     if (filter.supertypes && !filter.supertypes.some(supertype => getEffectiveSupertypes(card).includes(supertype))) return false;
     if (filter.colors && !filter.colors.some(color => card.definition.colorIdentity.includes(color))) return false;
-    if (filter.keywords && !filter.keywords.some(keyword => (card.modifiedKeywords ?? card.definition.keywords).includes(keyword as KeywordValue))) return false;
     if (filter.controller === 'you' && card.controller !== sourceController) return false;
     if (filter.controller === 'opponent' && card.controller === sourceController) return false;
     if (filter.name && card.definition.name !== filter.name) return false;

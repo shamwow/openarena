@@ -4,6 +4,7 @@ import test from 'node:test';
 import { CardBuilder } from '../../../src/cards/CardBuilder.ts';
 import { AnimalAttendant, AvatarKyoshiEarthbender, BadgermoleCub, BumiEclecticEarthbender, BumiUnleashed, EarthKingdomGeneral } from '../../../src/cards/sets/starter/creatures.ts';
 import { BaSingSe, Forest } from '../../../src/cards/sets/starter/lands.ts';
+import { hasAbilityDescription } from '../../../src/engine/AbilityPrimitives.ts';
 import { hasType } from '../../../src/engine/GameState.ts';
 import { ActionType, CardType, Phase, Step, Zone, parseManaCost } from '../../../src/engine/types.ts';
 import { createHarness, getCard, getLegalAction, graveyardNames, makeCommander, makeTargetedCreatureRemoval, settleEngine } from './helpers.ts';
@@ -266,7 +267,7 @@ test('Avatar Kyoshi earthbends a land at the beginning of combat on your turn an
   assert.equal(land.counters['+1/+1'], 8);
   assert.equal(land.modifiedPower, 8);
   assert.equal(land.modifiedToughness, 8);
-  assert.ok((land.modifiedKeywords ?? []).includes('Haste'));
+  assert.ok(hasAbilityDescription(land, 'Haste'));
   assert.equal(land.tapped, false);
 });
 
@@ -315,7 +316,7 @@ test('Bumi, Eclectic Earthbender earthbends a land on entry and returns it tappe
   assert.equal(earthbentLand.counters['+1/+1'], 1);
   assert.equal(earthbentLand.modifiedPower, 1);
   assert.equal(earthbentLand.modifiedToughness, 1);
-  assert.ok((earthbentLand.modifiedKeywords ?? []).includes('Haste'));
+  assert.ok(hasAbilityDescription(earthbentLand, 'Haste'));
   assert.equal(earthbentLand.tapped, false);
 
   engine.destroyPermanent(earthbentLand.objectId);
@@ -473,7 +474,7 @@ test('Earth Kingdom General earthbends 2 when it enters', async () => {
   assert.equal(earthbentLand.counters['+1/+1'], 2);
   assert.equal(earthbentLand.modifiedPower, 2);
   assert.equal(earthbentLand.modifiedToughness, 2);
-  assert.ok((earthbentLand.modifiedKeywords ?? []).includes('Haste'));
+  assert.ok(hasAbilityDescription(earthbentLand, 'Haste'));
 });
 
 test('Earth Kingdom General gains life once each turn from +1/+1 counters on creatures', async () => {
@@ -605,7 +606,7 @@ test('Bumi, Unleashed earthbends a land with four +1/+1 counters when it enters'
   assert.equal(earthbentLand.counters['+1/+1'], 4);
   assert.equal(earthbentLand.modifiedPower, 4);
   assert.equal(earthbentLand.modifiedToughness, 4);
-  assert.ok((earthbentLand.modifiedKeywords ?? []).includes('Haste'));
+  assert.ok(hasAbilityDescription(earthbentLand, 'Haste'));
 });
 
 test('Bumi, Unleashed queues an extra combat and restricts it to land creatures after combat damage to a player', async () => {
@@ -943,7 +944,6 @@ test('airbending leaves lands uncastable and tokens do not keep cast permissions
     types: [CardType.CREATURE],
     power: 1,
     toughness: 1,
-    keywords: [],
     abilities: [],
     subtypes: ['Bird'],
   });
@@ -986,7 +986,7 @@ test('earthbending animates a land with haste and returns it tapped after it die
   assert.equal(hasType(earthbentLand, CardType.CREATURE), true);
   assert.equal(earthbentLand.modifiedPower, 4);
   assert.equal(earthbentLand.modifiedToughness, 4);
-  assert.ok((earthbentLand.modifiedKeywords ?? []).includes('Haste'));
+  assert.ok(hasAbilityDescription(earthbentLand, 'Haste'));
 
   state.currentPhase = Phase.COMBAT;
   state.currentStep = Step.DECLARE_ATTACKERS;

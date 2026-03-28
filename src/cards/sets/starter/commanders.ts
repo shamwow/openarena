@@ -1,5 +1,6 @@
 import { CardBuilder } from '../../CardBuilder';
 import { CardType, ManaColor } from '../../../engine/types';
+import { createFlyingAbilities } from '../../../engine/AbilityPrimitives';
 
 // Commander 1: White — Heliod, Sun-Crowned (simplified)
 export const HeliodSunCrowned = CardBuilder.create('Heliod, Sun-Crowned')
@@ -47,7 +48,7 @@ export const TalrandSkySummoner = CardBuilder.create('Talrand, Sky Summoner')
         power: 2,
         toughness: 2,
         colorIdentity: [ManaColor.BLUE],
-        keywords: ['Flying' as import('../../../engine/types').Keyword],
+        abilities: createFlyingAbilities(),
       });
     },
     { description: 'Whenever you cast an instant or sorcery spell, create a 2/2 blue Drake creature token with flying.' }
@@ -62,7 +63,7 @@ export const TalrandSkySummoner = CardBuilder.create('Talrand, Sky Summoner')
         power: 2,
         toughness: 2,
         colorIdentity: [ManaColor.BLUE],
-        keywords: ['Flying' as import('../../../engine/types').Keyword],
+        abilities: createFlyingAbilities(),
       });
     },
     { description: 'Whenever you cast an instant or sorcery spell, create a 2/2 blue Drake creature token with flying.' }

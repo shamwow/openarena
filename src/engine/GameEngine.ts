@@ -8,7 +8,7 @@ import type {
 } from './types';
 import {
   GameEventType, ActionType, CardType, Step, Zone,
-  StackEntryType, manaCostTotal, Layer, emptyManaCost, Keyword,
+  StackEntryType, manaCostTotal, Layer, emptyManaCost,
 } from './types';
 import { v4 as uuid } from 'uuid';
 import {
@@ -36,6 +36,7 @@ import { CombatManager } from './CombatManager';
 import { ContinuousEffectsEngine } from './ContinuousEffects';
 import { InteractionEngine } from './InteractionEngine';
 import {
+  createHasteAbilities,
   getActivationRuleProfile,
   getCombatDamageRuleProfile,
   getSurvivalRuleProfile,
@@ -82,7 +83,6 @@ const PREDEFINED_TOKENS: Record<PredefinedTokenType, Partial<CardDefinition> & {
       isManaAbility: true,
       description: '{T}, Sacrifice this artifact: Add one mana of any color.',
     }],
-    keywords: [],
   },
   Clue: {
     name: 'Clue',
@@ -98,7 +98,6 @@ const PREDEFINED_TOKENS: Record<PredefinedTokenType, Partial<CardDefinition> & {
       isManaAbility: false,
       description: '{2}, {T}, Sacrifice this artifact: Draw a card.',
     }],
-    keywords: [],
   },
   Food: {
     name: 'Food',
@@ -114,7 +113,6 @@ const PREDEFINED_TOKENS: Record<PredefinedTokenType, Partial<CardDefinition> & {
       isManaAbility: false,
       description: '{2}, {T}, Sacrifice this artifact: You gain 3 life.',
     }],
-    keywords: [],
   },
   Blood: {
     name: 'Blood',
@@ -130,7 +128,6 @@ const PREDEFINED_TOKENS: Record<PredefinedTokenType, Partial<CardDefinition> & {
       isManaAbility: false,
       description: '{1}, {T}, Discard a card, Sacrifice this artifact: Draw a card.',
     }],
-    keywords: [],
   },
 };
 
@@ -1020,7 +1017,7 @@ export class GameEngineImpl implements IGameEngine {
       stackEntry.targetSpecs = stackEntry.modeChoices.flatMap((modeIndex) => spell.modes[modeIndex]?.targets ?? []);
     }
 
-    await this.applyCastKeywordEffects(controller, card, card.definition, stackEntry);
+    await this.applyCastBehaviors(controller, card, card.definition, stackEntry);
     this.priorityManager.playerTookAction(this.state, controller);
   }
 
@@ -1119,11 +1116,9 @@ export class GameEngineImpl implements IGameEngine {
       duration: effectDuration,
       appliesTo,
       apply: (permanent) => {
-        const keywords = permanent.modifiedKeywords ?? [...permanent.definition.keywords];
-        if (!keywords.includes(Keyword.HASTE)) {
-          keywords.push(Keyword.HASTE);
-        }
-        permanent.modifiedKeywords = keywords;
+        const grantedAbilities = permanent.modifiedAbilities ?? [...permanent.definition.abilities];
+        grantedAbilities.push(...createHasteAbilities());
+        permanent.modifiedAbilities = grantedAbilities;
       },
     });
 
@@ -1157,31 +1152,6 @@ export class GameEngineImpl implements IGameEngine {
           if (currentCard.zone !== Zone.GRAVEYARD && currentCard.zone !== Zone.EXILE) return;
           this.zoneManager.moveCard(ctx.state, currentCard.objectId, Zone.BATTLEFIELD, returnController, { tapped: true });
         },
-      },
-    });
-  }
-
-  grantKeywordUntilEndOfTurn(objectId: ObjectId, keyword: Keyword): void {
-    const target = findCard(this.state, objectId);
-    if (!target || target.zone !== Zone.BATTLEFIELD || target.phasedOut) return;
-
-    const objectZoneChangeCounter = target.zoneChangeCounter;
-    this.continuousEffects.addEffect(this.state, {
-      id: `grant-keyword-eot:${objectId}:${objectZoneChangeCounter}:${keyword}`,
-      sourceId: objectId,
-      layer: Layer.ABILITY as LayerType,
-      timestamp: getNextTimestamp(this.state),
-      duration: { type: 'until-end-of-turn' },
-      appliesTo: (permanent) =>
-        permanent.objectId === objectId &&
-        permanent.zoneChangeCounter === objectZoneChangeCounter &&
-        !permanent.phasedOut,
-      apply: (permanent) => {
-        const keywords = permanent.modifiedKeywords ?? [...permanent.definition.keywords];
-        if (!keywords.includes(keyword)) {
-          keywords.push(keyword);
-        }
-        permanent.modifiedKeywords = keywords;
       },
     });
   }
@@ -1253,7 +1223,6 @@ export class GameEngineImpl implements IGameEngine {
       supertypes: [],
       subtypes: [],
       abilities,
-      keywords: [],
     };
 
     const instance = createCardInstance(emblemDef, controller, 'COMMAND', getNextTimestamp(this.state));
@@ -1263,7 +1232,7 @@ export class GameEngineImpl implements IGameEngine {
     return instance;
   }
 
-  // --- Keyword Actions ---
+  // --- Search / Selection Actions ---
 
   async searchLibrary(player: PlayerId, filter: CardFilter, destination: Zone, count: number): Promise<CardInstance[]> {
     return this.searchLibraryWithOptions({
@@ -1975,7 +1944,7 @@ export class GameEngineImpl implements IGameEngine {
     }
     stackEntry.targetGroupCounts = targetGroupCounts;
 
-    await this.applyCastKeywordEffects(playerId, card, effectiveDef, stackEntry);
+    await this.applyCastBehaviors(playerId, card, effectiveDef, stackEntry);
 
     this.priorityManager.playerTookAction(this.state, playerId);
   }
@@ -2794,7 +2763,7 @@ export class GameEngineImpl implements IGameEngine {
     return { paidIds, extraManaCost };
   }
 
-  private async applyCastKeywordEffects(
+  private async applyCastBehaviors(
     playerId: PlayerId,
     card: CardInstance,
     definition: CardDefinition,
@@ -3825,7 +3794,6 @@ export class GameEngineImpl implements IGameEngine {
           effect: card.definition.adventure.effect,
           description: card.definition.adventure.name,
         },
-        keywords: [],
       };
     }
     if (opts.chosenFace === 'back' && card.definition.isMDFC && card.definition.backFace) {
@@ -3849,7 +3817,6 @@ export class GameEngineImpl implements IGameEngine {
     if (filter.subtypes && !filter.subtypes.some(t => getEffectiveSubtypes(card).includes(t))) return false;
     if (filter.supertypes && !filter.supertypes.some(t => getEffectiveSupertypes(card).includes(t))) return false;
     if (filter.colors && !filter.colors.some(c => card.definition.colorIdentity.includes(c))) return false;
-    if (filter.keywords && !filter.keywords.some(k => (card.modifiedKeywords ?? card.definition.keywords).includes(k))) return false;
     if (filter.controller === 'you' && sourceController && card.controller !== sourceController) return false;
     if (filter.controller === 'opponent' && sourceController && card.controller === sourceController) return false;
     if (filter.name && card.definition.name !== filter.name) return false;

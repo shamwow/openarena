@@ -45,7 +45,6 @@ test('Freedom Fighter Recruit tracks the number of creatures you control as its 
     power: 1,
     toughness: 1,
     abilities: [],
-    keywords: [],
   });
 
   await engine.submitAction({

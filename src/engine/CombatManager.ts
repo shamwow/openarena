@@ -373,7 +373,7 @@ export class CombatManager {
     if (!blockerProfile.canBlock) return false;
     const attackerProfile = getBlockRuleProfile(attacker, state);
 
-    // Unblockable: creature with this keyword can't be blocked
+    // Unblockable effect: creature can't be blocked
     if (!attackerProfile.canBeBlocked) return false;
 
     // Flying: can only be blocked by creatures with flying or reach
@@ -381,7 +381,7 @@ export class CombatManager {
       return false;
     }
 
-    // Landwalk: if attacker has a landwalk keyword and defending player controls that land type,
+    // Landwalk effect: if attacker has the matching landwalk ability and defender controls that land type,
     // the attacker can't be blocked
     if (state) {
       const defendingPlayer = blocker.controller;
@@ -523,7 +523,7 @@ export class CombatManager {
   }
 
   /**
-   * Check if attacker has a landwalk keyword and the defending player controls
+   * Check if attacker has a landwalk ability and the defending player controls
    * a land with the corresponding basic land subtype.
    */
   private hasLandwalkEvasion(
@@ -698,7 +698,6 @@ export class CombatManager {
     if (filter.subtypes && !filter.subtypes.some((type) => getEffectiveSubtypes(card).includes(type))) return false;
     if (filter.supertypes && !filter.supertypes.some((type) => getEffectiveSupertypes(card).includes(type))) return false;
     if (filter.colors && !filter.colors.some((color) => card.definition.colorIdentity.includes(color))) return false;
-    if (filter.keywords && !filter.keywords.some((keyword) => (card.modifiedKeywords ?? card.definition.keywords).includes(keyword))) return false;
     if (filter.controller === 'you' && card.controller !== sourceController) return false;
     if (filter.controller === 'opponent' && card.controller === sourceController) return false;
     if (filter.name && card.definition.name !== filter.name) return false;

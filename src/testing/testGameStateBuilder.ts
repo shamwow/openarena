@@ -220,7 +220,6 @@ export class TestGameStateBuilder {
     card.faceDown = false;
     card.modifiedPower = undefined;
     card.modifiedToughness = undefined;
-    card.modifiedKeywords = undefined;
     card.modifiedAbilities = undefined;
     card.exileInsteadOfDyingThisTurnZoneChangeCounter = undefined;
   }

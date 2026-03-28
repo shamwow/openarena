@@ -166,7 +166,6 @@ export function cloneCardInstance(card: CardInstance): CardInstance {
     modifiedTypes: card.modifiedTypes ? [...card.modifiedTypes] : undefined,
     modifiedSubtypes: card.modifiedSubtypes ? [...card.modifiedSubtypes] : undefined,
     modifiedSupertypes: card.modifiedSupertypes ? [...card.modifiedSupertypes] : undefined,
-    modifiedKeywords: card.modifiedKeywords ? [...card.modifiedKeywords] : undefined,
     modifiedAbilities: card.modifiedAbilities ? [...card.modifiedAbilities] : undefined,
     attackTaxes: card.attackTaxes ? card.attackTaxes.map(tax => ({
       sourceId: tax.sourceId,

@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import { CardBuilder } from '../../../src/cards/CardBuilder.ts';
 import { EarthbendingStudent } from '../../../src/cards/sets/starter/creatures.ts';
+import { hasAbilityDescription } from '../../../src/engine/AbilityPrimitives.ts';
 import { hasType } from '../../../src/engine/GameState.ts';
 import { ActionType, CardType, Phase, Step, Zone } from '../../../src/engine/types.ts';
 import { createHarness, getCard, getLegalAction, makeCommander, settleEngine } from './helpers.ts';
@@ -63,9 +64,9 @@ test('Earthbending Student earthbends a land and grants it vigilance while attac
   assert.equal(land.counters['+1/+1'], 2);
   assert.equal(land.modifiedPower, 2);
   assert.equal(land.modifiedToughness, 2);
-  assert.equal((land.modifiedKeywords ?? []).includes('Haste'), true);
-  assert.equal((land.modifiedKeywords ?? []).includes('Vigilance'), true);
-  assert.equal((quietField.modifiedKeywords ?? []).includes('Vigilance'), false);
+  assert.equal(hasAbilityDescription(land, 'Haste'), true);
+  assert.equal(hasAbilityDescription(land, 'Vigilance'), true);
+  assert.equal(hasAbilityDescription(quietField, 'Vigilance'), false);
 
   state.currentPhase = Phase.COMBAT;
   state.currentStep = Step.DECLARE_ATTACKERS;

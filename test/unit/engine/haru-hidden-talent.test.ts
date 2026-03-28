@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import { CardBuilder } from '../../../src/cards/CardBuilder.ts';
 import { HaruHiddenTalent } from '../../../src/cards/sets/starter/creatures.ts';
+import { hasAbilityDescription } from '../../../src/engine/AbilityPrimitives.ts';
 import { hasType } from '../../../src/engine/GameState.ts';
 import { ActionType, CardType, Phase, Step, Zone } from '../../../src/engine/types.ts';
 import { createHarness, getCard, getLegalAction, makeCommander, settleEngine } from './helpers.ts';
@@ -84,6 +85,6 @@ test('Haru, Hidden Talent only earthbends when another Ally enters under your co
   assert.equal(earthbentField.counters['+1/+1'], 1);
   assert.equal(earthbentField.modifiedPower, 1);
   assert.equal(earthbentField.modifiedToughness, 1);
-  assert.equal((earthbentField.modifiedKeywords ?? []).includes('Haste'), true);
+  assert.equal(hasAbilityDescription(earthbentField, 'Haste'), true);
   assert.equal(hasType(untouchedField, CardType.CREATURE), false);
 });

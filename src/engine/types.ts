@@ -68,34 +68,6 @@ export const CardType = {
 } as const;
 export type CardType = (typeof CardType)[keyof typeof CardType];
 
-export const Keyword = {
-  FLYING: 'Flying',
-  FIRST_STRIKE: 'First Strike',
-  DOUBLE_STRIKE: 'Double Strike',
-  TRAMPLE: 'Trample',
-  DEATHTOUCH: 'Deathtouch',
-  LIFELINK: 'Lifelink',
-  VIGILANCE: 'Vigilance',
-  HASTE: 'Haste',
-  REACH: 'Reach',
-  HEXPROOF: 'Hexproof',
-  SHROUD: 'Shroud',
-  INDESTRUCTIBLE: 'Indestructible',
-  MENACE: 'Menace',
-  FLASH: 'Flash',
-  DEFENDER: 'Defender',
-  PROTECTION: 'Protection',
-  WARD: 'Ward',
-  UNBLOCKABLE: 'Unblockable',
-  PHASING: 'Phasing',
-  PLAINSWALK: 'Plainswalk',
-  ISLANDWALK: 'Islandwalk',
-  SWAMPWALK: 'Swampwalk',
-  MOUNTAINWALK: 'Mountainwalk',
-  FORESTWALK: 'Forestwalk',
-} as const;
-export type Keyword = (typeof Keyword)[keyof typeof Keyword];
-
 // --- Mana ---
 
 export interface ManaCost {
@@ -405,7 +377,6 @@ export interface CardDefinition {
   spellCastBehaviors?: SpellCastBehavior[];
   spellCostMechanics?: SpellCostMechanic[];
   abilities: AbilityDefinition[];
-  keywords: Keyword[];
   attachment?: AttachmentDefinition;
   alternativeCosts?: AlternativeCast[];
   additionalCosts?: AdditionalCost[];
@@ -464,7 +435,6 @@ export interface CardInstance {
   modifiedSupertypes?: string[];
   modifiedPower?: number;
   modifiedToughness?: number;
-  modifiedKeywords?: Keyword[];
   modifiedAbilities?: AbilityDefinition[];
   attackTaxes?: AttackTaxRequirement[];
 }
@@ -570,7 +540,6 @@ export interface CardFilter {
   subtypes?: string[];
   supertypes?: string[];
   colors?: ManaColor[];
-  keywords?: Keyword[];
   controller?: 'you' | 'opponent' | 'any';
   name?: string;
   self?: boolean;
@@ -752,7 +721,6 @@ export type StaticEffectDef =
       layer?: 'cda' | 'set';
     }
   | { type: 'add-types'; types: CardType[]; filter: CardFilter }
-  | { type: 'grant-keyword'; keyword: Keyword; filter: CardFilter }
   | { type: 'grant-abilities'; abilities: AbilityDefinition[]; filter: CardFilter }
   | { type: 'cost-modification'; costDelta: Partial<ManaCost>; filter: SpellFilter }
   | { type: 'attack-tax'; filter: CardFilter; cost: Cost; defender: 'source-controller' }
@@ -1419,7 +1387,6 @@ export interface GameEngine {
   registerDelayedTrigger(trigger: DelayedTrigger): void;
   airbendObject(objectId: ObjectId, cost: Cost, actingPlayer: PlayerId): void;
   earthbendLand(targetId: ObjectId, counterCount: number, returnController: PlayerId): void;
-  grantKeywordUntilEndOfTurn(objectId: ObjectId, keyword: Keyword): void;
   grantPumpToObjectsUntilEndOfTurn(objectIds: ObjectId[], power: number, toughness: number): void;
   grantAbilitiesUntilEndOfTurn(
     sourceId: ObjectId,

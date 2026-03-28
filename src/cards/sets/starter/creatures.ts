@@ -1,7 +1,11 @@
 import { CardBuilder } from '../../CardBuilder';
 import { createFirebendingTriggeredAbility } from '../../firebending';
 import { findCard, getEffectiveSubtypes, hasType } from '../../../engine/GameState';
-import { CardType, GameEventType, Keyword, ManaColor, Step } from '../../../engine/types';
+import { CardType, GameEventType, ManaColor, Step } from '../../../engine/types';
+import {
+  createHexproofAbilities,
+  createVigilanceAbilities,
+} from '../../../engine/AbilityPrimitives';
 import type { ActivatedAbilityDef } from '../../../engine/types';
 
 // --- White Creatures ---
@@ -372,8 +376,8 @@ export const EarthbendingStudent = CardBuilder.create('Earthbending Student')
   }, { description: 'When Earthbending Student enters, earthbend 2.' })
   .staticAbility(
     {
-      type: 'grant-keyword',
-      keyword: Keyword.VIGILANCE,
+      type: 'grant-abilities',
+      abilities: createVigilanceAbilities(),
       filter: {
         controller: 'you',
         custom: (card) => hasType(card, CardType.LAND) && hasType(card, CardType.CREATURE),
@@ -436,8 +440,8 @@ export const AvatarKyoshiEarthbender = CardBuilder.create('Avatar Kyoshi, Earthb
   .stats(6, 6)
   .staticAbility(
     {
-      type: 'grant-keyword',
-      keyword: Keyword.HEXPROOF,
+      type: 'grant-abilities',
+      abilities: createHexproofAbilities(),
       filter: { self: true },
     },
     {

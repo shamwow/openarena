@@ -135,7 +135,6 @@ export class ZoneManager {
       card.modifiedTypes = undefined;
       card.modifiedSubtypes = undefined;
       card.modifiedSupertypes = undefined;
-      card.modifiedKeywords = undefined;
       card.modifiedAbilities = undefined;
       card.exileInsteadOfDyingThisTurnZoneChangeCounter = undefined;
 
@@ -450,7 +449,6 @@ export class ZoneManager {
       spellCastBehaviors: definition.spellCastBehaviors,
       spellCostMechanics: definition.spellCostMechanics,
       abilities: definition.abilities ?? [],
-      keywords: definition.keywords ?? [],
       attachment: definition.attachment,
       alternativeCosts: definition.alternativeCosts,
       additionalCosts: definition.additionalCosts,

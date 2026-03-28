@@ -1,6 +1,9 @@
 import { CardBuilder } from '../../CardBuilder';
 import { hasType } from '../../../engine/GameState';
-import { CardType, Keyword, parseManaCost } from '../../../engine/types';
+import { CardType, parseManaCost } from '../../../engine/types';
+import {
+  createTrampleAbilities,
+} from '../../../engine/AbilityPrimitives';
 
 export const RhysticStudy = CardBuilder.create('Rhystic Study')
   .cost('{2}{U}')
@@ -48,7 +51,6 @@ export const SmotheringTithe = CardBuilder.create('Smothering Tithe')
             isManaAbility: true,
             description: '{T}, Sacrifice: Add one mana of any color.',
           }],
-          keywords: [],
         });
       }
     },
@@ -115,7 +117,7 @@ export const CrystallineArmor = CardBuilder.create('Crystalline Armor')
     },
     { description: 'Enchanted creature gets +1/+1 for each land you control.' },
   )
-  .grantToAttached({ type: 'grant-keyword', keyword: Keyword.TRAMPLE, filter: { self: true } })
+  .grantToAttached({ type: 'grant-abilities', abilities: createTrampleAbilities(), filter: { self: true } })
   .oracleText('Enchant creature\nEnchanted creature gets +1/+1 for each land you control and has trample.')
   .build();
 
@@ -180,7 +182,12 @@ export const EarthbenderAscension = CardBuilder.create('Earthbender Ascension')
       sourceCardId: ctx.source.cardId,
       sourceZoneChangeCounter: ctx.source.zoneChangeCounter,
     });
-    ctx.game.grantKeywordUntilEndOfTurn(target.objectId, Keyword.TRAMPLE);
+    ctx.game.grantAbilitiesUntilEndOfTurn(
+      ctx.source.objectId,
+      target.objectId,
+      target.zoneChangeCounter,
+      createTrampleAbilities(),
+    );
   }, { description: 'Whenever a land enters under your control, add a quest counter. At four or more, grow a creature and grant trample.' })
   .oracleText('When Earthbender Ascension enters, earthbend 2. Then search your library for a basic land card, put it onto the battlefield tapped, then shuffle.\nLandfall — Whenever a land you control enters, put a quest counter on Earthbender Ascension. When you do, if it has four or more quest counters on it, put a +1/+1 counter on target creature you control. It gains trample until end of turn.')
   .build();

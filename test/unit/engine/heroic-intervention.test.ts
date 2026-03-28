@@ -4,7 +4,8 @@ import test from 'node:test';
 import { CardBuilder } from '../../../src/cards/CardBuilder.ts';
 import { HeroicIntervention } from '../../../src/cards/sets/starter/spells.ts';
 import { Forest } from '../../../src/cards/sets/starter/lands.ts';
-import { ActionType, CardType, Keyword, Phase, Step, Zone } from '../../../src/engine/types.ts';
+import { hasAbilityDescription } from '../../../src/engine/AbilityPrimitives.ts';
+import { ActionType, CardType, Phase, Step, Zone } from '../../../src/engine/types.ts';
 import { createHarness, getCard, handNames, makeCommander, makeTargetedCreatureRemoval, settleEngine, battlefieldNames, graveyardNames } from './helpers.ts';
 
 function makeCreature(name: string, power: number, toughness: number) {
@@ -60,10 +61,10 @@ test('Heroic Intervention grants hexproof and indestructible, and stops opposing
 
   const shieldedBear = getCard(state, 'player1', Zone.BATTLEFIELD, 'Shielded Bear');
   const forest = getCard(state, 'player1', Zone.BATTLEFIELD, 'Forest');
-  assert.ok((shieldedBear.modifiedKeywords ?? []).includes(Keyword.HEXPROOF));
-  assert.ok((shieldedBear.modifiedKeywords ?? []).includes(Keyword.INDESTRUCTIBLE));
-  assert.ok((forest.modifiedKeywords ?? []).includes(Keyword.HEXPROOF));
-  assert.ok((forest.modifiedKeywords ?? []).includes(Keyword.INDESTRUCTIBLE));
+  assert.ok(hasAbilityDescription(shieldedBear, 'Hexproof'));
+  assert.ok(hasAbilityDescription(shieldedBear, 'Indestructible'));
+  assert.ok(hasAbilityDescription(forest, 'Hexproof'));
+  assert.ok(hasAbilityDescription(forest, 'Indestructible'));
   assert.ok(graveyardNames(state, 'player1').includes('Heroic Intervention'));
 
   state.priorityPlayer = 'player2';
@@ -86,7 +87,7 @@ test('Heroic Intervention grants hexproof and indestructible, and stops opposing
   assert.deepEqual(battlefieldNames(state, 'player1').sort(), ['Forest', 'Shielded Bear'].sort());
 });
 
-test('Heroic Intervention keywords fall off after cleanup', async () => {
+test('Heroic Intervention granted abilities fall off after cleanup', async () => {
   const shieldedCreature = makeCreature('Cleanup Bear', 2, 2);
   const removal = makeTargetedCreatureRemoval('Pinning Light', '{W}');
 
@@ -135,6 +136,6 @@ test('Heroic Intervention keywords fall off after cleanup', async () => {
   await settleEngine();
 
   const afterCleanupBear = getCard(state, 'player1', Zone.BATTLEFIELD, 'Cleanup Bear');
-  assert.ok(!(afterCleanupBear.modifiedKeywords ?? []).includes(Keyword.HEXPROOF));
-  assert.ok(!(afterCleanupBear.modifiedKeywords ?? []).includes(Keyword.INDESTRUCTIBLE));
+  assert.ok(!hasAbilityDescription(afterCleanupBear, 'Hexproof'));
+  assert.ok(!hasAbilityDescription(afterCleanupBear, 'Indestructible'));
 });

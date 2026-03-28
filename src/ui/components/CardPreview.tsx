@@ -28,12 +28,24 @@ function getCardStats(preview: PreviewCardState): string | null {
   return null;
 }
 
+function getAbilityText(preview: PreviewCardState): string[] {
+  const abilities = preview.card.modifiedAbilities ?? preview.card.definition.abilities;
+  return Array.from(
+    new Set(
+      abilities
+        .map((ability) => ability.description.trim())
+        .filter((description) => description.length > 0),
+    ),
+  );
+}
+
 export const CardPreview: React.FC<CardPreviewProps> = ({ preview }) => {
   const art = useCardArt(preview.card.definition.name, {
     enabled: !preview.card.definition.id.startsWith('token-'),
   });
 
   const stats = getCardStats(preview);
+  const abilityText = getAbilityText(preview);
   const imageUrl = art.large ?? art.normal ?? art.png;
 
   return (
@@ -58,9 +70,9 @@ export const CardPreview: React.FC<CardPreviewProps> = ({ preview }) => {
 
       <div className="arena-preview__body">
         <div className="arena-preview__type">{getTypeLine(preview)}</div>
-        {preview.card.definition.keywords.length > 0 && (
+        {abilityText.length > 0 && (
           <div className="arena-preview__meta">
-            {preview.card.definition.keywords.join(', ')}
+            {abilityText.join(', ')}
           </div>
         )}
         <div className="arena-preview__footer">

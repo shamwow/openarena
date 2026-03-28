@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import { CardBuilder } from '../../../src/cards/CardBuilder.ts';
 import { BumisFeastLecture } from '../../../src/cards/sets/starter/spells.ts';
+import { hasAbilityDescription } from '../../../src/engine/AbilityPrimitives.ts';
 import { hasType } from '../../../src/engine/GameState.ts';
 import { ActionType, CardType, Phase, Step, Zone } from '../../../src/engine/types.ts';
 import { createHarness, getCard, makeCommander } from './helpers.ts';
@@ -65,5 +66,5 @@ test("Bumi's Feast Lecture creates Food first and earthbends for twice the Food 
   assert.equal(land.counters['+1/+1'], 4);
   assert.equal(land.modifiedPower, 4);
   assert.equal(land.modifiedToughness, 4);
-  assert.equal((land.modifiedKeywords ?? []).includes('Haste'), true);
+  assert.equal(hasAbilityDescription(land, 'Haste'), true);
 });

@@ -32,9 +32,6 @@ export class ContinuousEffectsEngine {
     );
 
     const compiledStaticEffects = this.compileStaticContinuousEffects(state);
-    state.replacementEffects = this.compileStaticReplacementEffects(state);
-    state.wouldEnterBattlefieldReplacementEffects = this.compileStaticWouldEnterBattlefieldReplacementEffects(state);
-    state.interactionHooks = this.compileStaticInteractionHooks(state);
 
     // Sort effects by layer, then by timestamp (with dependency handling)
     const sorted = this.sortEffects([...state.continuousEffects, ...compiledStaticEffects]);
@@ -48,6 +45,9 @@ export class ContinuousEffectsEngine {
     }
 
     this.applyCounterAdjustments(state);
+    state.replacementEffects = this.compileStaticReplacementEffects(state);
+    state.wouldEnterBattlefieldReplacementEffects = this.compileStaticWouldEnterBattlefieldReplacementEffects(state);
+    state.interactionHooks = this.compileStaticInteractionHooks(state);
   }
 
   /** Add a new continuous effect */
@@ -89,7 +89,6 @@ export class ContinuousEffectsEngine {
           card.modifiedSupertypes = [];
           card.modifiedPower = 2;
           card.modifiedToughness = 2;
-          card.modifiedKeywords = [];
           card.modifiedAbilities = [];
         } else {
           card.modifiedTypes = [...baseDef.types];
@@ -97,7 +96,6 @@ export class ContinuousEffectsEngine {
           card.modifiedSupertypes = [...baseDef.supertypes];
           card.modifiedPower = baseDef.power;
           card.modifiedToughness = baseDef.toughness;
-          card.modifiedKeywords = [...baseDef.keywords];
           card.modifiedAbilities = [...baseDef.abilities];
         }
         card.attackTaxes = [];
@@ -346,23 +344,6 @@ export class ContinuousEffectsEngine {
           },
         };
 
-      case 'grant-keyword':
-        return {
-          id: `${source.objectId}:${source.zoneChangeCounter}:keyword:${effect.keyword}:${ability.description}`,
-          sourceId: source.objectId,
-          layer: Layer.ABILITY,
-          timestamp: source.timestamp,
-          duration: { type: 'static', sourceId: source.objectId },
-          appliesTo: permanent => this.matchesFilter(permanent, effect.filter, source, state),
-          apply: permanent => {
-            const keywords = permanent.modifiedKeywords ?? [...permanent.definition.keywords];
-            if (!keywords.includes(effect.keyword)) {
-              keywords.push(effect.keyword);
-            }
-            permanent.modifiedKeywords = keywords;
-          },
-        };
-
       case 'grant-abilities':
         return {
           id: `${source.objectId}:${source.zoneChangeCounter}:grant-abilities:${ability.description}`,
@@ -496,7 +477,6 @@ export class ContinuousEffectsEngine {
     if (filter.subtypes && !filter.subtypes.some(subtype => getEffectiveSubtypes(card).includes(subtype))) return false;
     if (filter.supertypes && !filter.supertypes.some(supertype => getEffectiveSupertypes(card).includes(supertype))) return false;
     if (filter.colors && !filter.colors.some(color => card.definition.colorIdentity.includes(color))) return false;
-    if (filter.keywords && !filter.keywords.some(keyword => (card.modifiedKeywords ?? card.definition.keywords).includes(keyword))) return false;
     if (filter.controller === 'you' && card.controller !== source.controller) return false;
     if (filter.controller === 'opponent' && card.controller === source.controller) return false;
     if (filter.name && card.definition.name !== filter.name) return false;
