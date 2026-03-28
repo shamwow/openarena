@@ -27,7 +27,6 @@ export const SwordsToPlowshares = CardBuilder.create('Swords to Plowshares')
       ctx.game.gainLife(owner, power);
     }
   }, { description: 'Exile target creature. Its controller gains life equal to its power.' })
-  .oracleText('Exile target creature. Its controller gains life equal to its power.')
   .build();
 
 export const PathToExile = CardBuilder.create('Path to Exile')
@@ -53,7 +52,6 @@ export const PathToExile = CardBuilder.create('Path to Exile')
       ctx.game.shuffleLibrary(owner);
     }
   }, { description: 'Exile target creature. Its controller may search for a basic land tapped.' })
-  .oracleText('Exile target creature. Its controller may search their library for a basic land card, put that card onto the battlefield tapped, then shuffle their library.')
   .build();
 
 export const WrathOfGod = CardBuilder.create('Wrath of God')
@@ -65,7 +63,6 @@ export const WrathOfGod = CardBuilder.create('Wrath of God')
       ctx.game.destroyPermanent(creature.objectId);
     }
   }, { description: 'Destroy all creatures. They can\'t be regenerated.' })
-  .oracleText('Destroy all creatures. They can\'t be regenerated.')
   .build();
 
 export const Disenchant = CardBuilder.create('Disenchant')
@@ -81,7 +78,6 @@ export const Disenchant = CardBuilder.create('Disenchant')
       ctx.game.destroyPermanent(target.objectId);
     }
   }, { description: 'Destroy target artifact or enchantment.' })
-  .oracleText('Destroy target artifact or enchantment.')
   .build();
 
 // --- Blue Spells ---
@@ -100,7 +96,6 @@ export const Counterspell = CardBuilder.create('Counterspell')
       ctx.game.counterSpell(target.id);
     }
   }, { description: 'Counter target spell.' })
-  .oracleText('Counter target spell.')
   .build();
 
 export const BrainstormCard = CardBuilder.create('Brainstorm')
@@ -116,7 +111,6 @@ export const BrainstormCard = CardBuilder.create('Brainstorm')
       }
     }
   }, { description: 'Draw three cards, then put two cards from your hand on top of your library.' })
-  .oracleText('Draw three cards, then put two cards from your hand on top of your library in any order.')
   .build();
 
 export const CatharticReunion = CardBuilder.create('Cathartic Reunion')
@@ -130,7 +124,6 @@ export const CatharticReunion = CardBuilder.create('Cathartic Reunion')
   .spellEffect((ctx) => {
     ctx.game.drawCards(ctx.controller, 3);
   }, { description: 'As an additional cost to cast this spell, discard two cards. Draw three cards.' })
-  .oracleText('As an additional cost to cast this spell, discard two cards.\nDraw three cards.')
   .build();
 
 export const Ponder = CardBuilder.create('Ponder')
@@ -140,7 +133,6 @@ export const Ponder = CardBuilder.create('Ponder')
     // Look at top 3, reorder or shuffle, then draw
     ctx.game.drawCards(ctx.controller, 1);
   }, { description: 'Look at the top three cards of your library. Put them back or shuffle. Draw a card.' })
-  .oracleText('Look at the top three cards of your library, then put them back in any order. You may shuffle your library.\nDraw a card.')
   .build();
 
 export const Explore = CardBuilder.create('Explore')
@@ -151,7 +143,6 @@ export const Explore = CardBuilder.create('Explore')
     ctx.state.players[ctx.controller].landPlaysAvailable += 1;
     ctx.game.drawCards(ctx.controller, 1);
   }, { description: 'You may play an additional land this turn. Draw a card.' })
-  .oracleText('You may play an additional land this turn.\nDraw a card.')
   .build();
 
 // --- Black Spells ---
@@ -168,7 +159,6 @@ export const DoomBlade = CardBuilder.create('Doom Blade')
       ctx.game.destroyPermanent(target.objectId);
     }
   }, { description: 'Destroy target nonblack creature.' })
-  .oracleText('Destroy target nonblack creature.')
   .build();
 
 export const SignInBlood = CardBuilder.create('Sign in Blood')
@@ -180,7 +170,6 @@ export const SignInBlood = CardBuilder.create('Sign in Blood')
     ctx.game.drawCards(target, 2);
     ctx.game.loseLife(target, 2);
   }, { description: 'Target player draws two cards and loses 2 life.' })
-  .oracleText('Target player draws two cards and loses 2 life.')
   .build();
 
 export const Damnation = CardBuilder.create('Damnation')
@@ -192,7 +181,6 @@ export const Damnation = CardBuilder.create('Damnation')
       ctx.game.destroyPermanent(creature.objectId);
     }
   }, { description: 'Destroy all creatures. They can\'t be regenerated.' })
-  .oracleText('Destroy all creatures. They can\'t be regenerated.')
   .build();
 
 // --- Red Spells ---
@@ -213,7 +201,6 @@ export const LightningBolt = CardBuilder.create('Lightning Bolt')
       ctx.game.dealDamage(ctx.source.objectId, choice.value, 3, false);
     }
   }, { description: 'Lightning Bolt deals 3 damage to any target.' })
-  .oracleText('Lightning Bolt deals 3 damage to any target.')
   .build();
 
 export const Chaos_Warp = CardBuilder.create('Chaos Warp')
@@ -228,7 +215,6 @@ export const Chaos_Warp = CardBuilder.create('Chaos Warp')
       ctx.game.shuffleLibrary(owner);
     }
   }, { description: 'Owner shuffles target permanent into library, then reveals top card.' })
-  .oracleText('The owner of target permanent shuffles it into their library, then reveals the top card of their library. If it\'s a permanent card, they put it onto the battlefield.')
   .build();
 
 export const IrohDemonstration = CardBuilder.create("Iroh's Demonstration")
@@ -264,7 +250,6 @@ export const IrohDemonstration = CardBuilder.create("Iroh's Demonstration")
       },
     },
   ], 1, 'Choose one')
-  .oracleText("Choose one —\n• Iroh's Demonstration deals 1 damage to each creature your opponents control.\n• Iroh's Demonstration deals 4 damage to target creature.")
   .build();
 
 export const CombustionTechnique = CardBuilder.create('Combustion Technique')
@@ -292,7 +277,6 @@ export const CombustionTechnique = CardBuilder.create('Combustion Technique')
     }],
     description: 'Combustion Technique deals damage equal to 2 plus the number of Lesson cards in your graveyard to target creature.',
   })
-  .oracleText('Combustion Technique deals damage equal to 2 plus the number of Lesson cards in your graveyard to target creature. If that creature would die this turn, exile it instead.')
   .build();
 
 export const BumiBash = CardBuilder.create('Bumi Bash')
@@ -341,7 +325,6 @@ export const BumiBash = CardBuilder.create('Bumi Bash')
       },
     },
   ], 1, 'Choose one')
-  .oracleText('Choose one —\n• Bumi Bash deals damage equal to the number of lands you control to target creature.\n• Destroy target land creature or nonbasic land.')
   .build();
 
 export const FieryConfluence = CardBuilder.create('Fiery Confluence')
@@ -382,7 +365,6 @@ export const FieryConfluence = CardBuilder.create('Fiery Confluence')
       },
     },
   ], 3, 'Choose three', { allowRepeatedModes: true })
-  .oracleText('Choose three. You may choose the same mode more than once.\n• Fiery Confluence deals 1 damage to each creature.\n• Fiery Confluence deals 2 damage to each opponent.\n• Destroy target artifact.')
   .build();
 
 export const BlasphemousAct = CardBuilder.create('Blasphemous Act')
@@ -395,7 +377,6 @@ export const BlasphemousAct = CardBuilder.create('Blasphemous Act')
       ctx.game.dealDamage(ctx.source.objectId, creature.objectId, 13, false);
     }
   }, { description: 'Blasphemous Act deals 13 damage to each creature.' })
-  .oracleText('This spell costs {1} less to cast for each creature on the battlefield.\nBlasphemous Act deals 13 damage to each creature.')
   .build();
 
 export const Gamble = CardBuilder.create('Gamble')
@@ -420,7 +401,6 @@ export const Gamble = CardBuilder.create('Gamble')
 
     ctx.game.shuffleLibrary(ctx.controller);
   }, { description: 'Search your library for a card, put it into your hand, discard a card at random, then shuffle.' })
-  .oracleText('Search your library for a card, put that card into your hand, discard a card at random, then shuffle.')
   .build();
 
 // --- Green Spells ---
@@ -446,7 +426,6 @@ export const Cultivate = CardBuilder.create('Cultivate')
     }
     ctx.game.shuffleLibrary(ctx.controller);
   }, { description: 'Search for two basic lands, one to battlefield tapped, one to hand.' })
-  .oracleText('Search your library for up to two basic land cards, reveal those cards, put one onto the battlefield tapped and the other into your hand, then shuffle.')
   .build();
 
 export const CycleOfRenewal = CardBuilder.create('Cycle of Renewal')
@@ -477,7 +456,6 @@ export const CycleOfRenewal = CardBuilder.create('Cycle of Renewal')
       }
     }
   }, { description: 'Sacrifice a land. Search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle.' })
-  .oracleText('Sacrifice a land. Search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle your library.')
   .build();
 
 export const ManyPartings = CardBuilder.create('Many Partings')
@@ -500,7 +478,6 @@ export const ManyPartings = CardBuilder.create('Many Partings')
       ctx.game.createPredefinedToken(ctx.controller, 'Food');
     }
   }, { description: 'Search your library for up to one basic land card, put it into your hand, then shuffle. If you control a commander, create a Food token.' })
-  .oracleText('Search your library for up to one basic land card, put it into your hand, then shuffle. If you control a commander, create a Food token.')
   .build();
 
 export const HeroicIntervention = CardBuilder.create('Heroic Intervention')
@@ -517,7 +494,6 @@ export const HeroicIntervention = CardBuilder.create('Heroic Intervention')
       );
     }
   }, { description: 'Permanents you control gain hexproof and indestructible until end of turn.' })
-  .oracleText('Permanents you control gain hexproof and indestructible until end of turn.')
   .build();
 
 export const InspiringCall = CardBuilder.create('Inspiring Call')
@@ -539,7 +515,6 @@ export const InspiringCall = CardBuilder.create('Inspiring Call')
       );
     }
   }, { description: 'Draw a card for each creature you control with a +1/+1 counter on it. Those creatures gain indestructible until end of turn.' })
-  .oracleText('Draw a card for each creature you control with a +1/+1 counter on it. Those creatures gain indestructible until end of turn.')
   .build();
 
 export const HowToStartARiot = CardBuilder.create('How to Start a Riot')
@@ -579,7 +554,6 @@ export const HowToStartARiot = CardBuilder.create('How to Start a Riot')
     ],
     description: 'Target creature gains menace until end of turn. Creatures target player controls get +2/+0 until end of turn.',
   })
-  .oracleText('Target creature gains menace until end of turn. Creatures target player controls get +2/+0 until end of turn.')
   .build();
 
 export const KodamasReach = CardBuilder.create("Kodama's Reach")
@@ -603,7 +577,6 @@ export const KodamasReach = CardBuilder.create("Kodama's Reach")
     }
     ctx.game.shuffleLibrary(ctx.controller);
   }, { description: 'Search for two basic lands, one to battlefield tapped, one to hand.' })
-  .oracleText('Search your library for up to two basic land cards, reveal those cards, put one onto the battlefield tapped and the other into your hand, then shuffle.')
   .build();
 
 export const CrackedEarthTechnique = CardBuilder.create('Cracked Earth Technique')
@@ -630,7 +603,6 @@ export const CrackedEarthTechnique = CardBuilder.create('Cracked Earth Technique
     await earthbend();
     ctx.game.gainLife(ctx.controller, 3);
   }, { description: 'Earthbend 3, then earthbend 3. You gain 3 life.' })
-  .oracleText('Earthbend 3, then earthbend 3. You gain 3 life. (To earthbend 3, target land you control becomes a 0/0 creature with haste that\'s still a land. Put three +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)')
   .build();
 
 export const EarthRumble = CardBuilder.create('Earth Rumble')
@@ -686,7 +658,6 @@ export const EarthRumble = CardBuilder.create('Earth Rumble')
 
     ctx.game.fight(yourCreature.objectId, opposingCreature.objectId);
   }, { description: 'Earthbend 2, then up to one target creature you control fights target creature an opponent controls.' })
-  .oracleText('Earthbend 2. When you do, up to one target creature you control fights target creature an opponent controls.')
   .build();
 
 export const ElementalTeachings = CardBuilder.create('Elemental Teachings')
@@ -760,7 +731,6 @@ export const ElementalTeachings = CardBuilder.create('Elemental Teachings')
 
     ctx.game.shuffleLibrary(ctx.controller);
   }, { description: 'Search for up to four different land names. An opponent chooses two to graveyard, and the rest enter tapped.' })
-  .oracleText('Search your library for up to four land cards with different names and reveal them. An opponent chooses two of those cards. Put the chosen cards into your graveyard and the rest onto the battlefield tapped, then shuffle.')
   .build();
 
 export const BumisFeastLecture = CardBuilder.create("Bumi's Feast Lecture")
@@ -787,7 +757,6 @@ export const BumisFeastLecture = CardBuilder.create("Bumi's Feast Lecture")
       ctx.game.earthbendLand(target.objectId, earthbendCount, ctx.controller);
     }
   }, { description: 'Create a Food token. Then earthbend twice the number of Foods you control.' })
-  .oracleText('Create a Food token. Then earthbend X, where X is twice the number of Foods you control. (A Food token is an artifact with "{2}, {T}, Sacrifice this token:You gain 3 life." To earthbend X, target land you control becomes a 0/0 creature with haste that\'s still a land. Put X +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)')
   .build();
 
 export const BeastWithinSpell = CardBuilder.create('Beast Within')
@@ -809,7 +778,6 @@ export const BeastWithinSpell = CardBuilder.create('Beast Within')
       });
     }
   }, { description: 'Destroy target permanent. Its controller creates a 3/3 Beast token.' })
-  .oracleText('Destroy target permanent. Its controller creates a 3/3 green Beast creature token.')
   .build();
 
 export const AlliesAtLast = CardBuilder.create('Allies at Last')
@@ -846,7 +814,6 @@ export const AlliesAtLast = CardBuilder.create('Allies at Last')
     ],
     description: 'Up to two target creatures you control each deal damage equal to their power to target creature an opponent controls.',
   })
-  .oracleText('Affinity for Allies (This spell costs {1} less to cast for each Ally you control.)\nUp to two target creatures you control each deal damage equal to their power to target creature an opponent controls.')
   .build();
 
 export const HogMonkeyRampage = CardBuilder.create('Hog-Monkey Rampage')
@@ -898,7 +865,6 @@ export const HogMonkeyRampage = CardBuilder.create('Hog-Monkey Rampage')
     ],
     description: 'Choose target creature you control and target creature an opponent controls. Put a +1/+1 counter on the creature you control if it has power 4 or greater. Then those creatures fight each other.',
   })
-  .oracleText('Choose target creature you control and target creature an opponent controls. Put a +1/+1 counter on the creature you control if it has power 4 or greater. Then those creatures fight each other.')
   .build();
 
 export const BitterWork = CardBuilder.create('Bitter Work')
@@ -958,5 +924,4 @@ export const BitterWork = CardBuilder.create('Bitter Work')
       description: 'Exhaust — {4}: Earthbend 4. Activate only during your turn.',
     },
   )
-  .oracleText('Whenever you attack a player with one or more creatures with power 4 or greater, draw a card.\nExhaust — {4}: Earthbend 4. Activate only during your turn.')
   .build();

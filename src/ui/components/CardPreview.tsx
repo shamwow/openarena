@@ -57,7 +57,7 @@ export const CardPreview: React.FC<CardPreviewProps> = ({ preview }) => {
             Controlled by {preview.controllerName} · Owned by {preview.ownerName}
           </div>
         </div>
-        <ManaCostView cost={preview.card.definition.manaCost} />
+        <ManaCostView cost={preview.card.definition.spellCost.mana} />
       </div>
 
       <div className="arena-preview__art">

@@ -16,14 +16,12 @@ export const SolRing = CardBuilder.create('Sol Ring')
     },
     { isManaAbility: true, description: '{T}: Add {C}{C}.' }
   )
-  .oracleText('{T}: Add {C}{C}.')
   .build();
 
 export const ArcaneSignet = CardBuilder.create('Arcane Signet')
   .cost('{2}')
   .types(CardType.ARTIFACT)
   .tapForAnyColor()
-  .oracleText('{T}: Add one mana of any color in your commander\'s color identity.')
   .build();
 
 export const MindStone = CardBuilder.create('Mind Stone')
@@ -43,7 +41,6 @@ export const MindStone = CardBuilder.create('Mind Stone')
     },
     { description: '{1}, {T}, Sacrifice Mind Stone: Draw a card.' }
   )
-  .oracleText('{T}: Add {C}.\n{1}, {T}, Sacrifice Mind Stone: Draw a card.')
   .build();
 
 export const LightningGreaves = CardBuilder.create('Lightning Greaves')
@@ -53,7 +50,6 @@ export const LightningGreaves = CardBuilder.create('Lightning Greaves')
   .grantToAttached({ type: 'grant-abilities', abilities: createShroudAbilities(), filter: { self: true } })
   .grantToAttached({ type: 'grant-abilities', abilities: createHasteAbilities(), filter: { self: true } })
   .equip('{0}')
-  .oracleText('Equipped creature has haste and shroud.\nEquip {0}')
   .build();
 
 export const SwiftfootBoots = CardBuilder.create('Swiftfoot Boots')
@@ -63,7 +59,6 @@ export const SwiftfootBoots = CardBuilder.create('Swiftfoot Boots')
   .grantToAttached({ type: 'grant-abilities', abilities: createHexproofAbilities(), filter: { self: true } })
   .grantToAttached({ type: 'grant-abilities', abilities: createHasteAbilities(), filter: { self: true } })
   .equip('{1}')
-  .oracleText('Equipped creature has hexproof and haste.\nEquip {1}')
   .build();
 
 export const CommandersSphere = CardBuilder.create("Commander's Sphere")
@@ -77,7 +72,6 @@ export const CommandersSphere = CardBuilder.create("Commander's Sphere")
     },
     { description: 'Sacrifice: Draw a card.' }
   )
-  .oracleText('{T}: Add one mana of any color in your commander\'s color identity.\nSacrifice Commander\'s Sphere: Draw a card.')
   .build();
 
 export const ThoughtVessel = CardBuilder.create('Thought Vessel')
@@ -91,5 +85,4 @@ export const ThoughtVessel = CardBuilder.create('Thought Vessel')
     },
     { isManaAbility: true, description: '{T}: Add {C}.' }
   )
-  .oracleText('You have no maximum hand size.\n{T}: Add {C}.')
   .build();

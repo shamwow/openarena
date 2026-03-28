@@ -17,7 +17,6 @@ export const SerraAngel = CardBuilder.create('Serra Angel')
   .stats(4, 4)
   .flying()
   .vigilance()
-  .oracleText('Flying, vigilance')
   .build();
 
 export const SunTitan = CardBuilder.create('Sun Titan')
@@ -29,9 +28,9 @@ export const SunTitan = CardBuilder.create('Sun Titan')
   .etbEffect(async (ctx) => {
     const graveyard = ctx.game.getGraveyard(ctx.controller);
     const targets = graveyard.filter(c => {
-      const cmc = c.definition.manaCost.generic + c.definition.manaCost.W +
-        c.definition.manaCost.U + c.definition.manaCost.B +
-        c.definition.manaCost.R + c.definition.manaCost.G;
+      const cmc = c.definition.spellCost.mana.generic + c.definition.spellCost.mana.W +
+        c.definition.spellCost.mana.U + c.definition.spellCost.mana.B +
+        c.definition.spellCost.mana.R + c.definition.spellCost.mana.G;
       return cmc <= 3;
     });
     if (targets.length > 0) {
@@ -41,7 +40,6 @@ export const SunTitan = CardBuilder.create('Sun Titan')
       }
     }
   }, { description: 'Whenever Sun Titan enters or attacks, return permanent with MV 3 or less from graveyard to battlefield.' })
-  .oracleText('Vigilance\nWhenever Sun Titan enters the battlefield or attacks, you may return target permanent card with mana value 3 or less from your graveyard to the battlefield.')
   .build();
 
 export const SoldiersOfTheWatch = CardBuilder.create('Soldiers of the Watch')
@@ -50,7 +48,6 @@ export const SoldiersOfTheWatch = CardBuilder.create('Soldiers of the Watch')
   .subtypes('Human', 'Soldier')
   .stats(2, 4)
   .vigilance()
-  .oracleText('Vigilance')
   .build();
 
 // --- Blue Creatures ---
@@ -61,7 +58,6 @@ export const AirElemental = CardBuilder.create('Air Elemental')
   .subtypes('Elemental')
   .stats(4, 4)
   .flying()
-  .oracleText('Flying')
   .build();
 
 export const Mulldrifter = CardBuilder.create('Mulldrifter')
@@ -73,7 +69,6 @@ export const Mulldrifter = CardBuilder.create('Mulldrifter')
   .etbEffect((ctx) => {
     ctx.game.drawCards(ctx.controller, 2);
   }, { description: 'When Mulldrifter enters the battlefield, draw two cards.' })
-  .oracleText('Flying\nWhen Mulldrifter enters the battlefield, draw two cards.')
   .build();
 
 // --- Black Creatures ---
@@ -102,7 +97,6 @@ export const GraveTitan = CardBuilder.create('Grave Titan')
       colorIdentity: [ManaColor.BLACK],
     });
   }, { description: 'When Grave Titan enters the battlefield or attacks, create two 2/2 black Zombie creature tokens.' })
-  .oracleText('Deathtouch\nWhenever Grave Titan enters the battlefield or attacks, create two 2/2 black Zombie creature tokens.')
   .build();
 
 export const BloodArtist = CardBuilder.create('Blood Artist')
@@ -120,7 +114,6 @@ export const BloodArtist = CardBuilder.create('Blood Artist')
     },
     { description: 'Whenever Blood Artist or another creature dies, target opponent loses 1 life and you gain 1 life.' }
   )
-  .oracleText('Whenever Blood Artist or another creature dies, target opponent loses 1 life and you gain 1 life.')
   .build();
 
 // --- Red Creatures ---
@@ -138,7 +131,6 @@ export const ShivanDragon = CardBuilder.create('Shivan Dragon')
     },
     { description: '{R}: Shivan Dragon gets +1/+0 until end of turn.' }
   )
-  .oracleText('Flying\n{R}: Shivan Dragon gets +1/+0 until end of turn.')
   .build();
 
 export const GoblinGuide = CardBuilder.create('Goblin Guide')
@@ -147,7 +139,6 @@ export const GoblinGuide = CardBuilder.create('Goblin Guide')
   .subtypes('Goblin', 'Scout')
   .stats(2, 2)
   .haste()
-  .oracleText('Haste')
   .build();
 
 export const FreedomFighterRecruit = CardBuilder.create('Freedom Fighter Recruit')
@@ -171,7 +162,6 @@ export const FreedomFighterRecruit = CardBuilder.create('Freedom Fighter Recruit
     },
     { description: "Freedom Fighter Recruit's power is equal to the number of creatures you control." },
   )
-  .oracleText("Freedom Fighter Recruit's power is equal to the number of creatures you control.")
   .build();
 
 export const LongshotRebelBowman = CardBuilder.create('Longshot, Rebel Bowman')
@@ -209,7 +199,6 @@ export const LongshotRebelBowman = CardBuilder.create('Longshot, Rebel Bowman')
       description: 'Whenever you cast a noncreature spell, Longshot, Rebel Bowman deals 2 damage to each opponent.',
     },
   )
-  .oracleText('Reach\nNoncreature spells you cast cost {1} less to cast.\nWhenever you cast a noncreature spell, Longshot, Rebel Bowman deals 2 damage to each opponent.')
   .build();
 
 function createAnyColorManaAbility(): ActivatedAbilityDef {
@@ -248,7 +237,6 @@ export const GreatDivideGuide = CardBuilder.create('Great Divide Guide')
     },
     { description: "Each land and Ally you control has '{T}: Add one mana of any color.'" },
   )
-  .oracleText("Each land and Ally you control has '{T}: Add one mana of any color.'")
   .build();
 
 export const InfernalPlunge = CardBuilder.create('Inferno Titan')
@@ -266,7 +254,6 @@ export const InfernalPlunge = CardBuilder.create('Inferno Titan')
       ctx.game.dealDamage(ctx.source.objectId, target.objectId, 3, false);
     }
   }, { description: 'When Inferno Titan enters or attacks, deal 3 damage divided among targets.' })
-  .oracleText('Whenever Inferno Titan enters the battlefield or attacks, it deals 3 damage divided as you choose among one, two, or three targets.')
   .build();
 
 // --- Green Creatures ---
@@ -277,7 +264,6 @@ export const LlanowarElves = CardBuilder.create('Llanowar Elves')
   .subtypes('Elf', 'Druid')
   .stats(1, 1)
   .tapForMana('G')
-  .oracleText('{T}: Add {G}.')
   .build();
 
 export const BirdsOfParadise = CardBuilder.create('Birds of Paradise')
@@ -287,7 +273,6 @@ export const BirdsOfParadise = CardBuilder.create('Birds of Paradise')
   .stats(0, 1)
   .flying()
   .tapForAnyColor()
-  .oracleText('Flying\n{T}: Add one mana of any color.')
   .build();
 
 export const ElvishMystic = CardBuilder.create('Elvish Mystic')
@@ -296,7 +281,6 @@ export const ElvishMystic = CardBuilder.create('Elvish Mystic')
   .subtypes('Elf', 'Druid')
   .stats(1, 1)
   .tapForMana('G')
-  .oracleText('{T}: Add {G}.')
   .build();
 
 export const BadgermoleCub = CardBuilder.create('Badgermole Cub')
@@ -315,7 +299,6 @@ export const BadgermoleCub = CardBuilder.create('Badgermole Cub')
       description: 'Whenever you tap a creature for mana, add an additional {G}.',
     },
   )
-  .oracleText('Whenever you tap a creature for mana, add an additional {G}.')
   .build();
 
 export const EarthKingdomGeneral = CardBuilder.create('Earth Kingdom General')
@@ -352,7 +335,6 @@ export const EarthKingdomGeneral = CardBuilder.create('Earth Kingdom General')
       description: 'Whenever you put one or more +1/+1 counters on a creature, you may gain that much life. Do this only once each turn.',
     },
   )
-  .oracleText('When Earth Kingdom General enters, earthbend 2.\nWhenever you put one or more +1/+1 counters on a creature, you may gain that much life. Do this only once each turn.')
   .build();
 
 export const EarthbendingStudent = CardBuilder.create('Earthbending Student')
@@ -385,7 +367,6 @@ export const EarthbendingStudent = CardBuilder.create('Earthbending Student')
     },
     { description: 'Land creatures you control have vigilance.' },
   )
-  .oracleText('When Earthbending Student enters, earthbend 2.\nLand creatures you control have vigilance.')
   .build();
 
 export const HaruHiddenTalent = CardBuilder.create('Haru, Hidden Talent')
@@ -429,7 +410,6 @@ export const HaruHiddenTalent = CardBuilder.create('Haru, Hidden Talent')
       description: 'Whenever another Ally you control enters, earthbend 1.',
     },
   )
-  .oracleText('Whenever another Ally you control enters, earthbend 1. (Target land you control becomes a 0/0 creature with haste that\'s still a land. Put a +1/+1 counter on it. When it dies or is exiled, return it to the battlefield tapped.)')
   .build();
 
 export const AvatarKyoshiEarthbender = CardBuilder.create('Avatar Kyoshi, Earthbender')
@@ -476,7 +456,6 @@ export const AvatarKyoshiEarthbender = CardBuilder.create('Avatar Kyoshi, Earthb
       description: 'At the beginning of combat on your turn, earthbend 8, then untap that land.',
     },
   )
-  .oracleText('During your turn, Avatar Kyoshi has hexproof.\nAt the beginning of combat on your turn, earthbend 8, then untap that land.')
   .build();
 
 export const BumiEclecticEarthbender = CardBuilder.create('Bumi, Eclectic Earthbender')
@@ -519,7 +498,6 @@ export const BumiEclecticEarthbender = CardBuilder.create('Bumi, Eclectic Earthb
       description: 'Whenever Bumi attacks, put two +1/+1 counters on each land creature you control.',
     },
   )
-  .oracleText('When Bumi enters, earthbend 1.\nWhenever Bumi attacks, put two +1/+1 counters on each land creature you control.')
   .build();
 
 export const BumiUnleashed = CardBuilder.create('Bumi, Unleashed')
@@ -567,7 +545,6 @@ export const BumiUnleashed = CardBuilder.create('Bumi, Unleashed')
       description: 'Whenever Bumi deals combat damage to a player, untap all lands you control. After this phase, there is an additional combat phase. Only land creatures can attack during that combat phase.',
     },
   )
-  .oracleText('Trample\nWhen Bumi enters, earthbend 4.\nWhenever Bumi deals combat damage to a player, untap all lands you control. After this phase, there is an additional combat phase. Only land creatures can attack during that combat phase.')
   .build();
 
 export const IrohDragonOfTheWest = CardBuilder.create('Iroh, Dragon of the West')
@@ -632,7 +609,6 @@ export const IrohDragonOfTheWest = CardBuilder.create('Iroh, Dragon of the West'
     },
     { description: 'Mentor' },
   )
-  .oracleText('Haste\nMentor\nAt the beginning of combat on your turn, creatures you control with counters on them gain firebending 2 until end of turn.')
   .build();
 
 export const AnimalAttendant = CardBuilder.create('Animal Attendant')
@@ -671,7 +647,6 @@ export const AnimalAttendant = CardBuilder.create('Animal Attendant')
       description: '{T}: Add one mana of any color. If that mana is spent to cast a non-Human creature spell, that creature enters with an additional +1/+1 counter on it.',
     },
   )
-  .oracleText('{T}: Add one mana of any color. If that mana is spent to cast a non-Human creature spell, that creature enters with an additional +1/+1 counter on it.')
   .build();
 
 export const SakuraTribeElder = CardBuilder.create('Sakura-Tribe Elder')
@@ -698,7 +673,6 @@ export const SakuraTribeElder = CardBuilder.create('Sakura-Tribe Elder')
     },
     { description: 'Sacrifice: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.' }
   )
-  .oracleText('Sacrifice Sakura-Tribe Elder: Search your library for a basic land card, put that card onto the battlefield tapped, then shuffle your library.')
   .build();
 
 export const BeastWithin = CardBuilder.create('Acidic Slime')
@@ -719,7 +693,6 @@ export const BeastWithin = CardBuilder.create('Acidic Slime')
       ctx.game.destroyPermanent(chosen.objectId);
     }
   }, { description: 'When Acidic Slime enters, destroy target artifact, enchantment, or land.' })
-  .oracleText('Deathtouch\nWhen Acidic Slime enters the battlefield, destroy target artifact, enchantment, or land.')
   .build();
 
 // --- Multicolor / Colorless ---
@@ -745,5 +718,4 @@ export const SolemnSimulacrum = CardBuilder.create('Solemn Simulacrum')
   .diesEffect((ctx) => {
     ctx.game.drawCards(ctx.controller, 1);
   }, { description: 'When Solemn Simulacrum dies, draw a card.' })
-  .oracleText('When Solemn Simulacrum enters the battlefield, you may search your library for a basic land card, put that card onto the battlefield tapped, then shuffle.\nWhen Solemn Simulacrum dies, you may draw a card.')
   .build();

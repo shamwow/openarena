@@ -61,6 +61,11 @@ export type SpellCostMechanic =
   | { kind: 'convoke' }
   | { kind: 'generic-tap-substitution'; substitution: GenericTapSubstitution };
 
+export interface SpellCost {
+  mana: ManaCost;
+  mechanics?: SpellCostMechanic[];
+}
+
 export interface AlternativeCast {
   id: string;
   cost: Cost;
@@ -86,7 +91,7 @@ export interface CastCostAdjustment {
 export interface CardDefinition {
   id: string;
   name: string;
-  manaCost: ManaCost;
+  spellCost: SpellCost;
   colorIdentity: ManaColor[];
   commanderOptions?: CommanderOptions;
   types: CardType[];
@@ -97,7 +102,6 @@ export interface CardDefinition {
   loyalty?: number;
   spell?: SpellDefinition;
   spellCastBehaviors?: SpellCastBehavior[];
-  spellCostMechanics?: SpellCostMechanic[];
   abilities: AbilityDefinition[];
   attachment?: AttachmentDefinition;
   alternativeCosts?: AlternativeCast[];
@@ -106,7 +110,7 @@ export interface CardDefinition {
   backFace?: CardDefinition;
   isMDFC?: boolean;
   sagaChapters?: Array<{ chapter: number; effect: EffectFn }>;
-  adventure?: { name: string; manaCost: ManaCost; types: CardType[]; effect: EffectFn };
+  adventure?: { name: string; spellCost: SpellCost; types: CardType[]; effect: EffectFn };
   splitHalf?: CardDefinition;
   hasFuse?: boolean;
   morphCost?: Cost;

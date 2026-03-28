@@ -27,7 +27,6 @@ export const HeliodSunCrowned = CardBuilder.create('Heliod, Sun-Crowned')
     },
     { description: 'Whenever you gain life, put a +1/+1 counter on target creature or enchantment you control.' }
   )
-  .oracleText('Indestructible\nWhenever you gain life, put a +1/+1 counter on target creature or enchantment you control.')
   .build();
 
 // Commander 2: Blue — Talrand, Sky Summoner
@@ -68,7 +67,6 @@ export const TalrandSkySummoner = CardBuilder.create('Talrand, Sky Summoner')
     },
     { description: 'Whenever you cast an instant or sorcery spell, create a 2/2 blue Drake creature token with flying.' }
   )
-  .oracleText('Whenever you cast an instant or sorcery spell, create a 2/2 blue Drake creature token with flying.')
   .build();
 
 // Commander 3: Black — Ayara, First of Locthwain
@@ -97,7 +95,6 @@ export const AyaraFirstOfLocthwain = CardBuilder.create('Ayara, First of Locthwa
     },
     { description: '{T}, Sacrifice another creature: Draw a card.' }
   )
-  .oracleText('Whenever a black creature enters the battlefield under your control, each opponent loses 1 life and you gain 1 life.\n{T}, Sacrifice another creature: Draw a card.')
   .build();
 
 // Commander 4: Red — Krenko, Mob Boss
@@ -127,7 +124,6 @@ export const KrenkoMobBoss = CardBuilder.create('Krenko, Mob Boss')
     },
     { timing: 'sorcery', description: '{T}: Create X 1/1 red Goblin creature tokens, where X is the number of Goblins you control.' }
   )
-  .oracleText('{T}: Create X 1/1 red Goblin creature tokens, where X is the number of Goblins you control.')
   .build();
 
 // Commander 5: Green — Marwyn, the Nurturer (bonus for green deck)
@@ -160,5 +156,4 @@ export const MarwynTheNurturer = CardBuilder.create('Marwyn, the Nurturer')
     },
     { isManaAbility: true, description: '{T}: Add an amount of {G} equal to Marwyn\'s power.' }
   )
-  .oracleText('Whenever another Elf enters the battlefield under your control, put a +1/+1 counter on Marwyn, the Nurturer.\n{T}: Add an amount of {G} equal to Marwyn\'s power.')
   .build();

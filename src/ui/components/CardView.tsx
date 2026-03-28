@@ -210,7 +210,7 @@ const CardViewInner: React.FC<CardViewProps> = ({
 
         <div className="arena-card__chrome">
           <div className="arena-card__name">{card.definition.name}</div>
-          {variant !== 'mini' && <ManaCostView cost={card.definition.manaCost} />}
+          {variant !== 'mini' && <ManaCostView cost={card.definition.spellCost.mana} />}
         </div>
 
         <div className="arena-card__status-stack">

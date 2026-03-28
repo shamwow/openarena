@@ -361,7 +361,7 @@ export class GameEngineImpl implements IGameEngine {
       if (card.definition.types.includes(CardType.LAND)) continue;
 
       if (this.canCastWithCurrentTiming(playerId, card, card.zone)) {
-        const castCost = this.getCastCostForLegalAction(playerId, card, { mana: { ...card.definition.manaCost } });
+        const castCost = this.getCastCostForLegalAction(playerId, card, { mana: { ...card.definition.spellCost.mana } });
         if (castCost && this.canAffordCostWithTapSubstitution(playerId, card, castCost)) {
           actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId });
         }
@@ -371,7 +371,7 @@ export class GameEngineImpl implements IGameEngine {
         const adventure = card.definition.adventure;
         const adventureDefinition = this.getEffectiveSpellDefinition(card, { castAsAdventure: true });
         const adventureCastCost = adventureDefinition
-          ? this.getCastCostForLegalAction(playerId, card, { mana: { ...adventure.manaCost } }, adventureDefinition)
+          ? this.getCastCostForLegalAction(playerId, card, { mana: { ...adventure.spellCost.mana } }, adventureDefinition)
           : null;
         if (adventureDefinition && this.canCastWithCurrentTiming(playerId, adventureDefinition, card.zone) && adventureCastCost &&
           this.canAffordCostWithTapSubstitution(playerId, card, adventureCastCost)) {
@@ -395,7 +395,7 @@ export class GameEngineImpl implements IGameEngine {
         } else {
           // Back face is a spell
           if (this.canCastWithCurrentTiming(playerId, back, card.zone)) {
-            const backFaceCost = this.getCastCostForLegalAction(playerId, card, { mana: { ...back.manaCost } }, back);
+            const backFaceCost = this.getCastCostForLegalAction(playerId, card, { mana: { ...back.spellCost.mana } }, back);
             if (backFaceCost && this.canAffordCostWithTapSubstitution(playerId, card, backFaceCost)) {
               actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId, chosenFace: 'back' });
             }
@@ -424,7 +424,7 @@ export class GameEngineImpl implements IGameEngine {
 
       // Right half
       if (this.canCastWithCurrentTiming(playerId, right, card.zone)) {
-        const rightHalfCost = this.getCastCostForLegalAction(playerId, card, { mana: { ...right.manaCost } }, right);
+        const rightHalfCost = this.getCastCostForLegalAction(playerId, card, { mana: { ...right.spellCost.mana } }, right);
         if (rightHalfCost && this.canAffordCostWithTapSubstitution(playerId, card, rightHalfCost)) {
           actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId, chosenHalf: 'right' });
         }
@@ -433,14 +433,14 @@ export class GameEngineImpl implements IGameEngine {
       // Fuse: cast both halves as one spell (sorcery speed only)
       if (card.definition.hasFuse && isSorcerySpeed) {
         const fusedCost: ManaCost = {
-          generic: card.definition.manaCost.generic + right.manaCost.generic,
-          W: card.definition.manaCost.W + right.manaCost.W,
-          U: card.definition.manaCost.U + right.manaCost.U,
-          B: card.definition.manaCost.B + right.manaCost.B,
-          R: card.definition.manaCost.R + right.manaCost.R,
-          G: card.definition.manaCost.G + right.manaCost.G,
-          C: card.definition.manaCost.C + right.manaCost.C,
-          X: card.definition.manaCost.X + right.manaCost.X,
+          generic: card.definition.spellCost.mana.generic + right.spellCost.mana.generic,
+          W: card.definition.spellCost.mana.W + right.spellCost.mana.W,
+          U: card.definition.spellCost.mana.U + right.spellCost.mana.U,
+          B: card.definition.spellCost.mana.B + right.spellCost.mana.B,
+          R: card.definition.spellCost.mana.R + right.spellCost.mana.R,
+          G: card.definition.spellCost.mana.G + right.spellCost.mana.G,
+          C: card.definition.spellCost.mana.C + right.spellCost.mana.C,
+          X: card.definition.spellCost.mana.X + right.spellCost.mana.X,
         };
         const fusedCastCost = this.getCastCostForLegalAction(playerId, card, { mana: fusedCost });
         if (fusedCastCost && this.canAffordCostWithTapSubstitution(playerId, card, fusedCastCost)) {
@@ -470,7 +470,7 @@ export class GameEngineImpl implements IGameEngine {
     for (const card of commandZone) {
       if (player.commanderIds.includes(card.cardId)) {
         const tax = (player.commanderTimesCast[card.cardId] ?? 0) * 2;
-        const totalCost = { ...card.definition.manaCost, generic: card.definition.manaCost.generic + tax };
+        const totalCost = { ...card.definition.spellCost.mana, generic: card.definition.spellCost.mana.generic + tax };
         const commanderCastCost = this.getCastCostForLegalAction(playerId, card, { mana: totalCost });
         if (this.canCastWithCurrentTiming(playerId, card, card.zone) && commanderCastCost && this.canAffordCostWithTapSubstitution(playerId, card, commanderCastCost)) {
           actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId });
@@ -483,7 +483,7 @@ export class GameEngineImpl implements IGameEngine {
     for (const card of exile) {
       if (card.castAsAdventure && card.definition.adventure) {
         // Can cast the creature portion from exile
-        const exileAdventureCost = this.getCastCostForLegalAction(playerId, card, { mana: { ...card.definition.manaCost } });
+        const exileAdventureCost = this.getCastCostForLegalAction(playerId, card, { mana: { ...card.definition.spellCost.mana } });
         if (this.canCastWithCurrentTiming(playerId, card, card.zone) && exileAdventureCost && this.canAffordCostWithTapSubstitution(playerId, card, exileAdventureCost)) {
           actions.push({ type: ActionType.CAST_SPELL, playerId, cardId: card.objectId });
         }
@@ -1217,7 +1217,7 @@ export class GameEngineImpl implements IGameEngine {
     const emblemDef: CardDefinition = {
       id: `emblem-${description.toLowerCase().replace(/\s/g, '-')}-${Date.now()}`,
       name: description,
-      manaCost: emptyManaCost(),
+      spellCost: { mana: emptyManaCost() },
       colorIdentity: [],
       types: [],
       supertypes: [],
@@ -1736,8 +1736,8 @@ export class GameEngineImpl implements IGameEngine {
       cost = { ...matchingAltCost.cost.mana };
     } else if (chosenHalf === 'fused' && card.definition.splitHalf) {
       // Fuse: pay both halves' costs combined
-      const left = card.definition.manaCost;
-      const right = card.definition.splitHalf.manaCost;
+      const left = card.definition.spellCost.mana;
+      const right = card.definition.splitHalf.spellCost.mana;
       cost = {
         generic: left.generic + right.generic,
         W: left.W + right.W, U: left.U + right.U, B: left.B + right.B,
@@ -1745,9 +1745,9 @@ export class GameEngineImpl implements IGameEngine {
         X: left.X + right.X,
       };
     } else if (castAsAdventure && card.definition.adventure) {
-      cost = { ...card.definition.adventure.manaCost };
+      cost = { ...card.definition.adventure.spellCost.mana };
     } else {
-      cost = { ...effectiveDef.manaCost };
+      cost = { ...effectiveDef.spellCost.mana };
     }
 
     const isCommanderCast = card.zone === 'COMMAND' && player.commanderIds.includes(card.cardId);
@@ -2787,7 +2787,7 @@ export class GameEngineImpl implements IGameEngine {
     const library = this.state.zones[playerId].LIBRARY;
     const exiled: CardInstance[] = [];
     let found: CardInstance | null = null;
-    const sourceManaValue = this.getManaValue(sourceDefinition.manaCost);
+    const sourceManaValue = this.getManaValue(sourceDefinition.spellCost.mana);
 
     while (library.length > 0) {
       const card = library[library.length - 1];
@@ -2797,7 +2797,7 @@ export class GameEngineImpl implements IGameEngine {
       if (card.definition.types.includes(CardType.LAND as CardTypeEnum)) {
         continue;
       }
-      if (this.getManaValue(card.definition.manaCost) < sourceManaValue) {
+      if (this.getManaValue(card.definition.spellCost.mana) < sourceManaValue) {
         found = card;
         break;
       }
@@ -2931,7 +2931,7 @@ export class GameEngineImpl implements IGameEngine {
     source: CardInstance,
     cost: ManaCost,
   ): Promise<boolean> {
-    const mechanics = source.definition.spellCostMechanics ?? [];
+    const mechanics = source.definition.spellCost.mechanics ?? [];
 
     if (mechanics.some((mechanic) => mechanic.kind === 'delve') && cost.generic > 0) {
       const graveyard = this.state.zones[playerId].GRAVEYARD.filter(card => card.objectId !== source.objectId);
@@ -3035,7 +3035,7 @@ export class GameEngineImpl implements IGameEngine {
   }
 
   private getGenericTapSubstitutionFromMechanics(card: CardInstance): Cost['genericTapSubstitution'] | undefined {
-    const mechanic = card.definition.spellCostMechanics?.find(
+    const mechanic = card.definition.spellCost.mechanics?.find(
       (entry) => entry.kind === 'generic-tap-substitution'
     );
     if (!mechanic || mechanic.kind !== 'generic-tap-substitution') {
@@ -3787,7 +3787,12 @@ export class GameEngineImpl implements IGameEngine {
       return {
         ...card.definition,
         name: card.definition.adventure.name,
-        manaCost: { ...card.definition.adventure.manaCost },
+        spellCost: {
+          mana: { ...card.definition.adventure.spellCost.mana },
+          mechanics: card.definition.adventure.spellCost.mechanics
+            ? [...card.definition.adventure.spellCost.mechanics]
+            : undefined,
+        },
         types: [...card.definition.adventure.types],
         spell: {
           kind: 'simple',

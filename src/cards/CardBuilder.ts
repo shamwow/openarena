@@ -81,7 +81,7 @@ export class CardBuilder {
     this.def = {
       id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       name,
-      manaCost: emptyManaCost(),
+      spellCost: { mana: emptyManaCost() },
       colorIdentity: [],
       types: [],
       supertypes: [],
@@ -100,7 +100,10 @@ export class CardBuilder {
   }
 
   cost(manaCostStr: string): this {
-    this.def.manaCost = parseManaCost(manaCostStr);
+    this.def.spellCost = {
+      ...this.def.spellCost,
+      mana: parseManaCost(manaCostStr),
+    };
     this.deriveColorIdentity();
     return this;
   }
@@ -133,11 +136,6 @@ export class CardBuilder {
 
   loyalty(n: number): this {
     this.def.loyalty = n;
-    return this;
-  }
-
-  oracleText(text: string): this {
-    void text;
     return this;
   }
 
@@ -635,10 +633,13 @@ export class CardBuilder {
   }
 
   private ensureSpellCostMechanics() {
-    if (!this.def.spellCostMechanics) {
-      this.def.spellCostMechanics = [];
+    if (!this.def.spellCost) {
+      this.def.spellCost = { mana: emptyManaCost() };
     }
-    return this.def.spellCostMechanics;
+    if (!this.def.spellCost.mechanics) {
+      this.def.spellCost.mechanics = [];
+    }
+    return this.def.spellCost.mechanics;
   }
 
   private ensureCommanderOptions() {
@@ -831,7 +832,7 @@ export class CardBuilder {
   adventure(name: string, cost: string, adventureTypes: CardType[], effect: EffectFn): this {
     this.def.adventure = {
       name,
-      manaCost: parseManaCost(cost),
+      spellCost: { mana: parseManaCost(cost) },
       types: adventureTypes,
       effect,
     };
@@ -870,7 +871,7 @@ export class CardBuilder {
     return {
       id: this.def.id,
       name: this.def.name,
-      manaCost: this.def.manaCost!,
+      spellCost: this.def.spellCost!,
       colorIdentity: this.def.colorIdentity,
       commanderOptions: this.def.commanderOptions,
       types: this.def.types,
@@ -881,7 +882,6 @@ export class CardBuilder {
       loyalty: this.def.loyalty,
       spell: this.def.spell,
       spellCastBehaviors: this.def.spellCastBehaviors,
-      spellCostMechanics: this.def.spellCostMechanics,
       abilities: [...this.def.abilities, ...this.deferredAbilities],
       attachment: this.def.attachment,
       alternativeCosts: this.def.alternativeCosts,
@@ -899,7 +899,7 @@ export class CardBuilder {
   }
 
   private deriveColorIdentity(): void {
-    const cost = this.def.manaCost!;
+    const cost = this.def.spellCost!.mana;
     this.def.colorIdentity = manaCostColorIdentity(cost);
   }
 }

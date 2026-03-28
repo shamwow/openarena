@@ -316,7 +316,7 @@ export function drawOneCard(state: GameState, player: PlayerId): CardInstance | 
 
 function deriveColorIdentity(card: CardDefinition): ManaColor[] {
   const colors = new Set<ManaColor>();
-  const cost = card.manaCost;
+  const cost = card.spellCost.mana;
   if (cost.W > 0) colors.add('W' as ManaColor);
   if (cost.U > 0) colors.add('U' as ManaColor);
   if (cost.B > 0) colors.add('B' as ManaColor);

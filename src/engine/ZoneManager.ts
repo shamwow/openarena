@@ -436,7 +436,9 @@ export class ZoneManager {
     const fullDef: import('./types').CardDefinition = {
       id: `token-${definition.name.toLowerCase().replace(/\s/g, '-')}-${Date.now()}`,
       name: definition.name,
-      manaCost: definition.manaCost ?? { generic: 0, W: 0, U: 0, B: 0, R: 0, G: 0, C: 0, X: 0 },
+      spellCost: definition.spellCost ?? {
+        mana: { generic: 0, W: 0, U: 0, B: 0, R: 0, G: 0, C: 0, X: 0 },
+      },
       colorIdentity: definition.colorIdentity ?? [],
       commanderOptions: definition.commanderOptions,
       types: definition.types,
@@ -447,7 +449,6 @@ export class ZoneManager {
       loyalty: definition.loyalty,
       spell: definition.spell,
       spellCastBehaviors: definition.spellCastBehaviors,
-      spellCostMechanics: definition.spellCostMechanics,
       abilities: definition.abilities ?? [],
       attachment: definition.attachment,
       alternativeCosts: definition.alternativeCosts,

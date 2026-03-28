@@ -20,7 +20,6 @@ export const RhysticStudy = CardBuilder.create('Rhystic Study')
     },
     { optional: true, description: 'Whenever an opponent casts a spell, you may draw a card unless that player pays {1}.' }
   )
-  .oracleText('Whenever an opponent casts a spell, you may draw a card unless that player pays {1}.')
   .build();
 
 export const SmotheringTithe = CardBuilder.create('Smothering Tithe')
@@ -56,7 +55,6 @@ export const SmotheringTithe = CardBuilder.create('Smothering Tithe')
     },
     { optional: true, description: 'Whenever an opponent draws, you may create a Treasure unless they pay {2}.' }
   )
-  .oracleText('Whenever an opponent draws a card, that player may pay {2}. If the player doesn\'t, you create a Treasure token.')
   .build();
 
 export const Propaganda = CardBuilder.create('Propaganda')
@@ -66,7 +64,6 @@ export const Propaganda = CardBuilder.create('Propaganda')
     { type: 'attack-tax', filter: { controller: 'opponent' }, cost: { mana: parseManaCost('{2}') }, defender: 'source-controller' },
     { description: 'Creatures can\'t attack you unless their controller pays {2} for each creature they control that\'s attacking you.' }
   )
-  .oracleText('Creatures can\'t attack you unless their controller pays {2} for each creature they control that\'s attacking you.')
   .build();
 
 export const GhostlyPrison = CardBuilder.create('Ghostly Prison')
@@ -76,7 +73,6 @@ export const GhostlyPrison = CardBuilder.create('Ghostly Prison')
     { type: 'attack-tax', filter: { controller: 'opponent' }, cost: { mana: parseManaCost('{2}') }, defender: 'source-controller' },
     { description: 'Creatures can\'t attack you unless their controller pays {2} for each creature they control that\'s attacking you.' }
   )
-  .oracleText('Creatures can\'t attack you unless their controller pays {2} for each creature they control that\'s attacking you.')
   .build();
 
 export const SylvanLibrary = CardBuilder.create('Sylvan Library')
@@ -102,7 +98,6 @@ export const SylvanLibrary = CardBuilder.create('Sylvan Library')
     },
     { description: 'At the beginning of your upkeep, draw two additional cards, then put two back or pay 4 life each.' }
   )
-  .oracleText('At the beginning of your draw step, you may draw two additional cards. If you do, choose two cards in your hand drawn this turn. For each of those cards, pay 4 life or put the card on top of your library.')
   .build();
 
 export const CrystallineArmor = CardBuilder.create('Crystalline Armor')
@@ -118,7 +113,6 @@ export const CrystallineArmor = CardBuilder.create('Crystalline Armor')
     { description: 'Enchanted creature gets +1/+1 for each land you control.' },
   )
   .grantToAttached({ type: 'grant-abilities', abilities: createTrampleAbilities(), filter: { self: true } })
-  .oracleText('Enchant creature\nEnchanted creature gets +1/+1 for each land you control and has trample.')
   .build();
 
 export const EarthbenderAscension = CardBuilder.create('Earthbender Ascension')
@@ -189,5 +183,4 @@ export const EarthbenderAscension = CardBuilder.create('Earthbender Ascension')
       createTrampleAbilities(),
     );
   }, { description: 'Whenever a land enters under your control, add a quest counter. At four or more, grow a creature and grant trample.' })
-  .oracleText('When Earthbender Ascension enters, earthbend 2. Then search your library for a basic land card, put it onto the battlefield tapped, then shuffle.\nLandfall — Whenever a land you control enters, put a quest counter on Earthbender Ascension. When you do, if it has four or more quest counters on it, put a +1/+1 counter on target creature you control. It gains trample until end of turn.')
   .build();
