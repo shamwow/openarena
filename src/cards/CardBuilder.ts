@@ -724,6 +724,30 @@ export class CardBuilder {
     );
   }
 
+  landcycling(cost: Cost | string, landSubtype: string): this {
+    const parsed = this.parseCostParam(cost);
+    return this.activated(
+      parsed,
+      async (ctx) => {
+        ctx.game.discardCard(ctx.controller, ctx.source.objectId);
+        await ctx.game.searchLibraryWithOptions({
+          player: ctx.controller,
+          filter: { subtypes: [landSubtype] },
+          destination: 'HAND' as any,
+          count: 1,
+          optional: true,
+          shuffle: true,
+          reveal: true,
+        });
+      },
+      {
+        timing: 'instant',
+        activationZone: 'HAND' as any,
+        description: `${landSubtype}cycling`,
+      },
+    );
+  }
+
   affinity(filter: import('../engine/types').CardFilter, description = 'Affinity'): this {
     if (!this.def.castCostAdjustments) {
       this.def.castCostAdjustments = [];
