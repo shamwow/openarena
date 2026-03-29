@@ -6,7 +6,9 @@ import type {
   StaticAbilityDef,
   StaticEffectDef,
   Zone,
+  CardType as CardTypeEnum,
 } from './types';
+import { CardType } from './types';
 import { getEffectiveAbilities } from './GameState';
 import { StaticAbility } from './abilities';
 
@@ -215,6 +217,24 @@ export function createPhasingAbilities(): AbilityDefinition[] {
     phasesInDuringUntap: true,
     phasesOutDuringUntap: true,
   }, 'Phasing')];
+}
+
+export function createProwessAbilities(): AbilityDefinition[] {
+  return [{
+    kind: 'triggered',
+    trigger: {
+      on: 'cast-spell',
+      filter: {
+        controller: 'you',
+        custom: (card) => !card.definition.types.includes(CardType.CREATURE as CardTypeEnum),
+      },
+    },
+    effect: (ctx) => {
+      ctx.game.grantPumpToObjectsUntilEndOfTurn([ctx.source.objectId], 1, 1);
+    },
+    optional: false,
+    description: 'Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)',
+  }];
 }
 
 export function getTimingPermissionProfile(

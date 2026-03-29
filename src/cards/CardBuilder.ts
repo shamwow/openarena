@@ -29,6 +29,7 @@ import {
   createShroudAbilities,
   createTrampleAbilities,
   createVigilanceAbilities,
+  createProwessAbilities,
 } from '../engine/AbilityPrimitives';
 import { createFirebendingTriggeredAbility } from './firebending';
 
@@ -81,7 +82,6 @@ export class CardBuilder {
     this.def = {
       id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       name,
-      spellCost: { mana: emptyManaCost() },
       colorIdentity: [],
       types: [],
       supertypes: [],
@@ -100,10 +100,7 @@ export class CardBuilder {
   }
 
   cost(manaCostStr: string): this {
-    this.def.spellCost = {
-      ...this.def.spellCost,
-      mana: parseManaCost(manaCostStr),
-    };
+    this.ensureCost().mana = parseManaCost(manaCostStr);
     this.deriveColorIdentity();
     return this;
   }
@@ -161,6 +158,7 @@ export class CardBuilder {
   reach(): this { return this.addAbilities(createReachAbilities()); }
   firstStrike(): this { return this.addAbilities(createFirstStrikeAbilities()); }
   doubleStrike(): this { return this.addAbilities(createDoubleStrikeAbilities()); }
+  prowess(): this { return this.addAbilities(createProwessAbilities()); }
 
   /** Add protection from the specified qualities */
   protection(from: ProtectionFrom): this {
@@ -515,17 +513,14 @@ export class CardBuilder {
   }
 
   waterbend(amount: number): this {
-    this.ensureSpellCostMechanics().push({
-      kind: 'generic-tap-substitution',
-      substitution: {
-        amount,
-        filter: {
-          types: [CardTypeConst.ARTIFACT as CardType, CardTypeConst.CREATURE as CardType],
-          controller: 'you',
-        },
-        ignoreSummoningSickness: true,
+    this.ensureCost().genericTapSubstitution = {
+      amount,
+      filter: {
+        types: [CardTypeConst.ARTIFACT as CardType, CardTypeConst.CREATURE as CardType],
+        controller: 'you',
       },
-    });
+      ignoreSummoningSickness: true,
+    };
     return this;
   }
 
@@ -632,14 +627,11 @@ export class CardBuilder {
     return this.def.spellCastBehaviors;
   }
 
-  private ensureSpellCostMechanics() {
-    if (!this.def.spellCost) {
-      this.def.spellCost = { mana: emptyManaCost() };
+  private ensureCost(): Cost {
+    if (!this.def.cost) {
+      this.def.cost = {};
     }
-    if (!this.def.spellCost.mechanics) {
-      this.def.spellCost.mechanics = [];
-    }
-    return this.def.spellCost.mechanics;
+    return this.def.cost;
   }
 
   private ensureCommanderOptions() {
@@ -779,13 +771,13 @@ export class CardBuilder {
 
   /** Add the convoke tag — creatures you control can tap to help pay for this spell. */
   convoke(): this {
-    this.ensureSpellCostMechanics().push({ kind: 'convoke' });
+    this.ensureCost().convoke = true;
     return this;
   }
 
   /** Add the delve tag — exile cards from your graveyard to pay generic mana. */
   delve(): this {
-    this.ensureSpellCostMechanics().push({ kind: 'delve' });
+    this.ensureCost().delve = true;
     return this;
   }
 
@@ -832,7 +824,7 @@ export class CardBuilder {
   adventure(name: string, cost: string, adventureTypes: CardType[], effect: EffectFn): this {
     this.def.adventure = {
       name,
-      spellCost: { mana: parseManaCost(cost) },
+      cost: { mana: parseManaCost(cost) },
       types: adventureTypes,
       effect,
     };
@@ -871,7 +863,7 @@ export class CardBuilder {
     return {
       id: this.def.id,
       name: this.def.name,
-      spellCost: this.def.spellCost!,
+      cost: this.def.cost,
       colorIdentity: this.def.colorIdentity,
       commanderOptions: this.def.commanderOptions,
       types: this.def.types,
@@ -899,7 +891,6 @@ export class CardBuilder {
   }
 
   private deriveColorIdentity(): void {
-    const cost = this.def.spellCost!.mana;
-    this.def.colorIdentity = manaCostColorIdentity(cost);
+    this.def.colorIdentity = manaCostColorIdentity(this.def.cost?.mana ?? emptyManaCost());
   }
 }
