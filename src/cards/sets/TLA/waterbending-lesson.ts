@@ -5,9 +5,12 @@ export const WaterbendingLesson = CardBuilder.create('Waterbending Lesson')
   .cost('{3}{U}')
   .types(CardType.SORCERY)
   .subtypes('Lesson')
+  .additionalCost('waterbend-cost', { waterbend: 2 }, 'Waterbend {2}', { optional: true })
   .spellEffect(async (ctx) => {
     ctx.game.drawCards(ctx.controller, 3);
-    // TODO: Check if waterbend {2} was paid; if not, discard a card
+    if (ctx.additionalCostsPaid?.includes('waterbend-cost')) {
+      return;
+    }
     const hand = ctx.game.getHand(ctx.controller);
     if (hand.length > 0) {
       const toDiscard = await ctx.choices.chooseOne('Discard a card (unless you waterbend {2})', hand, c => c.definition.name);

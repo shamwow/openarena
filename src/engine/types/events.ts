@@ -143,6 +143,8 @@ export interface TappedEvent extends BaseGameEvent {
 export interface UntappedEvent extends BaseGameEvent {
   type: typeof GameEventType.UNTAPPED;
   objectId: ObjectId;
+  controller?: PlayerId;
+  isUntapStep?: boolean;
 }
 
 export interface TappedForManaEvent extends BaseGameEvent {

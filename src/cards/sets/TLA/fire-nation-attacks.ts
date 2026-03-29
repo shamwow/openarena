@@ -1,5 +1,6 @@
 import { CardBuilder } from '../../CardBuilder';
 import { CardType, ManaColor } from '../../../engine/types';
+import { createFirebendingTriggeredAbility } from '../../firebending';
 
 export const FireNationAttacks = CardBuilder.create('Fire Nation Attacks')
   .cost('{4}{R}')
@@ -13,9 +14,8 @@ export const FireNationAttacks = CardBuilder.create('Fire Nation Attacks')
         power: 2,
         toughness: 2,
         colorIdentity: [ManaColor.RED],
-        abilities: [],
+        abilities: [createFirebendingTriggeredAbility(1)],
       });
-      // TODO: Token should have firebending 1
     }
   }, { description: 'Create two 2/2 red Soldier creature tokens with firebending 1.' })
   .flashback('{8}{R}')

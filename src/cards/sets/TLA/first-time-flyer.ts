@@ -7,7 +7,6 @@ export const FirstTimeFlyer = CardBuilder.create('First-Time Flyer')
   .subtypes('Human', 'Pilot', 'Ally')
   .stats(1, 2)
   .flying()
-  // TODO: Gets +1/+1 as long as there's a Lesson card in your graveyard
   .staticAbility(
     {
       type: 'pump',

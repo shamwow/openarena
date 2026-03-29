@@ -1,5 +1,5 @@
 import { CardBuilder } from '../../CardBuilder';
-import { CardType, parseManaCost } from '../../../engine/types';
+import { CardType, GameEventType, parseManaCost } from '../../../engine/types';
 
 export const WateryGrasp = CardBuilder.create('Watery Grasp')
   .cost('{U}')
@@ -8,12 +8,14 @@ export const WateryGrasp = CardBuilder.create('Watery Grasp')
   .enchant({ what: 'creature', count: 1 })
   .staticAbility(
     {
-      type: 'custom',
-      apply: (_game, _source) => {
-        // TODO: Enchanted creature doesn't untap during its controller's untap step
-      },
+      type: 'replacement',
+      replaces: GameEventType.UNTAPPED,
+      condition: (_game, source, event) =>
+        'isUntapStep' in event && event.isUntapStep === true
+        && 'objectId' in event && event.objectId === source.attachedTo,
+      replace: () => null,
     },
-    { description: 'Enchanted creature doesn\'t untap during its controller\'s untap step.' },
+    { description: "Enchanted creature doesn't untap during its controller's untap step." },
   )
   .activated(
     { mana: parseManaCost('{5}') },

@@ -440,7 +440,10 @@ class GenericReplacementEffect extends BaseStaticEffect {
       id: `${source.objectId}:${source.zoneChangeCounter}:replacement:${index}`,
       sourceId: source.objectId,
       isSelfReplacement: false,
-      appliesTo: (event) => matchesReplacementEvent(def.replaces, event.type) && source.zone === 'BATTLEFIELD',
+      appliesTo: (event, game) =>
+        matchesReplacementEvent(def.replaces, event.type)
+        && source.zone === 'BATTLEFIELD'
+        && (!def.condition || def.condition(game, source, event)),
       replace: (event, game) => def.replace(game, source, event),
     };
   }
@@ -605,7 +608,7 @@ function compileInteractionHookFromDef(
 }
 
 function matchesReplacementEvent(
-  replaces: import('../types/effects').ReplacementEventType,
+  replaces: import('../types/effects').GenericReplacementEventType | import('../types/events').GameEventType,
   eventType: import('../types/events').GameEventType,
 ): boolean {
   switch (replaces) {
@@ -616,5 +619,6 @@ function matchesReplacementEvent(
     case 'discard': return eventType === GameEventType.DISCARDED;
     case 'dies': return eventType === GameEventType.ZONE_CHANGE;
   }
-  return false;
+  // Direct GameEventType match
+  return replaces === eventType;
 }

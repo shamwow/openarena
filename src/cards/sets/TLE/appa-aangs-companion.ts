@@ -1,6 +1,6 @@
 import { CardBuilder } from '../../CardBuilder';
 import { CardType } from '../../../engine/types';
-import { createFlyingAbilities } from '../../../engine/AbilityPrimitives';
+import { createFlyingAbilities, hasAbilityDescription } from '../../../engine/AbilityPrimitives';
 
 export const AppaAangsCompanion = CardBuilder.create("Appa, Aang's Companion")
   .cost('{3}{W}')
@@ -12,17 +12,15 @@ export const AppaAangsCompanion = CardBuilder.create("Appa, Aang's Companion")
   .triggered(
     { on: 'attacks', filter: { self: true } },
     async (ctx) => {
-      const attackers = ctx.game.getBattlefield({ types: [CardType.CREATURE], controller: 'you' }, ctx.controller)
-        .filter(c => c.objectId !== ctx.source.objectId && c.tapped);
-      // TODO: Should filter to "attacking creatures without flying"
-      const eligibleAttackers = attackers.filter(c => {
-        const abilities = c.modifiedAbilities ?? c.definition.abilities;
-        return !abilities.some(a =>
-          a.kind === 'static' && 'effect' in a && a.effect &&
-          'type' in a.effect && a.effect.type === 'block-rule' &&
-          'evasion' in a.effect && a.effect.evasion === 'requires-flying-or-reach'
-        );
-      });
+      const combat = ctx.state.combat;
+      const eligibleAttackers = combat
+        ? ctx.game.getBattlefield({ types: [CardType.CREATURE], controller: 'you' }, ctx.controller)
+          .filter((card) =>
+            card.objectId !== ctx.source.objectId
+            && combat.attackers.has(card.objectId)
+            && !hasAbilityDescription(card, 'Flying', ctx.state),
+          )
+        : [];
       if (eligibleAttackers.length > 0) {
         const target = await ctx.choices.chooseOne('Choose another attacking creature without flying', eligibleAttackers, c => c.definition.name);
         ctx.game.grantAbilitiesUntilEndOfTurn(ctx.source.objectId, target.objectId, target.zoneChangeCounter, createFlyingAbilities());

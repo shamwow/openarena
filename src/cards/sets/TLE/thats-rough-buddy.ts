@@ -1,5 +1,7 @@
 import { CardBuilder } from '../../CardBuilder';
-import { CardType } from '../../../engine/types';
+import { CardType, GameEventType } from '../../../engine/types';
+import { hasType } from '../../../engine/GameState';
+import { someEventThisTurn } from '../../turnLog';
 
 export const ThatsRoughBuddy = CardBuilder.create("That's Rough Buddy")
   .cost('{1}{W}')
@@ -9,8 +11,13 @@ export const ThatsRoughBuddy = CardBuilder.create("That's Rough Buddy")
     const creatures = ctx.game.getBattlefield({ types: [CardType.CREATURE] });
     if (creatures.length > 0) {
       const target = await ctx.choices.chooseOne('Choose target creature', creatures, c => c.definition.name);
-      // TODO: Check if a creature left the battlefield under your control this turn for +2 instead of +1
-      ctx.game.addCounters(target.objectId, '+1/+1', 1, {
+      const leftThisTurn = someEventThisTurn(
+        ctx.state,
+        (event) => event.type === GameEventType.LEAVES_BATTLEFIELD
+          && event.controller === ctx.controller
+          && Boolean(event.lastKnownInfo && hasType(event.lastKnownInfo, CardType.CREATURE)),
+      );
+      ctx.game.addCounters(target.objectId, '+1/+1', leftThisTurn ? 2 : 1, {
         player: ctx.controller,
         sourceId: ctx.source.objectId,
         sourceCardId: ctx.source.cardId,

@@ -1,16 +1,21 @@
 import { CardBuilder } from '../../CardBuilder';
 import { CardType, GameEventType } from '../../../engine/types';
+import { findCard } from '../../../engine/GameState';
 
 export const IntruderAlarm = CardBuilder.create('Intruder Alarm')
   .cost('{2}{U}')
   .types(CardType.ENCHANTMENT)
-  // TODO: Creatures don't untap during their controllers' untap steps
   .staticAbility(
     {
-      type: 'custom',
-      apply: () => {
-        // TODO: Prevent creatures from untapping during untap step
+      type: 'replacement',
+      replaces: GameEventType.UNTAPPED,
+      condition: (game, _source, event) => {
+        if (!('isUntapStep' in event) || !event.isUntapStep) return false;
+        if (!('objectId' in event)) return false;
+        const card = findCard(game, event.objectId as string);
+        return card?.definition.types.includes(CardType.CREATURE) ?? false;
       },
+      replace: () => null,
     },
     { description: "Creatures don't untap during their controllers' untap steps." },
   )

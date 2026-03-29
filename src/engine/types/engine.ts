@@ -44,6 +44,7 @@ export interface GameEngine {
   discardCard(player: PlayerId, objectId: ObjectId): void;
   shuffleLibrary(player: PlayerId): void;
   emitEvent(event: GameEvent): void;
+  applyAndEmit(event: GameEvent): GameEvent | null;
   recordActionPerformed(player: PlayerId, actionKind: string, actionName: string, sourceId?: ObjectId): void;
   getOpponents(player: PlayerId): PlayerId[];
   getActivePlayers(): PlayerId[];

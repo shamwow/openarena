@@ -1,6 +1,7 @@
 import { CardBuilder } from '../../CardBuilder';
-import { CardType, parseManaCost } from '../../../engine/types';
+import { CardType, GameEventType, parseManaCost } from '../../../engine/types';
 import { createMenaceAbilities } from '../../../engine/AbilityPrimitives';
+import { eventsThisTurn } from '../../turnLog';
 
 export const AzulaRuthlessFirebender = CardBuilder.create('Azula, Ruthless Firebender')
   .cost('{2}{B}')
@@ -20,8 +21,14 @@ export const AzulaRuthlessFirebender = CardBuilder.create('Azula, Ruthless Fireb
           ctx.game.discardCard(ctx.controller, toDiscard.objectId);
         }
       }
-      // TODO: Get experience counter for each player who discarded a card this turn
-      ctx.game.addPlayerCounters(ctx.controller, 'experience', 1);
+      const playersWhoDiscarded = new Set(
+        eventsThisTurn(ctx.state)
+          .filter((event) => event.type === GameEventType.DISCARDED)
+          .map((event) => event.player),
+      );
+      if (playersWhoDiscarded.size > 0) {
+        ctx.game.addPlayerCounters(ctx.controller, 'experience', playersWhoDiscarded.size);
+      }
     },
     { optional: true, description: 'Whenever Azula attacks, you may discard a card. Then you get an experience counter for each player who discarded a card this turn.' }
   )

@@ -1,5 +1,5 @@
 import { CardBuilder } from '../../CardBuilder';
-import { CardType } from '../../../engine/types';
+import { CardType, GameEventType } from '../../../engine/types';
 
 export const TheCabbageMerchant = CardBuilder.create('The Cabbage Merchant')
   .cost('{2}{G}')
@@ -8,9 +8,14 @@ export const TheCabbageMerchant = CardBuilder.create('The Cabbage Merchant')
   .subtypes('Human', 'Citizen')
   .stats(2, 2)
   .triggered(
-    { on: 'cast-spell', filter: { controller: 'opponent' } },
+    {
+      on: 'custom',
+      match: (event, source) =>
+        event.type === GameEventType.SPELL_CAST
+        && event.castBy !== source.controller
+        && !event.spellTypes.includes(CardType.CREATURE),
+    },
     async (ctx) => {
-      // TODO: Only noncreature spells
       ctx.game.createPredefinedToken(ctx.controller, 'Food');
     },
     { description: 'Whenever an opponent casts a noncreature spell, create a Food token.' },

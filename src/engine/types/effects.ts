@@ -3,7 +3,7 @@ import type { CardInstance } from './cards';
 import type { CardType, ManaColor, ObjectId, PlayerId, Timestamp, Zone } from './core';
 import type { Cost } from './costs';
 import type { GameEngine } from './engine';
-import type { GameEvent, WouldEnterBattlefieldEvent } from './events';
+import type { GameEvent, GameEventType, WouldEnterBattlefieldEvent } from './events';
 import type { CardFilter, SpellFilter } from './filters';
 import type { InteractionHookDef } from './interactions';
 import type { ManaCost, ManaReductionBudget } from './mana';
@@ -92,7 +92,8 @@ export type WouldEnterBattlefieldReplacementFn = (
 
 export type GenericReplacementEffectDef = {
   type: 'replacement';
-  replaces: GenericReplacementEventType;
+  replaces: GenericReplacementEventType | GameEventType;
+  condition?: (game: GameState, source: CardInstance, event: GameEvent) => boolean;
   replace: ReplacementFn;
   selfReplacement?: boolean;
 };

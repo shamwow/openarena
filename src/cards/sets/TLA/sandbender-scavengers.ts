@@ -1,5 +1,5 @@
 import { CardBuilder } from '../../CardBuilder';
-import { CardType } from '../../../engine/types';
+import { CardType, GameEventType } from '../../../engine/types';
 
 export const SandbenderScavengers = CardBuilder.create('Sandbender Scavengers')
   .cost('{W}{B}')
@@ -7,9 +7,14 @@ export const SandbenderScavengers = CardBuilder.create('Sandbender Scavengers')
   .subtypes('Human', 'Rogue')
   .stats(1, 1)
   .triggered(
-    { on: 'sacrifice', filter: { controller: 'you' } },
+    {
+      on: 'custom',
+      match: (event, source) =>
+        event.type === GameEventType.SACRIFICED
+        && event.controller === source.controller
+        && event.objectId !== source.objectId,
+    },
     async (ctx) => {
-      // TODO: "another permanent" — should exclude self from trigger
       ctx.game.addCounters(ctx.source.objectId, '+1/+1', 1, {
         player: ctx.controller,
         sourceId: ctx.source.objectId,

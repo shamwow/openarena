@@ -6,8 +6,10 @@ export const RunAmok = CardBuilder.create('Run Amok')
   .cost('{1}{R}')
   .types(CardType.INSTANT)
   .spellEffect(async (ctx) => {
-    // TODO: Should only target attacking creatures
-    const creatures = ctx.game.getBattlefield({ types: [CardType.CREATURE] });
+    const combat = ctx.state.combat;
+    const creatures = combat
+      ? ctx.game.getBattlefield({ types: [CardType.CREATURE] }).filter((card) => combat.attackers.has(card.objectId))
+      : [];
     if (creatures.length === 0) return;
     const target = await ctx.choices.chooseOne('Choose target attacking creature', creatures, c => c.definition.name);
     ctx.game.grantPumpToObjectsUntilEndOfTurn([target.objectId], 3, 3);

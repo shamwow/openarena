@@ -207,6 +207,7 @@ export class GameEngineImpl implements IGameEngine {
     );
     this.manaManager = new ManaManager(this.eventBus);
     this.turnManager = new TurnManager(this.eventBus, this.zoneManager, this.manaManager);
+    this.turnManager.setApplyAndEmit((event) => this.applyAndEmit(event));
     this.priorityManager = new PriorityManager();
     this.interactionEngine = new InteractionEngine();
     this.stackManager = new StackManager(this.eventBus, this.zoneManager, this.manaManager, this.interactionEngine);
@@ -981,6 +982,22 @@ export class GameEngineImpl implements IGameEngine {
   emitEvent(event: GameEvent): void {
     this.state.eventLog.push(event);
     this.eventBus.emit(event);
+  }
+
+  applyAndEmit(event: GameEvent): GameEvent | null {
+    const replaced = this.eventBus.applyReplacements(
+      event, this.state.replacementEffects, this.state,
+    );
+    if (replaced === null) return null;
+
+    this.state.eventLog.push(replaced);
+    this.eventBus.emit(replaced);
+
+    const triggers = this.eventBus.checkTriggers(replaced, this.state);
+    for (const t of triggers) {
+      this.state.pendingTriggers.push(t);
+    }
+    return replaced;
   }
 
   recordActionPerformed(player: PlayerId, actionKind: string, actionName: string, sourceId?: ObjectId): void {

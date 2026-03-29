@@ -7,11 +7,12 @@ export const Standstill = CardBuilder.create('Standstill')
   .triggered(
     { on: 'cast-spell' },
     async (ctx) => {
+      if (!ctx.event || ctx.event.type !== GameEventType.SPELL_CAST) return;
+
       // Sacrifice this enchantment
       ctx.game.sacrificePermanent(ctx.source.objectId, ctx.controller);
-      // Each of that player's opponents draws three cards
-      // TODO: Identify the casting player from the trigger event
-      const opponents = ctx.game.getOpponents(ctx.controller);
+
+      const opponents = ctx.game.getOpponents(ctx.event.castBy);
       for (const opponent of opponents) {
         ctx.game.drawCards(opponent, 3);
       }

@@ -30,11 +30,16 @@ export class TurnManager {
   private eventBus: EventBus;
   private zoneManager: ZoneManager;
   private manaManager: ManaManager;
+  private applyAndEmitFn: ((event: GameEvent) => GameEvent | null) | null = null;
 
   constructor(eventBus: EventBus, zoneManager: ZoneManager, manaManager: ManaManager) {
     this.eventBus = eventBus;
     this.zoneManager = zoneManager;
     this.manaManager = manaManager;
+  }
+
+  setApplyAndEmit(fn: (event: GameEvent) => GameEvent | null): void {
+    this.applyAndEmitFn = fn;
   }
 
   getCurrentIndex(state: GameState): number {
@@ -200,7 +205,23 @@ export class TurnManager {
     for (const card of battlefield) {
       if (card.phasedOut) continue;
       if (card.tapped) {
-        card.tapped = false;
+        if (this.applyAndEmitFn) {
+          const event: GameEvent = {
+            type: GameEventType.UNTAPPED,
+            timestamp: getNextTimestamp(state),
+            objectId: card.objectId,
+            cardId: card.cardId,
+            objectZoneChangeCounter: card.zoneChangeCounter,
+            controller: card.controller,
+            isUntapStep: true,
+          };
+          const result = this.applyAndEmitFn(event);
+          if (result !== null) {
+            card.tapped = false;
+          }
+        } else {
+          card.tapped = false;
+        }
       }
       // Remove summoning sickness for creatures that survived a full turn
       card.summoningSick = false;

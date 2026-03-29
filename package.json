@@ -14,9 +14,9 @@
     "scryfall:image-map:refresh": "node scripts/scryfall-image-map-refresh.mjs",
     "cards:import": "node scripts/import-cards.mjs",
     "cards:import:resume": "node scripts/import-cards.mjs --resume",
-    "test:unit": "node --experimental-strip-types --experimental-loader ./test/unit/engine/resolve-ts-loader.mjs --test \"test/unit/**/*.test.ts\"",
+    "test:unit": "node --no-warnings --experimental-strip-types --import ./test/unit/engine/resolve-ts-register.mjs --test \"test/unit/**/*.test.ts\"",
     "test:integration": "node --test test/integration/**/*.test.mjs",
-    "test:engine": "node --experimental-strip-types --experimental-loader ./test/unit/engine/resolve-ts-loader.mjs --test test/unit/engine/*.test.ts",
+    "test:engine": "node --no-warnings --experimental-strip-types --import ./test/unit/engine/resolve-ts-register.mjs --test test/unit/engine/*.test.ts",
     "lint": "eslint .",
     "preview": "vite preview"
   },
