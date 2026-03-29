@@ -14,6 +14,19 @@ export interface ManaCost {
   phyrexian?: ManaColor[];
 }
 
+export type ManaSpendRestriction =
+  | { kind: 'powerstone' };
+
+export interface ManaReductionBudget {
+  generic?: number;
+  W?: number;
+  U?: number;
+  B?: number;
+  R?: number;
+  G?: number;
+  C?: number;
+}
+
 export function emptyManaCost(): ManaCost {
   return {
     generic: 0,
@@ -101,6 +114,7 @@ export interface ManaProduction {
   amount: number;
   colors: ManaSymbol[];
   restrictToColorIdentity?: boolean;
+  restriction?: ManaSpendRestriction;
 }
 
 export interface TrackedManaEffect {
@@ -113,6 +127,7 @@ export interface TrackedMana {
   color: ManaSymbol;
   sourceId?: ObjectId;
   effect?: TrackedManaEffect;
+  restriction?: ManaSpendRestriction;
 }
 
 export interface AddManaOptions {

@@ -73,6 +73,7 @@ test('StaticAbility.getCostModification() returns delta and filter for cost-modi
   });
   const mod = sa.getCostModification();
   assert.ok(mod);
+  assert.ok(mod.costDelta);
   assert.equal(mod.costDelta.generic, -1);
   assert.equal(mod.filter.controller, 'you');
 });

@@ -19,7 +19,7 @@ export const NorthPolePatrol = CardBuilder.create('North Pole Patrol')
     { description: '{T}: Untap another target permanent you control.' },
   )
   .activated(
-    { mana: parseManaCost('{3}'), tap: true, genericTapSubstitution: { amount: 3, filter: { types: [CardType.ARTIFACT, CardType.CREATURE], controller: 'you' }, ignoreSummoningSickness: true } },
+    { mana: parseManaCost('{3}'), tap: true, genericTapSubstitution: { amount: 3, filter: { types: [CardType.ARTIFACT, CardType.CREATURE], controller: 'you' }, ignoreSummoningSickness: true, keywordAction: 'waterbend' } },
     async (ctx) => {
       const opponentCreatures = ctx.game.getBattlefield({ types: [CardType.CREATURE] })
         .filter(c => c.controller !== ctx.controller);

@@ -33,6 +33,7 @@ export interface CardInstance {
   isToken?: boolean;
   exhaustedAbilityZoneChangeCounters?: Record<number, number>;
   exileInsteadOfDyingThisTurnZoneChangeCounter?: number;
+  exileIfWouldLeaveBattlefieldZoneChangeCounter?: number;
   modifiedTypes?: CardType[];
   modifiedSubtypes?: string[];
   modifiedSupertypes?: string[];

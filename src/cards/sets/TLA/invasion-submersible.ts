@@ -22,6 +22,7 @@ export const InvasionSubmersible = CardBuilder.create('Invasion Submersible')
         amount: 3,
         filter: { types: [CardType.ARTIFACT, CardType.CREATURE], controller: 'you' },
         ignoreSummoningSickness: true,
+        keywordAction: 'waterbend',
       },
     },
     (ctx) => {

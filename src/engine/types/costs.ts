@@ -22,6 +22,7 @@ export interface GenericTapSubstitution {
   amount: number;
   filter: CardFilter;
   ignoreSummoningSickness?: boolean;
+  keywordAction?: string;
 }
 
 /** @deprecated Use PlainCost for data declarations or Cost class for runtime. */

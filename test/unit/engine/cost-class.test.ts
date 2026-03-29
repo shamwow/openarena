@@ -95,6 +95,32 @@ test('applyReduction is a no-op on costless abilities', () => {
   assert.equal(cost.getManaValue(), 0);
 });
 
+test('applyReductionBudget lets unused colored reduction spill into generic mana', () => {
+  const cost = Cost.from({ mana: parseManaCost('{5}{W}') });
+  cost.applyReductionBudget(
+    { W: 1, U: 1, B: 1, R: 1, G: 1 },
+    { spillUnusedColoredToGeneric: true },
+  );
+
+  const display = cost.getDisplayMana();
+  assert.equal(display.W, 0);
+  assert.equal(display.generic, 1);
+});
+
+test('applyReductionBudget handles hybrid, two-or-color hybrid, and phyrexian symbols', () => {
+  const cost = Cost.from({ mana: parseManaCost('{G/U}{2/U}{U/P}') });
+  cost.applyReductionBudget(
+    { W: 1, U: 1, B: 1, R: 1, G: 1 },
+    { spillUnusedColoredToGeneric: true },
+  );
+
+  const display = cost.getDisplayMana();
+  assert.equal(display.generic, 0);
+  assert.equal((display.hybrid ?? []).length, 0);
+  assert.equal((display.phyrexian ?? []).length, 0);
+  assert.equal(cost.getManaValue(), 0);
+});
+
 test('resolveX converts X to generic', () => {
   const cost = Cost.from({ mana: parseManaCost('{X}{X}{1}') });
   assert.equal(cost.getDisplayMana().X, 2);

@@ -23,6 +23,7 @@ export const FoggySwampVinebender = CardBuilder.create('Foggy Swamp Vinebender')
         amount: 5,
         filter: { types: [CardType.ARTIFACT, CardType.CREATURE], controller: 'you' },
         ignoreSummoningSickness: true,
+        keywordAction: 'waterbend',
       },
     },
     (ctx) => {

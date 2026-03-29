@@ -23,6 +23,7 @@ export interface SimpleSpellDef {
   effect: EffectFn;
   targets?: TargetSpec[];
   description: string;
+  afterResolution?: Zone;
 }
 
 export interface ModalSpellDef {
@@ -31,6 +32,7 @@ export interface ModalSpellDef {
   chooseCount: number;
   allowRepeatedModes?: boolean;
   description: string;
+  afterResolution?: Zone;
 }
 
 export type SpellDefinition = SimpleSpellDef | ModalSpellDef;
@@ -53,7 +55,8 @@ export interface CommanderOptions {
 
 export type SpellCastBehavior =
   | { kind: 'storm' }
-  | { kind: 'cascade' };
+  | { kind: 'cascade' }
+  | { kind: 'replicate'; cost: Cost };
 
 export interface AlternativeCast {
   id: string;

@@ -14,6 +14,7 @@ export const FlexibleWaterbender = CardBuilder.create('Flexible Waterbender')
         amount: 3,
         filter: { types: [CardType.ARTIFACT, CardType.CREATURE], controller: 'you' },
         ignoreSummoningSickness: true,
+        keywordAction: 'waterbend',
       },
     },
     (ctx) => {

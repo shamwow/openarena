@@ -37,7 +37,7 @@ export class ZoneManager {
     nextZoneChangeCounter: number,
     fromZone: Zone | undefined,
     controller: PlayerId,
-    options?: { tapped?: boolean; faceDown?: boolean; counters?: Record<string, number> },
+    options?: { tapped?: boolean; faceDown?: boolean; transformed?: boolean; counters?: Record<string, number> },
   ): WouldEnterBattlefieldReplacementResult {
     const event = this.createWouldEnterBattlefieldEvent(
       state,
@@ -71,7 +71,7 @@ export class ZoneManager {
     objectId: ObjectId,
     toZone: Zone,
     toOwner?: PlayerId,
-    options?: { tapped?: boolean; faceDown?: boolean; commanderReplacementDecision?: boolean }
+    options?: { tapped?: boolean; faceDown?: boolean; transformed?: boolean; commanderReplacementDecision?: boolean }
   ): void {
     const card = findCard(state, objectId);
     if (!card) return;
@@ -86,6 +86,13 @@ export class ZoneManager {
       resolvedZone === 'GRAVEYARD' &&
       (shouldExileInsteadOfDyingThisTurn(state, objectId, leavingZoneChangeCounter) ||
         card.exileInsteadOfDyingThisTurnZoneChangeCounter === leavingZoneChangeCounter)
+    ) {
+      resolvedZone = 'EXILE';
+    }
+    if (
+      fromZone === 'BATTLEFIELD' &&
+      card.exileIfWouldLeaveBattlefieldZoneChangeCounter === leavingZoneChangeCounter &&
+      resolvedZone !== 'EXILE'
     ) {
       resolvedZone = 'EXILE';
     }
@@ -104,6 +111,7 @@ export class ZoneManager {
         {
           tapped: options?.tapped ?? false,
           faceDown: options?.faceDown ?? false,
+          transformed: options?.transformed ?? false,
         },
       );
       if (wouldEnterResult.kind === 'redirect') {
@@ -139,6 +147,7 @@ export class ZoneManager {
       card.modifiedSupertypes = undefined;
       card.modifiedAbilities = undefined;
       card.exileInsteadOfDyingThisTurnZoneChangeCounter = undefined;
+      card.exileIfWouldLeaveBattlefieldZoneChangeCounter = undefined;
 
       // Detach any attachments
       for (const attachId of card.attachments) {
@@ -179,6 +188,7 @@ export class ZoneManager {
       }
     } else {
       this.clearBattlefieldEntryState(card);
+      card.faceDown = options?.faceDown ?? false;
     }
 
     // Tokens cease to exist after leaving the battlefield instead of persisting in other zones.
@@ -233,7 +243,10 @@ export class ZoneManager {
         state.pendingTriggers.push(t);
       }
 
-      if (card.definition.sagaChapters && card.definition.sagaChapters.length > 0) {
+      const enteringDefinition = card.isTransformed && card.definition.backFace
+        ? card.definition.backFace
+        : card.definition;
+      if (enteringDefinition.sagaChapters && enteringDefinition.sagaChapters.length > 0) {
         const counterEvent: GameEvent = {
           type: GameEventType.COUNTER_ADDED,
           timestamp: getNextTimestamp(state),
@@ -565,7 +578,7 @@ export class ZoneManager {
     nextZoneChangeCounter: number,
     fromZone: Zone | undefined,
     controller: PlayerId,
-    options?: { tapped?: boolean; faceDown?: boolean; counters?: Record<string, number> },
+    options?: { tapped?: boolean; faceDown?: boolean; transformed?: boolean; counters?: Record<string, number> },
   ): WouldEnterBattlefieldEvent {
     const entry = this.createBattlefieldEntryState(card, options);
     const entering = cloneCardInstance(card);
@@ -594,7 +607,7 @@ export class ZoneManager {
 
   private createBattlefieldEntryState(
     card: CardInstance,
-    options?: { tapped?: boolean; faceDown?: boolean; counters?: Record<string, number> },
+    options?: { tapped?: boolean; faceDown?: boolean; transformed?: boolean; counters?: Record<string, number> },
   ): BattlefieldEntryState {
     const entry: BattlefieldEntryState = {
       tapped: options?.tapped ?? false,
@@ -605,14 +618,18 @@ export class ZoneManager {
       },
       attachedTo: card.attachedTo,
       copyOf: card.copyOf,
-      transformed: card.isTransformed,
+      transformed: options?.transformed ?? card.isTransformed,
     };
 
+    const enteringDefinition = entry.transformed && card.definition.backFace
+      ? card.definition.backFace
+      : card.definition;
+
     if (!entry.faceDown) {
-      if (hasType(card, CardType.PLANESWALKER) && card.definition.loyalty !== undefined) {
-        entry.counters.loyalty = Math.max(entry.counters.loyalty ?? 0, card.definition.loyalty);
+      if (enteringDefinition.types.includes(CardType.PLANESWALKER) && enteringDefinition.loyalty !== undefined) {
+        entry.counters.loyalty = Math.max(entry.counters.loyalty ?? 0, enteringDefinition.loyalty);
       }
-      if (card.definition.sagaChapters && card.definition.sagaChapters.length > 0) {
+      if (enteringDefinition.sagaChapters && enteringDefinition.sagaChapters.length > 0) {
         entry.counters.lore = Math.max(entry.counters.lore ?? 0, 1);
       }
     }
@@ -627,6 +644,7 @@ export class ZoneManager {
     card.attachedTo = null;
     delete card.copyOf;
     delete card.isTransformed;
+    delete card.exileIfWouldLeaveBattlefieldZoneChangeCounter;
   }
 
   private collectSelfReplacementEffects(

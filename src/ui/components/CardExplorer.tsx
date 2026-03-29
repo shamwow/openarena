@@ -35,8 +35,10 @@ function ExplorerCard({
   onPreview: (card: CardInstance) => void;
   onPreviewClear: (cardId?: string) => void;
 }) {
-  const art = useCardArt(card.definition.name, { enabled: !isTokenCard(card) });
-  const imageUrl = art.normal ?? art.png ?? art.artCrop;
+  const isFaceDown = card.faceDown;
+  const art = useCardArt(card.definition.name, { enabled: !isTokenCard(card) && !isFaceDown });
+  const imageUrl = isFaceDown ? undefined : (art.normal ?? art.png ?? art.artCrop);
+  const displayName = isFaceDown ? 'Face-down card' : card.definition.name;
 
   return (
     <div
@@ -49,7 +51,7 @@ function ExplorerCard({
         className="arena-card"
         data-variant="hand"
         data-previewed={isPreviewed}
-        title={card.definition.name}
+        title={displayName}
         style={
           {
             ['--card-cursor' as string]: selectable ? 'pointer' : 'default',

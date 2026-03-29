@@ -19,7 +19,7 @@ export const AangsIceberg = CardBuilder.create("Aang's Iceberg")
     }
   }, { description: 'When this enchantment enters, exile up to one other target nonland permanent until this enchantment leaves the battlefield.' })
   .activated(
-    { mana: parseManaCost('{3}'), sacrifice: { self: true }, genericTapSubstitution: { amount: 3, filter: { types: [CardType.ARTIFACT, CardType.CREATURE], controller: 'you' }, ignoreSummoningSickness: true } },
+    { mana: parseManaCost('{3}'), sacrifice: { self: true }, genericTapSubstitution: { amount: 3, filter: { types: [CardType.ARTIFACT, CardType.CREATURE], controller: 'you' }, ignoreSummoningSickness: true, keywordAction: 'waterbend' } },
     async (ctx) => {
       await ctx.game.scry(ctx.controller, 2);
     },

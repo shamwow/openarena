@@ -9,10 +9,13 @@ import type {
 import {
   parseManaCost,
   emptyManaCost,
+  manaCostToString,
   manaCostColorIdentity,
+  GameEventType,
+  Step,
   CardType as CardTypeConst,
 } from '../engine/types';
-import { getEffectiveSubtypes, getEffectiveSupertypes, hasType } from '../engine/GameState';
+import { cloneCardInstance, getEffectiveSubtypes, getEffectiveSupertypes, hasType } from '../engine/GameState';
 import {
   createDeathtouchAbilities,
   createDefenderAbilities,
@@ -65,6 +68,63 @@ function matchesCardFilter(
   }
   if (filter.custom && !filter.custom(card, state)) return false;
   return true;
+}
+
+function isPermanentCardDefinition(definition: CardDefinition): boolean {
+  return definition.types.some((type) => (
+    type === CardTypeConst.ARTIFACT ||
+    type === CardTypeConst.CREATURE ||
+    type === CardTypeConst.ENCHANTMENT ||
+    type === CardTypeConst.LAND ||
+    type === CardTypeConst.PLANESWALKER
+  ));
+}
+
+function clonePlainCost(cost: Cost): Cost {
+  return {
+    mana: cost.mana ? { ...cost.mana, hybrid: [...(cost.mana.hybrid ?? [])], phyrexian: [...(cost.mana.phyrexian ?? [])] } : undefined,
+    convoke: cost.convoke,
+    delve: cost.delve,
+    tap: cost.tap,
+    genericTapSubstitution: cost.genericTapSubstitution
+      ? { ...cost.genericTapSubstitution, filter: { ...cost.genericTapSubstitution.filter } }
+      : undefined,
+    sacrifice: typeof cost.sacrifice === 'object' ? { ...cost.sacrifice } : cost.sacrifice,
+    discard: typeof cost.discard === 'object' ? { ...cost.discard } : cost.discard,
+    payLife: cost.payLife,
+    exileFromGraveyard: typeof cost.exileFromGraveyard === 'object'
+      ? { ...cost.exileFromGraveyard }
+      : cost.exileFromGraveyard,
+    removeCounters: cost.removeCounters ? { ...cost.removeCounters } : undefined,
+    custom: cost.custom,
+  };
+}
+
+function scaleManaCost(cost: Cost, multiplier: number): Cost {
+  const copy = clonePlainCost(cost);
+  if (!copy.mana) {
+    return copy;
+  }
+
+  copy.mana = {
+    ...copy.mana,
+    generic: copy.mana.generic * multiplier,
+    W: copy.mana.W * multiplier,
+    U: copy.mana.U * multiplier,
+    B: copy.mana.B * multiplier,
+    R: copy.mana.R * multiplier,
+    G: copy.mana.G * multiplier,
+    C: copy.mana.C * multiplier,
+    X: copy.mana.X * multiplier,
+    hybrid: Array.from({ length: multiplier }).flatMap(() => [...(copy.mana?.hybrid ?? [])]),
+    phyrexian: Array.from({ length: multiplier }).flatMap(() => [...(copy.mana?.phyrexian ?? [])]),
+  };
+
+  return copy;
+}
+
+function describeCost(cost: Cost): string {
+  return cost.mana ? manaCostToString(cost.mana) : 'this cost';
 }
 
 export class CardBuilder {
@@ -159,6 +219,38 @@ export class CardBuilder {
   firstStrike(): this { return this.addAbilities(createFirstStrikeAbilities()); }
   doubleStrike(): this { return this.addAbilities(createDoubleStrikeAbilities()); }
   prowess(): this { return this.addAbilities(createProwessAbilities()); }
+
+  mentor(): this {
+    return this.triggered(
+      { on: 'attacks', filter: { self: true } },
+      async (ctx) => {
+        const sourcePower = ctx.source.modifiedPower ?? ctx.source.definition.power ?? 0;
+        const attackingCreatures = ctx.game
+          .getBattlefield({ types: [CardTypeConst.CREATURE as CardType], controller: 'you' }, ctx.controller)
+          .filter((card) => (
+            card.objectId !== ctx.source.objectId &&
+            (ctx.state.combat?.attackers.has(card.objectId) ?? false) &&
+            (card.modifiedPower ?? card.definition.power ?? 0) < sourcePower
+          ));
+
+        if (attackingCreatures.length === 0) return;
+
+        const target = await ctx.choices.chooseOne(
+          'Put a +1/+1 counter on target attacking creature with lesser power',
+          attackingCreatures,
+          (card) => card.definition.name,
+        );
+
+        ctx.game.addCounters(target.objectId, '+1/+1', 1, {
+          player: ctx.controller,
+          sourceId: ctx.source.objectId,
+          sourceCardId: ctx.source.cardId,
+          sourceZoneChangeCounter: ctx.source.zoneChangeCounter,
+        });
+      },
+      { description: 'Mentor' },
+    );
+  }
 
   /** Add protection from the specified qualities */
   protection(from: ProtectionFrom): this {
@@ -392,19 +484,20 @@ export class CardBuilder {
   }
 
   /** Define the spell payload (what happens when the spell resolves). */
-  spell(effect: EffectFn, opts?: { targets?: TargetSpec[]; description?: string }): this {
+  spell(effect: EffectFn, opts?: { targets?: TargetSpec[]; description?: string; afterResolution?: Zone }): this {
     const spell: SimpleSpellDef = {
       kind: 'simple',
       effect,
       targets: opts?.targets,
       description: opts?.description ?? '',
+      afterResolution: opts?.afterResolution,
     };
     this.def.spell = spell;
     return this;
   }
 
   /** Backward-compatible alias for spell(...). */
-  spellEffect(effect: EffectFn, opts?: { targets?: TargetSpec[]; description?: string }): this {
+  spellEffect(effect: EffectFn, opts?: { targets?: TargetSpec[]; description?: string; afterResolution?: Zone }): this {
     return this.spell(effect, opts);
   }
 
@@ -520,6 +613,7 @@ export class CardBuilder {
         controller: 'you',
       },
       ignoreSummoningSickness: true,
+      keywordAction: 'waterbend',
     };
     return this;
   }
@@ -527,6 +621,46 @@ export class CardBuilder {
   firebending(amount = 1): this {
     this.def.abilities.push(createFirebendingTriggeredAbility(amount));
     return this;
+  }
+
+  cumulativeUpkeep(cost: Cost | string): this {
+    const parsed = this.parseCostParam(cost);
+    const baseDescription = describeCost(parsed);
+
+    return this.triggered(
+      { on: 'upkeep', whose: 'yours' },
+      async (ctx) => {
+        ctx.game.addCounters(ctx.source.objectId, 'age', 1, {
+          player: ctx.controller,
+          sourceId: ctx.source.objectId,
+          sourceCardId: ctx.source.cardId,
+          sourceZoneChangeCounter: ctx.source.zoneChangeCounter,
+        });
+
+        const current = ctx.game.getCard(ctx.source.objectId);
+        if (!current || current.zone !== 'BATTLEFIELD') {
+          return;
+        }
+
+        const ageCount = current.counters.age ?? 0;
+        const upkeepCost = scaleManaCost(parsed, ageCount);
+        let paid = false;
+
+        if (ctx.game.canAffordAuxiliaryCost(ctx.controller, current.objectId, upkeepCost)) {
+          const confirm = await ctx.choices.chooseYesNo(`Pay cumulative upkeep ${describeCost(upkeepCost)}?`);
+          if (confirm) {
+            paid = await ctx.game.payAuxiliaryCost(ctx.controller, current.objectId, upkeepCost);
+          }
+        }
+
+        if (!paid) {
+          ctx.game.sacrificePermanent(current.objectId, ctx.controller);
+        }
+      },
+      {
+        description: `Cumulative upkeep ${baseDescription}`,
+      },
+    );
   }
 
   /** Add an equip activated ability (sorcery-speed, attaches to target creature). */
@@ -708,6 +842,14 @@ export class CardBuilder {
     return this;
   }
 
+  replicate(cost: Cost | string): this {
+    this.ensureSpellCastBehaviors().push({
+      kind: 'replicate',
+      cost: this.parseCostParam(cost),
+    });
+    return this;
+  }
+
   cycling(cost: Cost | string): this {
     const parsed = this.parseCostParam(cost);
     return this.activated(
@@ -745,6 +887,58 @@ export class CardBuilder {
         activationZone: 'HAND' as any,
         description: `${landSubtype}cycling`,
       },
+    );
+  }
+
+  crew(n: number): this {
+    return this.activated(
+      {
+        custom: (game, source, player) => {
+          const creatures = game.zones[player].BATTLEFIELD.filter(c =>
+            !c.phasedOut && !c.tapped && c.objectId !== source.objectId &&
+            (c.modifiedTypes ?? c.definition.types).includes('Creature' as any) &&
+            c.controller === player,
+          );
+          const totalPower = creatures.reduce((sum, c) => sum + (c.modifiedPower ?? c.definition.power ?? 0), 0);
+          return totalPower >= n;
+        },
+      },
+      async (ctx) => {
+        const creatures = ctx.game.getBattlefield({ types: [CardType.CREATURE as any], controller: 'you' }, ctx.controller)
+          .filter(c => !c.tapped && c.objectId !== ctx.source.objectId);
+        const selected = await ctx.choices.chooseUpToN(
+          `Tap creatures with total power ${n} or more to crew`,
+          creatures,
+          creatures.length,
+          c => `${c.definition.name} (power ${c.modifiedPower ?? c.definition.power ?? 0})`,
+        );
+        const totalPower = selected.reduce((sum, c) => sum + (c.modifiedPower ?? c.definition.power ?? 0), 0);
+        if (totalPower >= n && selected.length > 0) {
+          for (const c of selected) {
+            ctx.game.tapPermanent(c.objectId);
+          }
+          const card = ctx.game.getCard(ctx.source.objectId);
+          if (card) {
+            const key = `${card.objectId}:${card.zoneChangeCounter}`;
+            ctx.state.continuousEffects.push({
+              id: `crew-${key}-${ctx.state.timestampCounter}`,
+              sourceId: ctx.source.objectId,
+              layer: 4 as any, // Layer.TYPE
+              timestamp: ctx.state.timestampCounter++,
+              duration: { type: 'until-end-of-turn' },
+              appliesTo: (p) => p.objectId === card.objectId && p.zoneChangeCounter === card.zoneChangeCounter,
+              apply: (p) => {
+                const types = p.modifiedTypes ?? [...p.definition.types];
+                if (!types.includes('Creature' as any)) {
+                  types.push('Creature' as any);
+                }
+                p.modifiedTypes = types;
+              },
+            });
+          }
+        }
+      },
+      { description: `Crew ${n} (Tap creatures with total power ${n} or more: This Vehicle becomes an artifact creature until end of turn.)` },
     );
   }
 
@@ -872,6 +1066,94 @@ export class CardBuilder {
       timeCounters,
     };
     return this;
+  }
+
+  foretell(cost: Cost | string): this {
+    const foretellCost = this.parseCostParam(cost);
+
+    return this.activated(
+      { mana: parseManaCost('{2}') },
+      (ctx) => {
+        ctx.game.moveCard(ctx.source.objectId, 'EXILE', ctx.controller, { faceDown: true });
+        const exiledCard = ctx.game.getCard(ctx.source.objectId);
+        if (!exiledCard || exiledCard.zone !== 'EXILE') {
+          return;
+        }
+
+        ctx.state.castPermissions = ctx.state.castPermissions.filter((permission) =>
+          permission.objectId !== exiledCard.objectId
+        );
+        ctx.state.castPermissions.push({
+          objectId: exiledCard.objectId,
+          zoneChangeCounter: exiledCard.zoneChangeCounter,
+          zone: 'EXILE',
+          castBy: ctx.controller,
+          owner: exiledCard.owner,
+          alternativeCost: clonePlainCost(foretellCost),
+          reason: 'foretell',
+          timing: 'normal',
+          castOnly: true,
+          availableOnTurnNumber: ctx.state.turnNumber + 1,
+        });
+      },
+      {
+        timing: 'instant',
+        activationZone: 'HAND',
+        activateOnlyDuringYourTurn: true,
+        description: `Foretell ${describeCost(foretellCost)}`,
+      },
+    );
+  }
+
+  unearth(cost: Cost | string): this {
+    const unearthCost = this.parseCostParam(cost);
+
+    return this.activated(
+      unearthCost,
+      (ctx) => {
+        ctx.game.moveCard(ctx.source.objectId, 'BATTLEFIELD', ctx.controller);
+        const returned = ctx.game.getCard(ctx.source.objectId);
+        if (!returned || returned.zone !== 'BATTLEFIELD') {
+          return;
+        }
+
+        returned.exileIfWouldLeaveBattlefieldZoneChangeCounter = returned.zoneChangeCounter;
+        ctx.game.grantAbilitiesUntilEndOfTurn(
+          ctx.source.objectId,
+          returned.objectId,
+          returned.zoneChangeCounter,
+          createHasteAbilities(),
+        );
+
+        const objectId = returned.objectId;
+        const zoneChangeCounter = returned.zoneChangeCounter;
+        const delayedSource = cloneCardInstance(returned);
+        ctx.game.registerDelayedTrigger({
+          id: `unearth-end-step:${objectId}:${zoneChangeCounter}`,
+          source: delayedSource,
+          controller: ctx.controller,
+          expiresAfterTrigger: true,
+          ability: {
+            kind: 'triggered',
+            trigger: { on: 'end-step', whose: 'each' },
+            optional: false,
+            description: 'Exile unearthed permanent',
+            effect: (innerCtx) => {
+              const current = innerCtx.game.getCard(objectId);
+              if (!current || current.zone !== 'BATTLEFIELD' || current.zoneChangeCounter !== zoneChangeCounter) {
+                return;
+              }
+              innerCtx.game.moveCard(current.objectId, 'EXILE', current.owner);
+            },
+          },
+        });
+      },
+      {
+        activationZone: 'GRAVEYARD',
+        timing: 'sorcery',
+        description: `Unearth ${describeCost(unearthCost)}`,
+      },
+    );
   }
 
   // --- Build ---

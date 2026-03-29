@@ -8,10 +8,11 @@ import type {
   EffectDuration,
   GenericReplacementEffectDef,
   WouldEnterBattlefieldReplacementEffectDef,
+  CostModificationEffectDef,
 } from '../types/effects';
 import type { CardFilter, SpellFilter } from '../types/filters';
 import type { CompiledInteractionHook, InteractionHookDef } from '../types/interactions';
-import type { ManaCost } from '../types/mana';
+import type { ManaCost, ManaReductionBudget } from '../types/mana';
 import type { GameState } from '../types/state';
 import type { GameEvent } from '../types/events';
 import { Layer, GameEventType } from '../types';
@@ -88,7 +89,12 @@ export interface StaticEffect {
   compileSelfReplacement(ctx: EffectCompilationContext, objectId: string, zoneChangeCounter: number, index: number): WouldEnterBattlefieldReplacementEffect | null;
   compileInteractionHook(ctx: EffectCompilationContext, index: number): CompiledInteractionHook | null;
 
-  getCostModification(): { costDelta: Partial<ManaCost>; filter: SpellFilter } | null;
+  getCostModification(): {
+    costDelta?: Partial<ManaCost>;
+    reductionBudget?: ManaReductionBudget;
+    spillUnusedColoredToGeneric?: boolean;
+    filter: SpellFilter;
+  } | null;
   isNoMaxHandSize(): boolean;
 
   contributeToTimingProfile(profile: TimingPermissionProfile, zone?: Zone): boolean;
@@ -110,7 +116,12 @@ class BaseStaticEffect implements StaticEffect {
   compileWouldEnterBattlefieldReplacement(_ctx: EffectCompilationContext, _index: number): WouldEnterBattlefieldReplacementEffect | null { return null; }
   compileSelfReplacement(_ctx: EffectCompilationContext, _objectId: string, _zcc: number, _index: number): WouldEnterBattlefieldReplacementEffect | null { return null; }
   compileInteractionHook(_ctx: EffectCompilationContext, _index: number): CompiledInteractionHook | null { return null; }
-  getCostModification(): { costDelta: Partial<ManaCost>; filter: SpellFilter } | null { return null; }
+  getCostModification(): {
+    costDelta?: Partial<ManaCost>;
+    reductionBudget?: ManaReductionBudget;
+    spillUnusedColoredToGeneric?: boolean;
+    filter: SpellFilter;
+  } | null { return null; }
   isNoMaxHandSize(): boolean { return false; }
   contributeToTimingProfile(_profile: TimingPermissionProfile, _zone?: Zone): boolean { return false; }
   contributeToAttackProfile(_profile: AttackRuleProfile): boolean { return false; }
@@ -250,11 +261,16 @@ class GrantAbilitiesEffect extends BaseStaticEffect {
 }
 
 class CostModificationEffect extends BaseStaticEffect {
-  private def: { costDelta: Partial<ManaCost>; filter: SpellFilter };
-  constructor(def: { costDelta: Partial<ManaCost>; filter: SpellFilter }) { super(); this.def = def; }
+  private def: CostModificationEffectDef;
+  constructor(def: CostModificationEffectDef) { super(); this.def = def; }
 
   getCostModification() {
-    return { costDelta: this.def.costDelta, filter: this.def.filter };
+    return {
+      costDelta: this.def.costDelta,
+      reductionBudget: this.def.reductionBudget,
+      spillUnusedColoredToGeneric: this.def.spillUnusedColoredToGeneric,
+      filter: this.def.filter,
+    };
   }
 }
 

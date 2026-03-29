@@ -6,7 +6,7 @@ import type {
   WouldEnterBattlefieldReplacementEffect,
 } from '../types/effects';
 import type { CompiledInteractionHook } from '../types/interactions';
-import type { ManaCost } from '../types/mana';
+import type { ManaCost, ManaReductionBudget } from '../types/mana';
 import type { CardFilter } from '../types/filters';
 import type { GameState } from '../types/state';
 import type { StaticAbilityDef } from '../types/abilities';
@@ -67,7 +67,12 @@ export class StaticAbility {
     return this._effect.compileInteractionHook(ctx, index);
   }
 
-  getCostModification(): { costDelta: Partial<ManaCost>; filter: CardFilter } | null {
+  getCostModification(): {
+    costDelta?: Partial<ManaCost>;
+    reductionBudget?: ManaReductionBudget;
+    spillUnusedColoredToGeneric?: boolean;
+    filter: CardFilter;
+  } | null {
     return this._effect.getCostModification();
   }
 

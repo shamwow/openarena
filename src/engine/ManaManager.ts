@@ -9,6 +9,7 @@ import type {
   ManaCost,
   ManaPool,
   ManaProduction,
+  ManaSpendRestriction,
   ManaSymbol,
   PlayerId,
   TrackedMana,
@@ -27,6 +28,7 @@ export interface AutoTapPlanEntry {
   tap: boolean;
   sacrificeSelf: boolean;
   trackedManaEffect?: TrackedManaEffect;
+  manaRestriction?: ManaSpendRestriction;
 }
 
 interface PaymentResult {
@@ -40,11 +42,22 @@ export interface PayManaContext {
 
 export interface PayManaResult {
   spentTrackedMana: TrackedMana[];
+  spentMana: ManaPool;
 }
 
 interface ManaSource {
   sourceId: string;
   options: AutoTapPlanEntry[];
+}
+
+interface ExactManaUnit {
+  color: ManaSymbol;
+  trackedIndex?: number;
+}
+
+interface ExactPaymentResult extends PaymentResult {
+  remainingTrackedMana: TrackedMana[];
+  spentTrackedMana: TrackedMana[];
 }
 
 export class ManaManager {
@@ -84,7 +97,12 @@ export class ManaManager {
   }
 
   canPayMana(state: GameState, player: PlayerId, cost: ManaCost): boolean {
-    return this.solvePaymentFromPool(state.players[player].manaPool, cost, state.players[player].life) !== null;
+    return this.solvePaymentWithTrackedMana(
+      state.players[player].manaPool,
+      state.players[player].trackedMana,
+      cost,
+      state.players[player].life,
+    ) !== null || this.solvePaymentFromPool(state.players[player].manaPool, cost, state.players[player].life) !== null;
   }
 
   payMana(state: GameState, player: PlayerId, cost: ManaCost): boolean {
@@ -97,16 +115,32 @@ export class ManaManager {
     cost: ManaCost,
     context?: PayManaContext,
   ): PayManaResult | null {
-    const result = this.solvePaymentFromPool(state.players[player].manaPool, cost, state.players[player].life);
-    if (!result) {
+    const exactResult = this.solvePaymentWithTrackedMana(
+      state.players[player].manaPool,
+      state.players[player].trackedMana,
+      cost,
+      state.players[player].life,
+      context,
+    );
+    const simpleResult = exactResult
+      ? null
+      : this.solvePaymentFromPool(state.players[player].manaPool, cost, state.players[player].life);
+
+    if (!exactResult && !simpleResult) {
       return null;
     }
 
-    const spentMana = this.diffManaPools(state.players[player].manaPool, result.pool);
-    const lifeLost = state.players[player].life - result.life;
-    const spentTrackedMana = this.consumeTrackedMana(state, player, spentMana, context);
-    state.players[player].manaPool = result.pool;
-    state.players[player].life = result.life;
+    const poolAfterPayment = exactResult?.pool ?? simpleResult!.pool;
+    const lifeAfterPayment = exactResult?.life ?? simpleResult!.life;
+    const spentMana = this.diffManaPools(state.players[player].manaPool, poolAfterPayment);
+    const lifeLost = state.players[player].life - lifeAfterPayment;
+    const spentTrackedMana = exactResult?.spentTrackedMana
+      ?? this.consumeTrackedMana(state, player, spentMana, context);
+    state.players[player].manaPool = poolAfterPayment;
+    state.players[player].life = lifeAfterPayment;
+    if (exactResult) {
+      state.players[player].trackedMana = exactResult.remainingTrackedMana;
+    }
 
     if (lifeLost > 0) {
       const event: GameEvent = {
@@ -119,7 +153,7 @@ export class ManaManager {
       this.eventBus.emit(event);
     }
 
-    return { spentTrackedMana };
+    return { spentTrackedMana, spentMana };
   }
 
   emptyPool(state: GameState, player: PlayerId): void {
@@ -143,14 +177,17 @@ export class ManaManager {
     player: PlayerId,
     cost: ManaCost,
     battlefield: CardInstance[] = state.zones[player].BATTLEFIELD,
+    context?: PayManaContext,
   ): boolean {
     const effectiveCost: ManaCost = cost.X > 0 ? { ...cost, X: 0 } : cost;
-    const sources = this.getManaSources(state, player, battlefield);
+    const sources = this.getManaSources(state, player, battlefield, context);
     return this.findSourcePaymentPlan(
       { ...state.players[player].manaPool },
+      [...state.players[player].trackedMana],
       effectiveCost,
       state.players[player].life,
       sources,
+      context,
     ) !== null;
   }
 
@@ -159,13 +196,16 @@ export class ManaManager {
     player: PlayerId,
     cost: ManaCost,
     battlefield: CardInstance[],
+    context?: PayManaContext,
   ): AutoTapPlanEntry[] | null {
-    const sources = this.getManaSources(state, player, battlefield);
+    const sources = this.getManaSources(state, player, battlefield, context);
     const plan = this.findSourcePaymentPlan(
       { ...state.players[player].manaPool },
+      [...state.players[player].trackedMana],
       cost,
       state.players[player].life,
       sources,
+      context,
     );
 
     return plan?.plan ?? null;
@@ -178,7 +218,52 @@ export class ManaManager {
     return state.players[player].colorIdentity.includes(color as ManaColor) ? color : 'C';
   }
 
-  private getManaSources(state: GameState, player: PlayerId, battlefield: CardInstance[]): ManaSource[] {
+  private manaRestrictionAllowsContext(
+    restriction: ManaSpendRestriction | undefined,
+    context?: PayManaContext,
+  ): boolean {
+    if (!restriction) {
+      return true;
+    }
+
+    switch (restriction.kind) {
+      case 'powerstone':
+        return !context?.spellDefinition || context.spellDefinition.types.includes('Artifact' as import('./types').CardType);
+      default:
+        return true;
+    }
+  }
+
+  private appendTrackedManaFromOption(
+    trackedMana: TrackedMana[],
+    option: AutoTapPlanEntry,
+    actualMana: Partial<ManaPool>,
+  ): TrackedMana[] {
+    if (!option.trackedManaEffect && !option.manaRestriction) {
+      return trackedMana;
+    }
+
+    const appended = [...trackedMana];
+    for (const color of Object.keys(actualMana) as ManaSymbol[]) {
+      const amount = actualMana[color] ?? 0;
+      for (let index = 0; index < amount; index += 1) {
+        appended.push({
+          color,
+          sourceId: option.sourceId,
+          effect: option.trackedManaEffect,
+          restriction: option.manaRestriction,
+        });
+      }
+    }
+    return appended;
+  }
+
+  private getManaSources(
+    state: GameState,
+    player: PlayerId,
+    battlefield: CardInstance[],
+    context?: PayManaContext,
+  ): ManaSource[] {
     return battlefield
       .filter(card => card.controller === player && !card.tapped)
       .flatMap((card) => {
@@ -194,7 +279,8 @@ export class ManaManager {
             return [];
           }
 
-          const productions = this.getManaProductions(card, aa, state.players[player].colorIdentity);
+          const productions = this.getManaProductions(card, aa, state.players[player].colorIdentity)
+            .filter((production) => this.manaRestrictionAllowsContext(production.restriction, context));
           if (productions.length === 0) {
             return [];
           }
@@ -212,6 +298,7 @@ export class ManaManager {
                 tap: aa.requiresTap(),
                 sacrificeSelf: aa.requiresSelfSacrifice(),
                 trackedManaEffect: aa.getTrackedManaEffect(),
+                manaRestriction: production.restriction,
               }))
             )
           );
@@ -439,13 +526,16 @@ export class ManaManager {
 
   private findSourcePaymentPlan(
     pool: ManaPool,
+    trackedMana: TrackedMana[],
     cost: ManaCost,
     life: number,
     sources: ManaSource[],
+    context?: PayManaContext,
     index = 0,
     plan: AutoTapPlanEntry[] = [],
   ): { plan: AutoTapPlanEntry[]; result: PaymentResult } | null {
-    const directPayment = this.solvePaymentFromPool(pool, cost, life);
+    const directPayment = this.solvePaymentWithTrackedMana(pool, trackedMana, cost, life, context)
+      ?? this.solvePaymentFromPool(pool, cost, life);
     if (directPayment) {
       return {
         plan: [...plan],
@@ -459,7 +549,7 @@ export class ManaManager {
 
     const source = sources[index];
 
-    const skipped = this.findSourcePaymentPlan(pool, cost, life, sources, index + 1, plan);
+    const skipped = this.findSourcePaymentPlan(pool, trackedMana, cost, life, sources, context, index + 1, plan);
     if (skipped) {
       return skipped;
     }
@@ -470,8 +560,18 @@ export class ManaManager {
       for (const color of Object.keys(producedMana) as ManaSymbol[]) {
         nextPool[color] += producedMana[color] ?? 0;
       }
+      const nextTrackedMana = this.appendTrackedManaFromOption(trackedMana, option, option.mana);
       plan.push(option);
-      const result = this.findSourcePaymentPlan(nextPool, cost, life, sources, index + 1, plan);
+      const result = this.findSourcePaymentPlan(
+        nextPool,
+        nextTrackedMana,
+        cost,
+        life,
+        sources,
+        context,
+        index + 1,
+        plan,
+      );
       if (result) {
         return result;
       }
@@ -479,6 +579,320 @@ export class ManaManager {
     }
 
     return null;
+  }
+
+  private solvePaymentWithTrackedMana(
+    pool: ManaPool,
+    trackedMana: TrackedMana[],
+    cost: ManaCost,
+    life: number,
+    context?: PayManaContext,
+  ): ExactPaymentResult | null {
+    if (!trackedMana.some((entry) => entry.restriction)) {
+      return null;
+    }
+
+    const units = this.buildExactManaUnits(pool, trackedMana);
+    const allIndexes = units.map((_, index) => index);
+    const remainingIndexes = this.resolveExactPayment(
+      units,
+      trackedMana,
+      allIndexes,
+      cost,
+      life,
+      context,
+    );
+    if (!remainingIndexes) {
+      return null;
+    }
+
+    const remainingSet = new Set(remainingIndexes.indexes);
+    const spentTrackedIndexes = new Set<number>();
+    for (const [unitIndex, unit] of units.entries()) {
+      if (unit.trackedIndex === undefined) {
+        continue;
+      }
+      if (!remainingSet.has(unitIndex)) {
+        spentTrackedIndexes.add(unit.trackedIndex);
+      }
+    }
+
+    return {
+      pool: this.countExactUnitsToPool(units, remainingIndexes.indexes),
+      life: remainingIndexes.life,
+      remainingTrackedMana: trackedMana.filter((_, index) => !spentTrackedIndexes.has(index)),
+      spentTrackedMana: [...spentTrackedIndexes].sort((a, b) => a - b).map((index) => trackedMana[index]),
+    };
+  }
+
+  private buildExactManaUnits(pool: ManaPool, trackedMana: TrackedMana[]): ExactManaUnit[] {
+    const remainingPool = { ...pool };
+    const units: ExactManaUnit[] = [];
+
+    for (const [trackedIndex, entry] of trackedMana.entries()) {
+      if (remainingPool[entry.color] <= 0) {
+        continue;
+      }
+      remainingPool[entry.color] -= 1;
+      units.push({
+        color: entry.color,
+        trackedIndex,
+      });
+    }
+
+    for (const color of ['W', 'U', 'B', 'R', 'G', 'C'] as const) {
+      for (let count = 0; count < remainingPool[color]; count += 1) {
+        units.push({ color });
+      }
+    }
+
+    return units;
+  }
+
+  private resolveExactPayment(
+    units: ExactManaUnit[],
+    trackedMana: TrackedMana[],
+    indexes: number[],
+    cost: ManaCost,
+    life: number,
+    context?: PayManaContext,
+  ): { indexes: number[]; life: number } | null {
+    let remaining = [...indexes];
+
+    for (const color of ['W', 'U', 'B', 'R', 'G'] as const) {
+      remaining = this.consumeExactColoredUnits(units, trackedMana, remaining, color, cost[color], context);
+      if (!remaining) {
+        return null;
+      }
+    }
+
+    remaining = this.consumeExactColoredUnits(units, trackedMana, remaining, 'C', cost.C, context);
+    if (!remaining) {
+      return null;
+    }
+
+    return this.resolveExactSpecialSymbols(
+      units,
+      trackedMana,
+      remaining,
+      cost.generic,
+      [...(cost.hybrid ?? [])],
+      [...(cost.phyrexian ?? [])],
+      life,
+      context,
+    );
+  }
+
+  private resolveExactSpecialSymbols(
+    units: ExactManaUnit[],
+    trackedMana: TrackedMana[],
+    indexes: number[],
+    generic: number,
+    hybrid: string[],
+    phyrexian: ManaColor[],
+    life: number,
+    context?: PayManaContext,
+  ): { indexes: number[]; life: number } | null {
+    if (hybrid.length > 0) {
+      const [symbol, ...rest] = hybrid;
+      for (const candidate of this.getExactHybridPaymentCandidates(units, trackedMana, indexes, symbol, context)) {
+        const result = this.resolveExactSpecialSymbols(
+          units,
+          trackedMana,
+          candidate,
+          generic,
+          rest,
+          phyrexian,
+          life,
+          context,
+        );
+        if (result) {
+          return result;
+        }
+      }
+      return null;
+    }
+
+    if (phyrexian.length > 0) {
+      const [color, ...rest] = phyrexian;
+      const manaPaid = this.consumeExactColoredUnits(units, trackedMana, indexes, color, 1, context);
+      if (manaPaid) {
+        const result = this.resolveExactSpecialSymbols(
+          units,
+          trackedMana,
+          manaPaid,
+          generic,
+          hybrid,
+          rest,
+          life,
+          context,
+        );
+        if (result) {
+          return result;
+        }
+      }
+      if (life >= 2) {
+        const result = this.resolveExactSpecialSymbols(
+          units,
+          trackedMana,
+          indexes,
+          generic,
+          hybrid,
+          rest,
+          life - 2,
+          context,
+        );
+        if (result) {
+          return result;
+        }
+      }
+      return null;
+    }
+
+    const genericPaid = this.consumeExactGenericUnits(units, trackedMana, indexes, generic, context);
+    if (!genericPaid) {
+      return null;
+    }
+
+    return {
+      indexes: genericPaid,
+      life,
+    };
+  }
+
+  private consumeExactColoredUnits(
+    units: ExactManaUnit[],
+    trackedMana: TrackedMana[],
+    indexes: number[],
+    color: ManaSymbol,
+    amount: number,
+    context?: PayManaContext,
+  ): number[] | null {
+    let remaining = [...indexes];
+    for (let count = 0; count < amount; count += 1) {
+      const candidate = this.sortExactUnitCandidates(
+        remaining.filter((index) =>
+          units[index].color === color && this.isExactUnitSpendable(units[index], trackedMana, context)
+        ),
+        units,
+        trackedMana,
+        context,
+      )[0];
+      if (candidate === undefined) {
+        return null;
+      }
+      remaining = remaining.filter((index) => index !== candidate);
+    }
+    return remaining;
+  }
+
+  private consumeExactGenericUnits(
+    units: ExactManaUnit[],
+    trackedMana: TrackedMana[],
+    indexes: number[],
+    amount: number,
+    context?: PayManaContext,
+  ): number[] | null {
+    let remaining = [...indexes];
+    const sortedCandidates = this.sortExactUnitCandidates(
+      remaining.filter((index) => this.isExactUnitSpendable(units[index], trackedMana, context)),
+      units,
+      trackedMana,
+      context,
+    );
+    if (sortedCandidates.length < amount) {
+      return null;
+    }
+
+    for (let count = 0; count < amount; count += 1) {
+      remaining = remaining.filter((index) => index !== sortedCandidates[count]);
+    }
+
+    return remaining;
+  }
+
+  private getExactHybridPaymentCandidates(
+    units: ExactManaUnit[],
+    trackedMana: TrackedMana[],
+    indexes: number[],
+    symbol: string,
+    context?: PayManaContext,
+  ): number[][] {
+    if (symbol.startsWith('2/')) {
+      const color = symbol.split('/')[1] as ManaColor;
+      const candidates: number[][] = [];
+      const colored = this.consumeExactColoredUnits(units, trackedMana, indexes, color, 1, context);
+      if (colored) {
+        candidates.push(colored);
+      }
+      const generic = this.consumeExactGenericUnits(units, trackedMana, indexes, 2, context);
+      if (generic) {
+        candidates.push(generic);
+      }
+      return candidates;
+    }
+
+    const colors = symbol.split('/').filter((part): part is ManaColor =>
+      part === 'W' || part === 'U' || part === 'B' || part === 'R' || part === 'G'
+    );
+    return colors
+      .map((color) => this.consumeExactColoredUnits(units, trackedMana, indexes, color, 1, context))
+      .filter((candidate): candidate is number[] => candidate !== null);
+  }
+
+  private isExactUnitSpendable(
+    unit: ExactManaUnit,
+    trackedMana: TrackedMana[],
+    context?: PayManaContext,
+  ): boolean {
+    if (unit.trackedIndex === undefined) {
+      return true;
+    }
+    return this.manaRestrictionAllowsContext(trackedMana[unit.trackedIndex]?.restriction, context);
+  }
+
+  private sortExactUnitCandidates(
+    indexes: number[],
+    units: ExactManaUnit[],
+    trackedMana: TrackedMana[],
+    context?: PayManaContext,
+  ): number[] {
+    return [...indexes].sort((left, right) => {
+      const leftPriority = this.getExactUnitPriority(units[left], trackedMana, context);
+      const rightPriority = this.getExactUnitPriority(units[right], trackedMana, context);
+      if (leftPriority !== rightPriority) {
+        return leftPriority - rightPriority;
+      }
+      if (units[left].color !== units[right].color) {
+        return units[left].color === 'C' ? -1 : 1;
+      }
+      return left - right;
+    });
+  }
+
+  private getExactUnitPriority(
+    unit: ExactManaUnit,
+    trackedMana: TrackedMana[],
+    context?: PayManaContext,
+  ): number {
+    if (unit.trackedIndex === undefined) {
+      return 2;
+    }
+
+    const trackedEntry = trackedMana[unit.trackedIndex];
+    if (trackedEntry?.effect && this.trackedManaEffectAppliesToSpell(trackedEntry.effect, context?.spellDefinition)) {
+      return 0;
+    }
+
+    return 1;
+  }
+
+  private countExactUnitsToPool(units: ExactManaUnit[], indexes: number[]): ManaPool {
+    const pool = emptyManaPool();
+    for (const index of indexes) {
+      pool[units[index].color] += 1;
+    }
+    return pool;
   }
 
   private solvePaymentFromPool(pool: ManaPool, cost: ManaCost, life: number): PaymentResult | null {

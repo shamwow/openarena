@@ -22,7 +22,12 @@ export interface GameEngine {
   destroyPermanent(objectId: ObjectId): void;
   sacrificePermanent(objectId: ObjectId, controller: PlayerId): void;
   exilePermanent(objectId: ObjectId): void;
-  moveCard(objectId: ObjectId, toZone: Zone, toOwner?: PlayerId): void;
+  moveCard(
+    objectId: ObjectId,
+    toZone: Zone,
+    toOwner?: PlayerId,
+    options?: { tapped?: boolean; faceDown?: boolean; transformed?: boolean; commanderReplacementDecision?: boolean },
+  ): void;
   createToken(controller: PlayerId, definition: Partial<CardDefinition>): CardInstance;
   createPredefinedToken(controller: PlayerId, tokenType: PredefinedTokenType): CardInstance;
   addCounters(objectId: ObjectId, counterType: string, amount: number, options?: AddCounterOptions): void;
@@ -39,6 +44,7 @@ export interface GameEngine {
   discardCard(player: PlayerId, objectId: ObjectId): void;
   shuffleLibrary(player: PlayerId): void;
   emitEvent(event: GameEvent): void;
+  recordActionPerformed(player: PlayerId, actionKind: string, actionName: string, sourceId?: ObjectId): void;
   getOpponents(player: PlayerId): PlayerId[];
   getActivePlayers(): PlayerId[];
   searchLibrary(player: PlayerId, filter: CardFilter, destination: Zone, count: number): Promise<CardInstance[]>;
@@ -69,6 +75,8 @@ export interface GameEngine {
     zoneChangeCounter: number,
     abilities: AbilityDefinition[],
   ): void;
+  canAffordAuxiliaryCost(player: PlayerId, sourceId: ObjectId, cost: Cost): boolean;
+  payAuxiliaryCost(player: PlayerId, sourceId: ObjectId, cost: Cost): Promise<boolean>;
   unlessPlayerPays(player: PlayerId, sourceId: ObjectId, cost: Cost, prompt: string): Promise<boolean>;
   sacrificePermanents(player: PlayerId, filter: CardFilter, count: number, prompt?: string): Promise<CardInstance[]>;
   addPlayerCounters(player: PlayerId, counterType: 'experience' | 'energy', amount: number): void;

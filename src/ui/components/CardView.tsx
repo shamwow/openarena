@@ -42,6 +42,9 @@ function cardViewPropsEqual(prev: CardViewProps, next: CardViewProps): boolean {
 }
 
 function getTypeLine(card: CardInstance): string {
+  if (card.faceDown) {
+    return 'Face-down card';
+  }
   const left = [...card.definition.supertypes, ...card.definition.types].join(' ');
   if (card.definition.subtypes.length === 0) {
     return left;
@@ -50,6 +53,9 @@ function getTypeLine(card: CardInstance): string {
 }
 
 function getStats(card: CardInstance): string | null {
+  if (card.faceDown) {
+    return null;
+  }
   if (card.definition.types.includes(CardType.CREATURE)) {
     return `${card.modifiedPower ?? card.definition.power}/${card.modifiedToughness ?? card.definition.toughness}`;
   }
@@ -75,11 +81,13 @@ const CardViewInner: React.FC<CardViewProps> = ({
   isDragging = false,
   sourceZone,
 }) => {
+  const isFaceDown = card.faceDown;
   const art = useCardArt(card.definition.name, {
-    enabled: !isTokenCard(card),
+    enabled: !isTokenCard(card) && !isFaceDown,
   });
   const interactionAction = getPrimaryCardAction(card, legalActions);
-  const imageUrl = art.normal ?? art.png ?? art.artCrop;
+  const imageUrl = isFaceDown ? undefined : (art.normal ?? art.png ?? art.artCrop);
+  const displayName = isFaceDown ? 'Face-down card' : card.definition.name;
   const hasAction = interactionAction != null;
   const resolvedSourceZone = sourceZone ?? card.zone;
   const isBareCardVariant = variant === 'battlefield' || variant === 'hand';
@@ -148,7 +156,7 @@ const CardViewInner: React.FC<CardViewProps> = ({
         onFocus={handlePreview}
         onBlur={previewMode === 'hover' ? handlePreviewClear : undefined}
         onClick={handleActivate}
-        title={card.definition.name}
+        title={displayName}
         style={
           {
             ['--card-cursor' as string]:
@@ -185,7 +193,7 @@ const CardViewInner: React.FC<CardViewProps> = ({
       onFocus={handlePreview}
       onBlur={previewMode === 'hover' ? handlePreviewClear : undefined}
       onClick={variant === 'flight' ? undefined : handleActivate}
-      title={card.definition.name}
+      title={displayName}
       style={
         {
           ['--card-cursor' as string]:
@@ -198,7 +206,7 @@ const CardViewInner: React.FC<CardViewProps> = ({
           {imageUrl ? (
             <img
               className="arena-card__image"
-              alt={card.definition.name}
+              alt={displayName}
               src={imageUrl}
               loading="lazy"
             />
@@ -209,8 +217,8 @@ const CardViewInner: React.FC<CardViewProps> = ({
         <div className="arena-card__surface" />
 
         <div className="arena-card__chrome">
-          <div className="arena-card__name">{card.definition.name}</div>
-          {variant !== 'mini' && <ManaCostView cost={card.definition.cost?.mana ?? emptyManaCost()} />}
+          <div className="arena-card__name">{displayName}</div>
+          {variant !== 'mini' && !isFaceDown && <ManaCostView cost={card.definition.cost?.mana ?? emptyManaCost()} />}
         </div>
 
         <div className="arena-card__status-stack">

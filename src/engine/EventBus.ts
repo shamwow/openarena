@@ -138,6 +138,33 @@ export class EventBus {
       state.triggeredAbilitiesUsedThisTurn = new Set<string>();
     }
 
+    if (event.type === 'SPELL_CAST') {
+      for (const entry of state.stack) {
+        const source = entry.cardInstance;
+        if (!source) continue;
+
+        for (const [abilityIndex, ability] of getEffectiveAbilities(source).entries()) {
+          if (ability.kind !== 'triggered') continue;
+          const ta = TriggeredAbility.from(ability);
+          const usageKey = `${source.objectId}:${source.zoneChangeCounter}:stack:${abilityIndex}`;
+          if (ta.isOncePerTurn() && state.triggeredAbilitiesUsedThisTurn.has(usageKey)) {
+            continue;
+          }
+          if (ta.matches(event, source, state)) {
+            if (ta.isOncePerTurn()) {
+              state.triggeredAbilitiesUsedThisTurn.add(usageKey);
+            }
+            triggers.push({
+              ability,
+              source: cloneCardInstance(source),
+              event,
+              controller: source.controller,
+            });
+          }
+        }
+      }
+    }
+
     for (const playerId of state.turnOrder) {
       if (state.players[playerId].hasLost) continue;
       const battlefield = state.zones[playerId].BATTLEFIELD;

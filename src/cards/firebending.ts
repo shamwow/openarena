@@ -5,6 +5,7 @@ export function createFirebendingTriggeredAbility(amount = 1): TriggeredAbilityD
     kind: 'triggered',
     trigger: { on: 'attacks', filter: { self: true } },
     effect: (ctx) => {
+      ctx.game.recordActionPerformed(ctx.controller, 'keyword-action', 'firebend', ctx.source.objectId);
       ctx.game.addMana(ctx.controller, 'R', amount);
     },
     manaProduction: [{ amount, colors: ['R'] }],

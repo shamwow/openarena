@@ -45,6 +45,7 @@ export class StackManager {
     rememberLastKnownInformation(state, card);
     this.removeFromCurrentZone(state, card);
     card.zone = 'STACK';
+    card.faceDown = false;
     card.zoneChangeCounter += 1;
     card.timestamp = getNextTimestamp(state);
 
@@ -272,6 +273,8 @@ export class StackManager {
       } else if (altCost?.afterResolution) {
         // Alternative cost specifies a post-resolution destination (e.g. exile for flashback)
         this.moveCardInstanceFromStack(state, entry, altCost.afterResolution, card.owner);
+      } else if (effectiveDef.spell?.afterResolution) {
+        this.moveCardInstanceFromStack(state, entry, effectiveDef.spell.afterResolution, card.owner);
       } else if (isPermanent) {
         // Permanents enter the battlefield
         this.moveCardInstanceFromStack(state, entry, 'BATTLEFIELD', entry.controller);

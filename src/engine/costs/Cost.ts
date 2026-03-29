@@ -5,6 +5,7 @@ import type { CardFilter } from '../types/filters';
 import type {
   ManaCost,
   ManaPool,
+  ManaReductionBudget,
   ManaSymbol,
   TrackedMana,
 } from '../types/mana';
@@ -33,6 +34,7 @@ export interface CostContext {
   moveCard(objectId: ObjectId, toZone: Zone, toOwner?: PlayerId): void;
   discardCard(player: PlayerId, objectId: ObjectId): void;
   tapPermanent(objectId: ObjectId): void;
+  recordActionPerformed(player: PlayerId, actionKind: string, actionName: string, sourceId?: ObjectId): void;
 
   // Query
   matchesFilter(card: CardInstance, filter: CardFilter, controller?: PlayerId): boolean;
@@ -43,8 +45,18 @@ export interface CostContext {
   canPayMana(player: PlayerId, cost: ManaCost): boolean;
   payMana(player: PlayerId, cost: ManaCost): boolean;
   payManaWithContext(player: PlayerId, cost: ManaCost, context?: PayManaContext): PayManaResult | null;
-  autoTapForCost(player: PlayerId, cost: ManaCost, battlefield: CardInstance[]): AutoTapPlanEntry[] | null;
-  canAffordWithManaProduction(player: PlayerId, cost: ManaCost, battlefield: CardInstance[]): boolean;
+  autoTapForCost(
+    player: PlayerId,
+    cost: ManaCost,
+    battlefield: CardInstance[],
+    context?: PayManaContext,
+  ): AutoTapPlanEntry[] | null;
+  canAffordWithManaProduction(
+    player: PlayerId,
+    cost: ManaCost,
+    battlefield: CardInstance[],
+    context?: PayManaContext,
+  ): boolean;
   applyAutoTapPlan(playerId: PlayerId, plan: AutoTapPlanEntry[]): void;
 
   // Options
@@ -174,7 +186,12 @@ export class Cost {
     const battlefield = ctx.getBattlefield(undefined, ctx.playerId).filter(
       card => !ctx.reservedTapSourceIds?.has(card.objectId),
     );
-    const plan = ctx.autoTapForCost(ctx.playerId, this._mana, battlefield);
+    const plan = ctx.autoTapForCost(
+      ctx.playerId,
+      this._mana,
+      battlefield,
+      ctx.spellDefinition ? { spellDefinition: ctx.spellDefinition } : undefined,
+    );
     if (plan) {
       ctx.applyAutoTapPlan(ctx.playerId, plan);
     }
@@ -203,6 +220,15 @@ export class Cost {
   applyReduction(delta: Partial<ManaCost>): void {
     if (!this._mana) return;
     applyManaDelta(this._mana, delta, 'reduce');
+  }
+
+  /** Apply a symbol-aware reduction budget that can interact with hybrid and phyrexian symbols. */
+  applyReductionBudget(
+    budget: ManaReductionBudget,
+    options?: { spillUnusedColoredToGeneric?: boolean },
+  ): void {
+    if (!this._mana) return;
+    this._mana = applyReductionBudget(this._mana, budget, options);
   }
 
   /** Resolve X spells: add X * xValue to generic, then zero out X. */
@@ -355,6 +381,14 @@ export class Cost {
         for (const card of uniqueSelections) {
           ctx.tapPermanent(card.objectId);
         }
+        if (uniqueSelections.length > 0 && this._genericTapSubstitution.keywordAction) {
+          ctx.recordActionPerformed(
+            ctx.playerId,
+            'keyword-action',
+            this._genericTapSubstitution.keywordAction,
+            ctx.source.objectId,
+          );
+        }
         this._mana.generic = Math.max(0, this._mana.generic - uniqueSelections.length);
       }
     }
@@ -389,7 +423,12 @@ export class Cost {
     const battlefield = ctx.getBattlefield(undefined, ctx.playerId).filter(
       card => !ctx.reservedTapSourceIds?.has(card.objectId),
     );
-    return ctx.canAffordWithManaProduction(ctx.playerId, this._mana, battlefield);
+    return ctx.canAffordWithManaProduction(
+      ctx.playerId,
+      this._mana,
+      battlefield,
+      ctx.spellDefinition ? { spellDefinition: ctx.spellDefinition } : undefined,
+    );
   }
 
   /** Get the generic tap substitution config (for the backtracking solver). */
@@ -690,4 +729,211 @@ function applyManaDelta(cost: ManaCost, delta: Partial<ManaCost>, mode: 'add' | 
   cost.G = Math.max(0, cost.G + sign * (delta.G ?? 0));
   cost.C = Math.max(0, cost.C + sign * (delta.C ?? 0));
   cost.X = Math.max(0, cost.X + sign * (delta.X ?? 0));
+}
+
+type ReductionColor = 'W' | 'U' | 'B' | 'R' | 'G';
+type ExactReductionSymbol =
+  | { kind: 'mono'; color: ReductionColor | 'C' }
+  | { kind: 'hybrid'; symbol: string; colors: ReductionColor[] }
+  | { kind: 'hybrid-two'; symbol: string; color: ReductionColor }
+  | { kind: 'phyrexian'; color: ReductionColor };
+
+interface NormalizedReductionBudget {
+  generic: number;
+  W: number;
+  U: number;
+  B: number;
+  R: number;
+  G: number;
+  C: number;
+}
+
+function applyReductionBudget(
+  baseCost: ManaCost,
+  budget: ManaReductionBudget,
+  options?: { spillUnusedColoredToGeneric?: boolean },
+): ManaCost {
+  const normalizedBudget = normalizeReductionBudget(budget);
+  const exactSymbols = buildExactReductionSymbols(baseCost);
+  const workingCost = cloneManaCost(baseCost);
+  let bestCost = applyGenericCapableReductions(workingCost, normalizedBudget, options);
+  let bestScore = scoreReducedCost(bestCost);
+
+  const visit = (index: number, currentBudget: NormalizedReductionBudget) => {
+    if (index >= exactSymbols.length) {
+      const candidate = applyGenericCapableReductions(workingCost, currentBudget, options);
+      const candidateScore = scoreReducedCost(candidate);
+      if (compareReductionScores(candidateScore, bestScore) < 0) {
+        bestCost = candidate;
+        bestScore = candidateScore;
+      }
+      return;
+    }
+
+    const symbol = exactSymbols[index];
+
+    visit(index + 1, currentBudget);
+
+    switch (symbol.kind) {
+      case 'mono': {
+        if (currentBudget[symbol.color] <= 0) return;
+        currentBudget[symbol.color] -= 1;
+        workingCost[symbol.color] = Math.max(0, workingCost[symbol.color] - 1);
+        visit(index + 1, currentBudget);
+        workingCost[symbol.color] += 1;
+        currentBudget[symbol.color] += 1;
+        return;
+      }
+      case 'phyrexian': {
+        if (currentBudget[symbol.color] <= 0) return;
+        const hybrid = workingCost.phyrexian ?? [];
+        const removeIndex = hybrid.indexOf(symbol.color);
+        if (removeIndex < 0) return;
+        currentBudget[symbol.color] -= 1;
+        hybrid.splice(removeIndex, 1);
+        visit(index + 1, currentBudget);
+        hybrid.splice(removeIndex, 0, symbol.color);
+        currentBudget[symbol.color] += 1;
+        return;
+      }
+      case 'hybrid-two': {
+        if (currentBudget[symbol.color] <= 0) return;
+        const hybrid = workingCost.hybrid ?? [];
+        const removeIndex = hybrid.indexOf(symbol.symbol);
+        if (removeIndex < 0) return;
+        currentBudget[symbol.color] -= 1;
+        hybrid.splice(removeIndex, 1);
+        visit(index + 1, currentBudget);
+        hybrid.splice(removeIndex, 0, symbol.symbol);
+        currentBudget[symbol.color] += 1;
+        return;
+      }
+      case 'hybrid': {
+        const hybrid = workingCost.hybrid ?? [];
+        const removeIndex = hybrid.indexOf(symbol.symbol);
+        if (removeIndex < 0) return;
+        for (const color of symbol.colors) {
+          if (currentBudget[color] <= 0) continue;
+          currentBudget[color] -= 1;
+          hybrid.splice(removeIndex, 1);
+          visit(index + 1, currentBudget);
+          hybrid.splice(removeIndex, 0, symbol.symbol);
+          currentBudget[color] += 1;
+        }
+        return;
+      }
+    }
+  };
+
+  visit(0, normalizedBudget);
+  return bestCost;
+}
+
+function normalizeReductionBudget(budget: ManaReductionBudget): NormalizedReductionBudget {
+  return {
+    generic: Math.max(0, budget.generic ?? 0),
+    W: Math.max(0, budget.W ?? 0),
+    U: Math.max(0, budget.U ?? 0),
+    B: Math.max(0, budget.B ?? 0),
+    R: Math.max(0, budget.R ?? 0),
+    G: Math.max(0, budget.G ?? 0),
+    C: Math.max(0, budget.C ?? 0),
+  };
+}
+
+function buildExactReductionSymbols(cost: ManaCost): ExactReductionSymbol[] {
+  const symbols: ExactReductionSymbol[] = [];
+
+  for (let index = 0; index < cost.W; index += 1) symbols.push({ kind: 'mono', color: 'W' });
+  for (let index = 0; index < cost.U; index += 1) symbols.push({ kind: 'mono', color: 'U' });
+  for (let index = 0; index < cost.B; index += 1) symbols.push({ kind: 'mono', color: 'B' });
+  for (let index = 0; index < cost.R; index += 1) symbols.push({ kind: 'mono', color: 'R' });
+  for (let index = 0; index < cost.G; index += 1) symbols.push({ kind: 'mono', color: 'G' });
+  for (let index = 0; index < cost.C; index += 1) symbols.push({ kind: 'mono', color: 'C' });
+
+  for (const symbol of cost.hybrid ?? []) {
+    if (symbol.startsWith('2/')) {
+      const color = symbol.split('/')[1];
+      if (isReductionColor(color)) {
+        symbols.push({ kind: 'hybrid-two', symbol, color });
+      }
+      continue;
+    }
+
+    const colors = symbol.split('/').filter(isReductionColor);
+    if (colors.length > 0) {
+      symbols.push({ kind: 'hybrid', symbol, colors });
+    }
+  }
+
+  for (const color of cost.phyrexian ?? []) {
+    if (isReductionColor(color)) {
+      symbols.push({ kind: 'phyrexian', color });
+    }
+  }
+
+  return symbols;
+}
+
+function applyGenericCapableReductions(
+  baseCost: ManaCost,
+  budget: NormalizedReductionBudget,
+  options?: { spillUnusedColoredToGeneric?: boolean },
+): ManaCost {
+  const reduced = cloneManaCost(baseCost);
+  let genericCapablePoints = budget.generic;
+
+  if (options?.spillUnusedColoredToGeneric) {
+    genericCapablePoints += budget.W + budget.U + budget.B + budget.R + budget.G;
+  }
+
+  if (genericCapablePoints > 0 && (reduced.hybrid?.length ?? 0) > 0) {
+    const remainingHybrid: string[] = [];
+    for (const symbol of reduced.hybrid ?? []) {
+      if (symbol.startsWith('2/') && genericCapablePoints >= 2) {
+        genericCapablePoints -= 2;
+        continue;
+      }
+      remainingHybrid.push(symbol);
+    }
+    reduced.hybrid = remainingHybrid;
+  }
+
+  if (genericCapablePoints > 0) {
+    reduced.generic = Math.max(0, reduced.generic - genericCapablePoints);
+  }
+
+  return reduced;
+}
+
+function scoreReducedCost(cost: ManaCost): [number, number, number, number, number, number] {
+  const hybridTwoCount = (cost.hybrid ?? []).filter((symbol) => symbol.startsWith('2/')).length;
+  const hybridColorCount = (cost.hybrid ?? []).length - hybridTwoCount;
+  const strictColorCount = cost.W + cost.U + cost.B + cost.R + cost.G + cost.C;
+  const phyrexianCount = cost.phyrexian?.length ?? 0;
+
+  return [
+    manaCostTotal(cost),
+    strictColorCount,
+    hybridColorCount,
+    cost.generic,
+    phyrexianCount,
+    hybridTwoCount,
+  ];
+}
+
+function compareReductionScores(
+  left: [number, number, number, number, number, number],
+  right: [number, number, number, number, number, number],
+): number {
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) {
+      return left[index] - right[index];
+    }
+  }
+  return 0;
+}
+
+function isReductionColor(value: string): value is ReductionColor {
+  return value === 'W' || value === 'U' || value === 'B' || value === 'R' || value === 'G';
 }

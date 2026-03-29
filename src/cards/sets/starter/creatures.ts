@@ -552,6 +552,7 @@ export const IrohDragonOfTheWest = CardBuilder.create('Iroh, Dragon of the West'
   .subtypes('Human', 'Noble', 'Ally')
   .stats(4, 4)
   .haste()
+  .mentor()
   .triggered(
     {
       on: 'custom',
@@ -577,35 +578,6 @@ export const IrohDragonOfTheWest = CardBuilder.create('Iroh, Dragon of the West'
     {
       description: 'At the beginning of combat on your turn, creatures you control with counters on them gain firebending 2 until end of turn.',
     },
-  )
-  .triggered(
-    { on: 'attacks', filter: { self: true } },
-    async (ctx) => {
-      const sourcePower = ctx.source.modifiedPower ?? ctx.source.definition.power ?? 0;
-      const attackingCreatures = ctx.game
-        .getBattlefield({ types: [CardType.CREATURE] }, ctx.controller)
-        .filter((card) => (
-          card.objectId !== ctx.source.objectId &&
-          (ctx.state.combat?.attackers.has(card.objectId) ?? false) &&
-          (card.modifiedPower ?? card.definition.power ?? 0) < sourcePower
-        ));
-
-      if (attackingCreatures.length === 0) return;
-
-      const target = await ctx.choices.chooseOne(
-        'Put a +1/+1 counter on target attacking creature with lesser power',
-        attackingCreatures,
-        (card) => card.definition.name,
-      );
-
-      ctx.game.addCounters(target.objectId, '+1/+1', 1, {
-        player: ctx.controller,
-        sourceId: ctx.source.objectId,
-        sourceCardId: ctx.source.cardId,
-        sourceZoneChangeCounter: ctx.source.zoneChangeCounter,
-      });
-    },
-    { description: 'Mentor' },
   )
   .build();
 

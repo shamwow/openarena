@@ -14,6 +14,7 @@ export const GeyserLeaper = CardBuilder.create('Geyser Leaper')
         amount: 4,
         filter: { types: [CardType.ARTIFACT, CardType.CREATURE], controller: 'you' },
         ignoreSummoningSickness: true,
+        keywordAction: 'waterbend',
       },
     },
     async (ctx) => {

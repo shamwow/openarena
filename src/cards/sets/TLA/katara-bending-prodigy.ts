@@ -19,7 +19,7 @@ export const KataraBendingProdigy = CardBuilder.create('Katara, Bending Prodigy'
     },
   )
   .activated(
-    { mana: parseManaCost('{6}'), genericTapSubstitution: { amount: 6, filter: { types: [CardType.ARTIFACT, CardType.CREATURE], controller: 'you' }, ignoreSummoningSickness: true } },
+    { mana: parseManaCost('{6}'), genericTapSubstitution: { amount: 6, filter: { types: [CardType.ARTIFACT, CardType.CREATURE], controller: 'you' }, ignoreSummoningSickness: true, keywordAction: 'waterbend' } },
     (ctx) => {
       ctx.game.drawCards(ctx.controller, 1);
     },

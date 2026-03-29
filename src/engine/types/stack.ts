@@ -1,6 +1,6 @@
 import type { AbilityDefinition } from './abilities';
 import type { CardInstance, LastKnownInformation } from './cards';
-import type { ObjectId, PlayerId, Timestamp } from './core';
+import type { ManaColor, ObjectId, PlayerId, Timestamp } from './core';
 import type { EffectContext } from './effects';
 import type { GameEvent } from './events';
 import type { CardDefinition } from './spells';
@@ -33,6 +33,8 @@ export interface StackEntry {
   modeChoices?: number[];
   castMethod?: string;
   additionalCostsPaid?: string[];
+  replicateCount?: number;
+  colorsSpentToCast?: ManaColor[];
   entersBattlefieldWithCounters?: Record<string, number>;
   triggeringEvent?: GameEvent;
   castAsAdventure?: boolean;

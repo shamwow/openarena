@@ -1,12 +1,12 @@
 import type { AbilityDefinition } from './abilities';
 import type { CardInstance } from './cards';
-import type { CardType, ObjectId, PlayerId, Timestamp, Zone } from './core';
+import type { CardType, ManaColor, ObjectId, PlayerId, Timestamp, Zone } from './core';
 import type { Cost } from './costs';
 import type { GameEngine } from './engine';
 import type { GameEvent, WouldEnterBattlefieldEvent } from './events';
 import type { CardFilter, SpellFilter } from './filters';
 import type { InteractionHookDef } from './interactions';
-import type { ManaCost } from './mana';
+import type { ManaCost, ManaReductionBudget } from './mana';
 import type { CardDefinition } from './spells';
 import type { GameState } from './state';
 import type { TargetSpec } from './targeting';
@@ -24,6 +24,7 @@ export interface EffectContext {
   xValue?: number;
   castMethod?: string;
   additionalCostsPaid?: string[];
+  colorsSpentToCast?: ManaColor[];
   chooseTarget(spec: Omit<TargetSpec, 'count'>): Promise<CardInstance | PlayerId | null>;
   chooseTargets(spec: TargetSpec): Promise<(CardInstance | PlayerId)[]>;
 }
@@ -44,7 +45,7 @@ export interface ChoiceHelper {
   choosePlayer(prompt: string, options: PlayerId[]): Promise<PlayerId>;
 }
 
-export type PredefinedTokenType = 'Treasure' | 'Clue' | 'Food' | 'Blood';
+export type PredefinedTokenType = 'Treasure' | 'Clue' | 'Food' | 'Blood' | 'Powerstone';
 
 export interface SearchLibraryOptions {
   player: PlayerId;
@@ -153,6 +154,14 @@ export interface PhaseRuleEffectDef {
   phasesOutDuringUntap?: boolean;
 }
 
+export interface CostModificationEffectDef {
+  type: 'cost-modification';
+  costDelta?: Partial<ManaCost>;
+  reductionBudget?: ManaReductionBudget;
+  spillUnusedColoredToGeneric?: boolean;
+  filter: SpellFilter;
+}
+
 export type StaticEffectDef =
   | { type: 'pump'; power: number; toughness: number; filter: CardFilter; duration?: EffectDuration }
   | { type: 'attached-pump'; power: number | ((game: GameState, source: CardInstance) => number); toughness: number | ((game: GameState, source: CardInstance) => number) }
@@ -165,7 +174,7 @@ export type StaticEffectDef =
     }
   | { type: 'add-types'; types: CardType[]; filter: CardFilter }
   | { type: 'grant-abilities'; abilities: AbilityDefinition[]; filter: CardFilter }
-  | { type: 'cost-modification'; costDelta: Partial<ManaCost>; filter: SpellFilter }
+  | CostModificationEffectDef
   | { type: 'attack-tax'; filter: CardFilter; cost: Cost; defender: 'source-controller' }
   | TimingPermissionEffectDef
   | AttackRuleEffectDef

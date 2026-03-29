@@ -7,7 +7,7 @@ export const RuthlessWaterbender = CardBuilder.create('Ruthless Waterbender')
   .subtypes('Human', 'Soldier', 'Ally')
   .stats(1, 3)
   .activated(
-    { mana: parseManaCost('{2}'), genericTapSubstitution: { amount: 2, filter: { types: ['Artifact' as any, 'Creature' as any], controller: 'you' }, ignoreSummoningSickness: true } },
+    { mana: parseManaCost('{2}'), genericTapSubstitution: { amount: 2, filter: { types: ['Artifact' as any, 'Creature' as any], controller: 'you' }, ignoreSummoningSickness: true, keywordAction: 'waterbend' } },
     async (ctx) => {
       ctx.game.grantPumpToObjectsUntilEndOfTurn([ctx.source.objectId], 1, 1);
     },

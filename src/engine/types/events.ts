@@ -9,6 +9,7 @@ export const GameEventType = {
   WOULD_ENTER_BATTLEFIELD: 'WOULD_ENTER_BATTLEFIELD',
   ENTERS_BATTLEFIELD: 'ENTERS_BATTLEFIELD',
   LEAVES_BATTLEFIELD: 'LEAVES_BATTLEFIELD',
+  ACTION_PERFORMED: 'ACTION_PERFORMED',
   PHASE_CHANGE: 'PHASE_CHANGE',
   STEP_CHANGE: 'STEP_CHANGE',
   TURN_START: 'TURN_START',
@@ -84,6 +85,13 @@ export interface LeavesBattlefieldEvent extends BaseGameEvent {
   objectId: ObjectId;
   controller: PlayerId;
   destination: Zone;
+}
+
+export interface ActionPerformedEvent extends BaseGameEvent {
+  type: typeof GameEventType.ACTION_PERFORMED;
+  player: PlayerId;
+  actionKind: string;
+  actionName: string;
 }
 
 export interface SpellCastEvent extends BaseGameEvent {
@@ -259,6 +267,7 @@ export type GameEvent =
   | WouldEnterBattlefieldEvent
   | EntersBattlefieldEvent
   | LeavesBattlefieldEvent
+  | ActionPerformedEvent
   | SpellCastEvent
   | DamageDealtEvent
   | LifeGainedEvent

@@ -10,6 +10,9 @@ interface CardPreviewProps {
 
 function getTypeLine(preview: PreviewCardState): string {
   const { card } = preview;
+  if (card.faceDown) {
+    return 'Face-down card';
+  }
   const left = [...card.definition.supertypes, ...card.definition.types].join(' ');
   if (card.definition.subtypes.length === 0) {
     return left;
@@ -19,6 +22,9 @@ function getTypeLine(preview: PreviewCardState): string {
 
 function getCardStats(preview: PreviewCardState): string | null {
   const { card } = preview;
+  if (card.faceDown) {
+    return null;
+  }
   if (card.definition.types.includes(CardType.CREATURE)) {
     return `${card.modifiedPower ?? card.definition.power}/${card.modifiedToughness ?? card.definition.toughness}`;
   }
@@ -29,6 +35,9 @@ function getCardStats(preview: PreviewCardState): string | null {
 }
 
 function getAbilityText(preview: PreviewCardState): string[] {
+  if (preview.card.faceDown) {
+    return [];
+  }
   const abilities = preview.card.modifiedAbilities ?? preview.card.definition.abilities;
   return Array.from(
     new Set(
@@ -40,29 +49,31 @@ function getAbilityText(preview: PreviewCardState): string[] {
 }
 
 export const CardPreview: React.FC<CardPreviewProps> = ({ preview }) => {
+  const isFaceDown = preview.card.faceDown;
   const art = useCardArt(preview.card.definition.name, {
-    enabled: !preview.card.definition.id.startsWith('token-'),
+    enabled: !preview.card.definition.id.startsWith('token-') && !isFaceDown,
   });
 
   const stats = getCardStats(preview);
   const abilityText = getAbilityText(preview);
-  const imageUrl = art.large ?? art.normal ?? art.png;
+  const imageUrl = isFaceDown ? undefined : (art.large ?? art.normal ?? art.png);
+  const displayName = isFaceDown ? 'Face-down card' : preview.card.definition.name;
 
   return (
     <aside className="arena-preview">
       <div className="arena-preview__header">
         <div>
-          <h2 className="arena-preview__title">{preview.card.definition.name}</h2>
+          <h2 className="arena-preview__title">{displayName}</h2>
           <div className="arena-preview__meta">
             Controlled by {preview.controllerName} · Owned by {preview.ownerName}
           </div>
         </div>
-        <ManaCostView cost={preview.card.definition.cost?.mana ?? emptyManaCost()} />
+        {!isFaceDown && <ManaCostView cost={preview.card.definition.cost?.mana ?? emptyManaCost()} />}
       </div>
 
       <div className="arena-preview__art">
         {imageUrl ? (
-          <img alt={preview.card.definition.name} src={imageUrl} loading="eager" />
+          <img alt={displayName} src={imageUrl} loading="eager" />
         ) : (
           <div className="arena-card__placeholder" />
         )}

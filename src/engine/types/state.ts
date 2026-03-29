@@ -54,6 +54,7 @@ export interface CastPermission {
   reason: string;
   timing: 'normal';
   castOnly: true;
+  availableOnTurnNumber?: number;
 }
 
 export interface PendingTrigger {
