@@ -1,6 +1,6 @@
 import React from 'react';
 import type { CardInstance, PlayerAction, Zone } from '../../engine/types';
-import { CardType } from '../../engine/types';
+import { CardType, emptyManaCost } from '../../engine/types';
 import { useCardArt } from '../hooks/useCardArt';
 import type { DragCardPayload } from '../types';
 import { getPrimaryCardAction, isTokenCard } from '../utils/gameView';
@@ -210,7 +210,7 @@ const CardViewInner: React.FC<CardViewProps> = ({
 
         <div className="arena-card__chrome">
           <div className="arena-card__name">{card.definition.name}</div>
-          {variant !== 'mini' && <ManaCostView cost={card.definition.spellCost.mana} />}
+          {variant !== 'mini' && <ManaCostView cost={card.definition.cost?.mana ?? emptyManaCost()} />}
         </div>
 
         <div className="arena-card__status-stack">

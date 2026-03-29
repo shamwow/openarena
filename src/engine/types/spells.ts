@@ -1,10 +1,9 @@
 import type { AbilityDefinition } from './abilities';
 import type { CardInstance } from './cards';
 import type { CardType, ManaColor, Zone } from './core';
-import type { Cost, GenericTapSubstitution } from './costs';
+import type { Cost } from './costs';
 import type { EffectFn } from './effects';
 import type { CardFilter } from './filters';
-import type { ManaCost } from './mana';
 import type { TargetSpec } from './targeting';
 
 export interface ProtectionFrom {
@@ -56,16 +55,6 @@ export type SpellCastBehavior =
   | { kind: 'storm' }
   | { kind: 'cascade' };
 
-export type SpellCostMechanic =
-  | { kind: 'delve' }
-  | { kind: 'convoke' }
-  | { kind: 'generic-tap-substitution'; substitution: GenericTapSubstitution };
-
-export interface SpellCost {
-  mana: ManaCost;
-  mechanics?: SpellCostMechanic[];
-}
-
 export interface AlternativeCast {
   id: string;
   cost: Cost;
@@ -91,7 +80,7 @@ export interface CastCostAdjustment {
 export interface CardDefinition {
   id: string;
   name: string;
-  spellCost: SpellCost;
+  cost?: Cost;
   colorIdentity: ManaColor[];
   commanderOptions?: CommanderOptions;
   types: CardType[];
@@ -110,7 +99,7 @@ export interface CardDefinition {
   backFace?: CardDefinition;
   isMDFC?: boolean;
   sagaChapters?: Array<{ chapter: number; effect: EffectFn }>;
-  adventure?: { name: string; spellCost: SpellCost; types: CardType[]; effect: EffectFn };
+  adventure?: { name: string; cost: Cost; types: CardType[]; effect: EffectFn };
   splitHalf?: CardDefinition;
   hasFuse?: boolean;
   morphCost?: Cost;

@@ -1,0 +1,1025 @@
+name,manaCost,types,subtypes,supertypes,power,toughness,text,keywords,colors,rarity,setCode,layout
+Aang and Katara,{3}{G}{W}{U},Creature,"Human, Avatar, Ally",Legendary,5,5,"Whenever Aang and Katara enter or attack, create X 1/1 white Ally creature tokens, where X is the number of tapped artifacts and/or creatures you control.",,"W, U, G",rare,TLE,normal
+"Aang, A Lot to Learn",{2}{G/W},Creature,"Human, Avatar, Ally",Legendary,3,2,"Aang has vigilance as long as there's a Lesson card in your graveyard.
+Whenever another creature you control dies, put a +1/+1 counter on Aang.",,"W, G",uncommon,TLE,normal
+"Aang, Air Nomad",{3}{W}{W},Creature,"Human, Avatar, Ally",Legendary,5,4,"Flying (This creature can't be blocked except by creatures with flying or reach.)
+Vigilance (Attacking doesn't cause this creature to tap.)
+Other creatures you control have vigilance.","Flying, Vigilance",W,rare,TLE,normal
+"Aang, Airbending Master",{4}{W},Creature,"Human, Avatar, Ally",Legendary,4,4,"When Aang enters, airbend another target creature. (Exile it. While it's exiled, its owner may cast it for {2} rather than its mana cost.)
+Whenever one or more creatures you control leave the battlefield without dying, you get an experience counter.
+At the beginning of your upkeep, create a 1/1 white Ally creature token for each experience counter you have.",Airbend,W,mythic,TLE,normal
+"Aang, at the Crossroads // Aang, Destined Savior",{2}{G}{W}{U},Creature,"Human, Avatar, Ally",Legendary,3,3,"Flying
+When Aang enters, look at the top five cards of your library. You may put a creature card with mana value 4 or less from among them onto the battlefield. Put the rest on the bottom of your library in a random order.
+When another creature you control leaves the battlefield, transform Aang at the beginning of the next upkeep.","Flying, Transform, Earthbend","W, U, G",rare,TLA,transform
+"Aang, Swift Savior // Aang and La, Ocean's Fury",{1}{W}{U},Creature,"Human, Avatar, Ally",Legendary,2,3,"Flash
+Flying
+When Aang enters, airbend up to one other target creature or spell. (Exile it. While it's exiled, its owner may cast it for {2} rather than its mana cost.)
+Waterbend {8}: Transform Aang.","Flying, Reach, Airbend, Transform, Trample, Flash, Waterbend","W, U",rare,TLA,transform
+"Aang, the Last Airbender",{3}{W},Creature,"Human, Avatar, Ally",Legendary,3,2,"Flying
+When Aang enters, airbend up to one other target nonland permanent. (Exile it. While it's exiled, its owner may cast it for {2} rather than its mana cost.)
+Whenever you cast a Lesson spell, Aang gains lifelink until end of turn.","Flying, Airbend",W,uncommon,TLA,normal
+Aang's Defense,{W},Instant,,,,,"Target blocking creature you control gets +2/+2 until end of turn.
+Draw a card.",,W,common,TLE,normal
+Aang's Iceberg,{2}{W},Enchantment,,,,,"Flash
+When this enchantment enters, exile up to one other target nonland permanent until this enchantment leaves the battlefield.
+Waterbend {3}: Sacrifice this enchantment. If you do, scry 2. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)","Flash, Waterbend, Scry",W,rare,TLA,normal
+Aang's Journey,{2},Sorcery,Lesson,,,,"Kicker {2} (You may pay an additional {2} as you cast this spell.)
+Search your library for a basic land card. If this spell was kicked, instead search your library for a basic land card and a Shrine card. Reveal those cards, put them into your hand, then shuffle.
+You gain 2 life.",Kicker,,common,TLA,normal
+Aardvark Sloth,{3}{W},Creature,"Sloth, Beast",,3,3,Lifelink (Damage dealt by this creature also causes you to gain that much life.),Lifelink,W,common,TLE,normal
+Abandon Attachments,{1}{U/R},Instant,Lesson,,,,"You may discard a card. If you do, draw two cards.",,"U, R",common,TLA,normal
+Abandoned Air Temple,,Land,,,,,"This land enters tapped unless you control a basic land.
+{T}: Add {W}.
+{3}{W}, {T}: Put a +1/+1 counter on each creature you control.",,,rare,TLA,normal
+Accumulate Wisdom,{1}{U},Instant,Lesson,,,,Look at the top three cards of your library. Put one of those cards into your hand and the rest on the bottom of your library in any order. Put each of those cards into your hand instead if there are three or more Lesson cards in your graveyard.,,U,uncommon,TLA,normal
+Acrobatic Leap,{W},Instant,,,,,Target creature gets +1/+3 and gains flying until end of turn. Untap it.,,W,common,TLE,normal
+Agent of Treachery,{5}{U}{U},Creature,"Human, Rogue",,2,3,"When this creature enters, gain control of target permanent.
+At the beginning of your end step, if you control three or more permanents you don't own, draw three cards.",,U,mythic,TLE,normal
+Agna Qel'a,,Land,,,,,"This land enters tapped unless you control a basic land.
+{T}: Add {U}.
+{2}{U}, {T}: Draw a card, then discard a card.",,,rare,TLA,normal
+Air Nomad Legacy,{W}{U},Enchantment,,,,,"When this enchantment enters, create a Clue token. (It's an artifact with ""{2}, Sacrifice this token: Draw a card."")
+Creatures you control with flying get +1/+1.",,"W, U",uncommon,TLA,normal
+Air Nomad Student,{3}{W},Creature,"Human, Monk",,2,2,"Flying
+At the beginning of your end step, if this creature didn't attack this turn, put a +1/+1 counter on it.",Flying,W,uncommon,TLE,normal
+Airbender Ascension,{1}{W},Enchantment,,,,,"When this enchantment enters, airbend up to one target creature.
+Whenever a creature you control enters, put a quest counter on this enchantment.
+At the beginning of your end step, if this enchantment has four or more quest counters on it, exile up to one target creature you control, then return it to the battlefield under its owner's control.",Airbend,W,rare,TLA,normal
+Airbender's Reversal,{1}{W},Instant,Lesson,,,,"Choose one —
+• Destroy target attacking creature.
+• Airbend target creature you control. (Exile it. While it's exiled, its owner may cast it for {2} rather than its mana cost.)",Airbend,W,uncommon,TLA,normal
+Airbending Lesson,{2}{W},Instant,Lesson,,,,"Airbend target nonland permanent. (Exile it. While it's exiled, its owner may cast it for {2} rather than its mana cost.)
+Draw a card.",Airbend,W,common,TLA,normal
+Airship Engine Room,,Land,,,,,"This land enters tapped.
+{T}: Add {U} or {R}.
+{4}, {T}, Sacrifice this land: Draw a card.",,,common,TLA,normal
+Allied Teamwork,{2}{W},Enchantment,,,,,"When this enchantment enters, create a 1/1 white Ally creature token.
+Allies you control get +1/+1.",,W,rare,TLE,normal
+Allies at Last,{2}{G},Instant,,,,,"Affinity for Allies (This spell costs {1} less to cast for each Ally you control.)
+Up to two target creatures you control each deal damage equal to their power to target creature an opponent controls.",Affinity,G,uncommon,TLA,normal
+Animal Attendant,{1}{G},Creature,"Human, Citizen",,2,2,"{T}: Add one mana of any color. If that mana is spent to cast a non-Human creature spell, that creature enters with an additional +1/+1 counter on it.",,G,uncommon,TLE,normal
+"Appa, Aang's Companion",{3}{W},Creature,"Bison, Ally",Legendary,2,4,"Flying (This creature can't be blocked except by creatures with flying or reach.)
+Whenever Appa attacks, another target attacking creature without flying gains flying until end of turn.",Flying,W,uncommon,TLE,normal
+"Appa, Loyal Sky Bison",{4}{W}{W},Creature,"Bison, Ally",Legendary,4,4,"Flying
+Whenever Appa enters or attacks, choose one —
+• Target creature you control gains flying until end of turn.
+• Airbend another target nonland permanent you control. (Exile it. While it's exiled, its owner may cast it for {2} rather than its mana cost.)","Flying, Airbend",W,uncommon,TLA,normal
+"Appa, Steadfast Guardian",{2}{W}{W},Creature,"Bison, Ally",Legendary,3,4,"Flash
+Flying
+When Appa enters, airbend any number of other target nonland permanents you control. (Exile them. While each one is exiled, its owner may cast it for {2} rather than its mana cost.)
+Whenever you cast a spell from exile, create a 1/1 white Ally creature token.","Flying, Airbend, Flash",W,mythic,TLA,normal
+"Appa, the Vigilant",{5}{W}{W},Creature,"Bison, Ally",Legendary,6,6,"Flying, vigilance
+Whenever Appa or another Ally you control enters, creatures you control get +1/+1 and gain flying and vigilance until end of turn.","Flying, Vigilance",W,rare,TLE,normal
+Arcane Signet,{2},Artifact,,,,,{T}: Add one mana of any color in your commander's color identity.,,,rare,TLE,normal
+"Avatar Aang // Aang, Master of Elements",{R}{G}{W}{U},Creature,"Human, Avatar, Ally",Legendary,4,4,"Flying, firebending 2
+Whenever you waterbend, earthbend, firebend, or airbend, draw a card. Then if you've done all four this turn, transform Avatar Aang.","Flying, Transform, Firebending","W, U, R, G",mythic,TLA,transform
+Avatar Destiny,{2}{G}{G},Enchantment,Aura,,,,"Enchant creature you control
+Enchanted creature gets +1/+1 for each creature card in your graveyard and is an Avatar in addition to its other types.
+When enchanted creature dies, mill cards equal to its power. Return this card to its owner's hand and up to one creature card milled this way to the battlefield under your control.","Enchant, Mill",G,rare,TLA,normal
+Avatar Enthusiasts,{2}{W},Creature,"Human, Peasant, Ally",,2,2,"Whenever another Ally you control enters, put a +1/+1 counter on this creature.",,W,common,TLA,normal
+"Avatar Kyoshi, Earthbender",{5}{G}{G}{G},Creature,"Human, Avatar",Legendary,6,6,"During your turn, Avatar Kyoshi has hexproof.
+At the beginning of combat on your turn, earthbend 8, then untap that land. (Target land you control becomes a 0/0 creature with haste that's still a land. Put eight +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)",Earthbend,G,mythic,TLE,normal
+"Avatar Roku, Firebender",{3}{R}{R}{R},Creature,"Human, Avatar",Legendary,6,6,"Whenever a player attacks, add six {R}. Until end of combat, you don't lose this mana as steps end.
+{R}{R}{R}: Target creature gets +3/+0 until end of turn.",,R,mythic,TLE,normal
+Avatar's Wrath,{2}{W}{W},Sorcery,,,,,"Choose up to one target creature, then airbend all other creatures. (Exile them. While each one is exiled, its owner may cast it for {2} rather than its mana cost.)
+Until your next turn, your opponents can't cast spells from anywhere other than their hands.
+Exile Avatar's Wrath.",Airbend,W,rare,TLA,normal
+Azula Always Lies,{1}{B},Instant,Lesson,,,,"Choose one or both —
+• Target creature gets -1/-1 until end of turn.
+• Put a +1/+1 counter on target creature.",,B,common,TLA,normal
+"Azula, Cunning Usurper",{2}{U}{B}{B},Creature,"Human, Noble, Rogue",Legendary,4,4,"Firebending 2 (Whenever this creature attacks, add {R}{R}. This mana lasts until end of combat.)
+When Azula enters, target opponent exiles a nontoken creature they control, then they exile a nonland card from their graveyard.
+During your turn, you may cast cards exiled with Azula and you may cast them as though they had flash. Mana of any type can be spent to cast those spells.",Firebending,"U, B",rare,TLA,normal
+"Azula, On the Hunt",{3}{B},Creature,"Human, Noble",Legendary,4,3,"Firebending 2 (Whenever this creature attacks, add {R}{R}. This mana lasts until end of combat.)
+Whenever Azula attacks, you lose 1 life and create a Clue token. (It's an artifact with ""{2}, Sacrifice this token: Draw a card."")",Firebending,B,uncommon,TLA,normal
+"Azula, Ruthless Firebender",{2}{B},Creature,"Human, Noble",Legendary,3,3,"Firebending 1 (Whenever this creature attacks, add {R}. This mana lasts until end of combat.)
+Whenever Azula attacks, you may discard a card. Then you get an experience counter for each player who discarded a card this turn.
+{2}{B}: Until end of turn, Azula gets +1/+1 for each experience counter you have and gains menace.",Firebending,B,mythic,TLE,normal
+Ba Sing Se,,Land,,,,,"This land enters tapped unless you control a basic land.
+{T}: Add {G}.
+{2}{G}, {T}: Earthbend 2. Activate only as a sorcery. (Target land you control becomes a 0/0 creature with haste that's still a land. Put two +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)",Earthbend,,rare,TLA,normal
+Baboon Spirit,{2}{U},Creature,"Monkey, Spirit",,2,4,"Whenever another nontoken Spirit you control enters, create a 1/1 colorless Spirit creature token with ""This token can't block or be blocked by non-Spirit creatures.""
+{3}{U}: Exile another target creature you control. Return it to the battlefield under its owner's control at the beginning of the next end step.",,U,rare,TLE,normal
+Badgermole,{4}{G},Creature,"Badger, Mole",,4,4,"When this creature enters, earthbend 2. (Target land you control becomes a 0/0 creature with haste that's still a land. Put two +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)
+Creatures you control with +1/+1 counters on them have trample.",Earthbend,G,common,TLA,normal
+Badgermole Cub,{1}{G},Creature,"Badger, Mole",,2,2,"When this creature enters, earthbend 1. (Target land you control becomes a 0/0 creature with haste that's still a land. Put a +1/+1 counter on it. When it dies or is exiled, return it to the battlefield tapped.)
+Whenever you tap a creature for mana, add an additional {G}.",Earthbend,G,mythic,TLA,normal
+Barrels of Blasting Jelly,{1},Artifact,,,,,"{1}: Add one mana of any color. Activate only once each turn.
+{5}, {T}, Sacrifice this artifact: It deals 5 damage to target creature.",,,common,TLA,normal
+Bastion of Remembrance,{2}{B},Enchantment,,,,,"When this enchantment enters, create a 1/1 white Human Soldier creature token.
+Whenever a creature you control dies, each opponent loses 1 life and you gain 1 life.",,B,uncommon,TLE,normal
+Beastmaster Ascension,{2}{G},Enchantment,,,,,"Whenever a creature you control attacks, you may put a quest counter on this enchantment.
+As long as this enchantment has seven or more quest counters on it, creatures you control get +5/+5.",,G,mythic,TLE,normal
+Beetle-Headed Merchants,{4}{B},Creature,"Human, Citizen",,5,4,"Whenever this creature attacks, you may sacrifice another creature or artifact. If you do, draw a card and put a +1/+1 counter on this creature.",,B,common,TLA,normal
+Beifong's Bounty Hunters,{2}{B}{G},Creature,"Human, Mercenary",,4,4,"Whenever a nonland creature you control dies, earthbend X, where X is that creature's power. (Target land you control becomes a 0/0 creature with haste that's still a land. Put X +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)",Earthbend,"B, G",rare,TLA,normal
+Bender's Waterskin,{3},Artifact,,,,,"Untap this artifact during each other player's untap step.
+{T}: Add one mana of any color.",,,common,TLA,normal
+Benevolent River Spirit,{U}{U},Creature,Spirit,,4,5,"As an additional cost to cast this spell, waterbend {5}. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)
+Flying, ward {2} (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {2}.)
+When this creature enters, scry 2.","Scry, Flying, Ward, Waterbend",U,uncommon,TLA,normal
+Bison Whistle,{1}{G},Artifact,,,,,"{1}, {T}: Look at the top card of your library. If it's a Bison card, you may put it onto the battlefield. If it's a creature card, you may reveal it and put it into your hand. Otherwise, you may put it into your graveyard.",,G,rare,TLE,normal
+Bitter Work,{1}{R}{G},Enchantment,,,,,"Whenever you attack a player with one or more creatures with power 4 or greater, draw a card.
+Exhaust — {4}: Earthbend 4. Activate only during your turn. (Target land you control becomes a 0/0 creature with haste that's still a land. Put four +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped. Activate each exhaust ability only once.)","Exhaust, Earthbend","R, G",uncommon,TLA,normal
+Black Sun's Zenith,{X}{B}{B},Sorcery,,,,,Put X -1/-1 counters on each creature. Shuffle Black Sun's Zenith into its owner's library.,,B,mythic,TLE,normal
+Blasphemous Act,{8}{R},Sorcery,,,,,"This spell costs {1} less to cast for each creature on the battlefield.
+Blasphemous Act deals 13 damage to each creature.",,R,mythic,TLE,normal
+Bloodchief Ascension,{B},Enchantment,,,,,"At the beginning of each end step, if an opponent lost 2 or more life this turn, you may put a quest counter on this enchantment. (Damage causes loss of life.)
+Whenever a card is put into an opponent's graveyard from anywhere, if this enchantment has three or more quest counters on it, you may have that player lose 2 life. If you do, you gain 2 life.",,B,mythic,TLE,normal
+Boar-q-pine,{2}{R},Creature,"Boar, Porcupine",,2,2,"Whenever you cast a noncreature spell, put a +1/+1 counter on this creature.",,R,common,TLA,normal
+Boiling Rock Prison,,Land,,,,,"This land enters tapped.
+{T}: Add {B} or {R}.
+{4}, {T}, Sacrifice this land: Draw a card.",,,common,TLA,normal
+Boiling Rock Rioter,{2}{B},Creature,"Human, Rogue, Ally",,3,3,"Firebending 1 (Whenever this creature attacks, add {R}. This mana lasts until end of combat.)
+Tap an untapped Ally you control: Exile target card from a graveyard.
+Whenever this creature attacks, you may cast an Ally spell from among cards you own exiled with this creature.",Firebending,B,rare,TLA,normal
+Bolt Bend,{3}{R},Instant,,,,,"This spell costs {3} less to cast if you control a creature with power 4 or greater.
+Change the target of target spell or ability with a single target.",,R,uncommon,TLE,normal
+Boomerang Basics,{U},Sorcery,Lesson,,,,"Return target nonland permanent to its owner's hand. If you controlled that permanent, draw a card.",,U,uncommon,TLA,normal
+"Bosco, Just a Bear",{4}{G},Creature,Bear,Legendary,4,4,"When Bosco enters, create a Food token for each legendary creature you control. (It's an artifact with ""{2}, {T}, Sacrifice this token: You gain 3 life."")
+{2}{G}, Sacrifice a Food: Put two +1/+1 counters on Bosco. He gains trample until end of turn.",Food,G,uncommon,TLE,normal
+Brainstorm,{U},Instant,,,,,"Draw three cards, then put two cards from your hand on top of your library in any order.",,U,common,TLE,normal
+Bribery,{3}{U}{U},Sorcery,,,,,Search target opponent's library for a creature card and put that card onto the battlefield under your control. Then that player shuffles.,,U,mythic,TLE,normal
+Brought Back,{W}{W},Instant,,,,,Choose up to two target permanent cards in your graveyard that were put there from the battlefield this turn. Return them to the battlefield tapped.,,W,mythic,TLE,normal
+Bumi Bash,{3}{R},Sorcery,,,,,"Choose one —
+• Bumi Bash deals damage equal to the number of lands you control to target creature.
+• Destroy target land creature or nonbasic land.",,R,common,TLA,normal
+"Bumi, Eclectic Earthbender",{3}{G}{G},Creature,"Human, Noble, Ally",Legendary,4,4,"When Bumi enters, earthbend 1. (Target land you control becomes a 0/0 creature with haste that's still a land. Put a +1/+1 counter on it. When it dies or is exiled, return it to the battlefield tapped.)
+Whenever Bumi attacks, put two +1/+1 counters on each land creature you control.",Earthbend,G,rare,TLE,normal
+"Bumi, King of Three Trials",{5}{G},Creature,"Human, Noble, Ally",Legendary,4,4,"When Bumi enters, choose up to X, where X is the number of Lesson cards in your graveyard —
+• Put three +1/+1 counters on Bumi.
+• Target player scries 3.
+• Earthbend 3. (Target land you control becomes a 0/0 creature with haste that's still a land. Put three +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)",Earthbend,G,uncommon,TLA,normal
+"Bumi, Unleashed",{3}{R}{G},Creature,"Human, Noble, Ally",Legendary,5,4,"Trample
+When Bumi enters, earthbend 4.
+Whenever Bumi deals combat damage to a player, untap all lands you control. After this phase, there is an additional combat phase. Only land creatures can attack during that combat phase.","Trample, Earthbend","R, G",mythic,TLA,normal
+Bumi's Feast Lecture,{1}{G},Sorcery,Lesson,,,,"Create a Food token. Then earthbend X, where X is twice the number of Foods you control. (A Food token is an artifact with ""{2}, {T}, Sacrifice this token:You gain 3 life."" To earthbend X, target land you control becomes a 0/0 creature with haste that's still a land. Put X +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)","Food, Earthbend",G,uncommon,TLE,normal
+Buzzard-Wasp Colony,{3}{B},Creature,"Bird, Insect",,2,2,"Flying
+When this creature enters, you may sacrifice an artifact or creature. If you do, draw a card.
+Whenever another creature you control dies, if it had counters on it, put its counters on this creature.",Flying,B,uncommon,TLA,normal
+Callous Inspector,{B},Creature,"Human, Soldier",,1,1,"Menace (This creature can't be blocked except by two or more creatures.)
+When this creature dies, it deals 1 damage to you. Create a Clue token. (It's an artifact with ""{2}, Sacrifice this token: Draw a card."")",Menace,B,common,TLA,normal
+Canyon Crawler,{4}{B}{B},Creature,"Spider, Beast",,6,6,"Deathtouch
+When this creature enters, create a Food token. (It's an artifact with ""{2}, {T}, Sacrifice this token: You gain 3 life."")
+Swampcycling {2} ({2}, Discard this card: Search your library for a Swamp card, reveal it, put it into your hand, then shuffle.)","Landcycling, Food, Typecycling, Cycling, Swampcycling, Deathtouch",B,common,TLA,normal
+Capital Guard,{1}{R},Creature,"Human, Soldier",,2,2,,,R,common,TLE,normal
+Captain Sisay,{2}{G}{W},Creature,"Human, Soldier",Legendary,2,2,"{T}: Search your library for a legendary card, reveal that card, put it into your hand, then shuffle.",,"W, G",mythic,TLE,normal
+Cat-Gator,{6}{B},Creature,"Fish, Crocodile",,3,2,"Lifelink
+When this creature enters, it deals damage equal to the number of Swamps you control to any target.",Lifelink,B,uncommon,TLA,normal
+Cat-Owl,{3}{W/U},Creature,"Cat, Bird",,3,3,"Flying
+Whenever this creature attacks, untap target artifact or creature.",Flying,"W, U",common,TLA,normal
+Cathartic Reunion,{1}{R},Sorcery,,,,,"As an additional cost to cast this spell, discard two cards.
+Draw three cards.",,R,common,TLE,normal
+Chakra Meditation,{2}{U},Enchantment,,,,,"When this enchantment enters, return up to one target instant or sorcery card from your graveyard to your hand.
+Whenever you cast an instant or sorcery spell, draw a card. Then discard a card unless there are three or more Lesson cards in your graveyard.",,U,rare,TLE,normal
+"Chong and Lily, Nomads",{3}{R},Creature,"Human, Bard, Ally",Legendary,3,3,"Whenever one or more Bards you control attack, choose one —
+• Put a lore counter on each of any number of target Sagas you control.
+• Creatures you control get +1/+0 until end of turn for each lore counter among Sagas you control.",,R,rare,TLE,normal
+Cityscape Leveler,{8},"Artifact, Creature",Construct,,8,8,"Trample
+When you cast this spell and whenever this creature attacks, destroy up to one target nonland permanent. Its controller creates a tapped Powerstone token.
+Unearth {8}","Unearth, Trample",,mythic,TLE,normal
+Clone,{3}{U},Creature,Shapeshifter,,0,0,You may have this creature enter as a copy of any creature on the battlefield.,,U,mythic,TLE,normal
+Clone Legion,{7}{U}{U},Sorcery,,,,,"For each creature target player controls, create a token that's a copy of that creature.",,U,mythic,TLE,normal
+Cloudshift,{W},Instant,,,,,"Exile target creature you control, then return that card to the battlefield under your control.",,W,common,TLE,normal
+Coastal Piracy,{2}{U}{U},Enchantment,,,,,"Whenever a creature you control deals combat damage to an opponent, you may draw a card.",,U,uncommon,TLE,normal
+Combustion Man,{3}{R}{R},Creature,"Human, Assassin",Legendary,4,6,"Whenever Combustion Man attacks, destroy target permanent unless its controller has Combustion Man deal damage to them equal to his power.",,R,uncommon,TLA,normal
+Combustion Technique,{1}{R},Instant,Lesson,,,,"Combustion Technique deals damage equal to 2 plus the number of Lesson cards in your graveyard to target creature. If that creature would die this turn, exile it instead.",,R,uncommon,TLA,normal
+Compassionate Healer,{1}{W},Creature,"Human, Cleric, Ally",,2,2,"Whenever this creature becomes tapped, you gain 1 life and scry 1. (Look at the top card of your library. You may put it on the bottom.)",Scry,W,common,TLA,normal
+Consider,{U},Instant,,,,,"Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)
+Draw a card.",Surveil,U,common,TLE,normal
+Corrupt Court Official,{1}{B},Creature,"Human, Advisor",,1,1,"When this creature enters, target opponent discards a card.",,B,common,TLA,normal
+Cracked Earth Technique,{4}{G},Sorcery,Lesson,,,,"Earthbend 3, then earthbend 3. You gain 3 life. (To earthbend 3, target land you control becomes a 0/0 creature with haste that's still a land. Put three +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)",Earthbend,G,uncommon,TLE,normal
+Crashing Wave,{U}{U},Sorcery,,,,,"As an additional cost to cast this spell, waterbend {X}. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)
+Tap up to X target creatures, then distribute three stun counters among any number of tapped creatures your opponents control. (If a permanent with a stun counter would become untapped, remove one from it instead.)",Waterbend,U,uncommon,TLA,normal
+Creeping Crystal Coating,{2}{G},Enchantment,Aura,,,,"Flash
+Enchant creature
+Enchanted creature gets +0/+3 and has ""Whenever this creature attacks, create a Food token."" (It's an artifact with ""{2}, {T}, Sacrifice this token: You gain 3 life."")","Food, Enchant, Flash",G,uncommon,TLE,normal
+Crescent Island Temple,{3}{R},Enchantment,Shrine,Legendary,,,"When Crescent Island Temple enters, for each Shrine you control, create a 1/1 red Monk creature token with prowess. (Whenever you cast a noncreature spell, it gets +1/+1 until end of turn.)
+Whenever another Shrine you control enters, create a 1/1 red Monk creature token with prowess.",,R,uncommon,TLA,normal
+Cruel Administrator,{3}{B}{R},Creature,"Human, Soldier",,5,4,"Raid — This creature enters with a +1/+1 counter on it if you attacked this turn.
+Whenever this creature attacks, create a 2/2 red Soldier creature token with firebending 1. (Whenever it attacks, add {R}. This mana lasts until end of combat.)",Raid,"B, R",uncommon,TLA,normal
+Cruel Tutor,{2}{B},Sorcery,,,,,"Search your library for a card, then shuffle and put that card on top. You lose 2 life.",,B,mythic,TLE,normal
+Crystalline Armor,{3}{G},Enchantment,Aura,,,,"Enchant creature
+Enchanted creature gets +1/+1 for each land you control and has trample.",Enchant,G,rare,TLE,normal
+Cunning Maneuver,{1}{R},Instant,,,,,"Target creature gets +3/+1 until end of turn.
+Create a Clue token. (It's an artifact with ""{2}, Sacrifice this token: Draw a card."")",,R,common,TLA,normal
+Curious Farm Animals,{W},Creature,"Boar, Elk, Bird, Ox",,1,1,"When this creature dies, you gain 3 life.
+{2}, Sacrifice this creature: Destroy up to one target artifact or enchantment.",,W,common,TLA,normal
+Cycle of Renewal,{2}{G},Instant,Lesson,,,,"Sacrifice a land. Search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle.",,G,common,TLA,normal
+Dai Li Agents,{3}{B}{G},Creature,"Human, Soldier",,3,4,"When this creature enters, earthbend 1, then earthbend 1. (To earthbend 1, target land you control becomes a 0/0 creature with haste that's still a land. Put a +1/+1 counter on it. When it dies or is exiled, return it to the battlefield tapped.)
+Whenever this creature attacks, each opponent loses X life and you gain X life, where X is the number of creatures you control with +1/+1 counters on them.",Earthbend,"B, G",uncommon,TLA,normal
+Dai Li Censor,{1}{B},Creature,"Human, Soldier, Advisor",,2,1,"{1}, Sacrifice another creature: This creature gets +2/+2 until end of turn. Activate only once each turn.",,B,common,TLE,normal
+Dai Li Indoctrination,{1}{B},Sorcery,Lesson,,,,"Choose one —
+• Target opponent reveals their hand. You choose a nonland permanent card from it. That player discards that card.
+• Earthbend 2. (Target land you control becomes a 0/0 creature with haste that's still a land. Put two +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)",Earthbend,B,common,TLA,normal
+Dark Deal,{2}{B},Sorcery,,,,,"Each player discards all the cards in their hand, then draws that many cards minus one.",,B,uncommon,TLE,normal
+Dark Depths,,Land,,"Legendary, Snow",,,"Dark Depths enters with ten ice counters on it.
+{3}: Remove an ice counter from Dark Depths.
+When Dark Depths has no ice counters on it, sacrifice it. If you do, create Marit Lage, a legendary 20/20 black Avatar creature token with flying and indestructible.",,,mythic,TLE,normal
+Day of Black Sun,{X}{B}{B},Sorcery,,,,,Each creature with mana value X or less loses all abilities until end of turn. Destroy those creatures.,,B,rare,TLA,normal
+Deadly Precision,{B},Sorcery,,,,,"As an additional cost to cast this spell, pay {4} or sacrifice an artifact or creature.
+Destroy target creature.",,B,common,TLA,normal
+Deadly Rollick,{3}{B},Instant,,,,,"If you control a commander, you may cast this spell without paying its mana cost.
+Exile target creature.",,B,rare,TLE,normal
+Deer-Dog,{1}{R},Creature,"Elk, Dog",,1,3,First strike (This creature deals combat damage before creatures without first strike.),First strike,R,common,TLE,normal
+Deflecting Swat,{2}{R},Instant,,,,,"If you control a commander, you may cast this spell without paying its mana cost.
+You may choose new targets for target spell or ability.",,R,rare,TLE,normal
+Deny Entry,{2}{U},Instant,,,,,"Counter target creature spell. Draw a card, then discard a card.",,U,common,TLE,normal
+Descendants' Path,{2}{G},Enchantment,,,,,"At the beginning of your upkeep, reveal the top card of your library. If it's a creature card that shares a creature type with a creature you control, you may cast it without paying its mana cost. If you don't cast it, put it on the bottom of your library.",,G,rare,TLE,normal
+Deserter's Disciple,{1}{R},Creature,"Human, Rebel, Ally",,2,2,{T}: Another target creature you control with power 2 or less can't be blocked this turn.,,R,common,TLA,normal
+Desperate Plea,{1}{B},Sorcery,Lesson,,,,"As an additional cost to cast this spell, sacrifice a creature.
+Choose one or both —
+• Return target creature card from your graveyard to the battlefield if its power is less than or equal to the sacrificed creature's power.
+• Destroy target creature.",,B,rare,TLE,normal
+Destined Confrontation,{2}{W}{W},Sorcery,,,,,"Each player chooses any number of creatures they control with total power 4 or less, then sacrifices all other creatures they control.",,W,uncommon,TLA,normal
+"Diaochan, Artful Beauty",{3}{R},Creature,"Human, Advisor",Legendary,1,1,"{T}: Destroy target creature of your choice, then destroy target creature of an opponent's choice. Activate only during your turn, before attackers are declared.",,R,mythic,TLE,normal
+Diligent Zookeeper,{3}{G},Creature,"Human, Citizen, Ally",,4,4,"Each non-Human creature you control gets +1/+1 for each of its creature types, to a maximum of 10.",,G,rare,TLA,normal
+Diresight,{2}{B},Sorcery,,,,,"Surveil 2, then draw two cards. You lose 2 life. (To surveil 2, look at the top two cards of your library, then put any number of them into your graveyard and the rest on top of your library in any order.)",Surveil,B,common,TLE,normal
+Dockside Extortionist,{1}{R},Creature,"Goblin, Pirate",,1,2,"When this creature enters, create X Treasure tokens, where X is the number of artifacts and enchantments your opponents control. (Treasure tokens are artifacts with ""{T}, Sacrifice this token: Add one mana of any color."")",Treasure,R,mythic,TLE,normal
+Dragon Moose,{3}{R},Creature,"Dragon, Elk",,3,3,Haste (This creature can attack and {T} as soon as it comes under your control.),Haste,R,common,TLE,normal
+Dragonfly Swarm,{1}{U}{R},Creature,"Dragon, Insect",,*,3,"Flying, ward {1} (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {1}.)
+This creature's power is equal to the number of noncreature, nonland cards in your graveyard.
+When this creature dies, if there's a Lesson card in your graveyard, draw a card.","Flying, Ward","U, R",uncommon,TLA,normal
+Dramatic Reversal,{1}{U},Instant,,,,,Untap all nonland permanents you control.,,U,common,TLE,normal
+Drannith Magistrate,{1}{W},Creature,"Human, Wizard",,1,3,Your opponents can't cast spells from anywhere other than their hands.,,W,mythic,TLE,normal
+Duelist's Heritage,{2}{W},Enchantment,,,,,"Whenever one or more creatures attack, you may have target attacking creature gain double strike until end of turn.",,W,rare,TLE,normal
+Dutiful Knowledge Seeker,{2}{U},Creature,"Fox, Spirit",,2,2,"Whenever one or more cards are put into a library from anywhere, put a +1/+1 counter on this creature.
+{3}: Put target card from a graveyard on the bottom of its owner's library.",,U,uncommon,TLE,normal
+Earth King's Lieutenant,{G}{W},Creature,"Human, Soldier, Ally",,1,1,"Trample
+When this creature enters, put a +1/+1 counter on each other Ally creature you control.
+Whenever another Ally you control enters, put a +1/+1 counter on this creature.",Trample,"W, G",rare,TLA,normal
+Earth Kingdom General,{3}{G},Creature,"Human, Soldier, Ally",,2,2,"When this creature enters, earthbend 2. (Target land you control becomes a 0/0 creature with haste that's still a land. Put two +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)
+Whenever you put one or more +1/+1 counters on a creature, you may gain that much life. Do this only once each turn.",Earthbend,G,uncommon,TLA,normal
+Earth Kingdom Jailer,{2}{W},Creature,"Human, Soldier, Ally",,3,3,"When this creature enters, exile up to one target artifact, creature, or enchantment an opponent controls with mana value 3 or greater until this creature leaves the battlefield.",,W,uncommon,TLA,normal
+Earth Kingdom Protectors,{W},Creature,"Human, Soldier, Ally",,1,1,"Vigilance
+Sacrifice this creature: Another target Ally you control gains indestructible until end of turn. (Damage and effects that say ""destroy"" don't destroy it.)",Vigilance,W,uncommon,TLA,normal
+Earth Kingdom Soldier,{4}{G/W},Creature,"Human, Soldier",,3,4,"Vigilance
+When this creature enters, put a +1/+1 counter on each of up to two target creatures you control.",Vigilance,"W, G",common,TLA,normal
+Earth Rumble,{3}{G},Sorcery,,,,,"Earthbend 2. When you do, up to one target creature you control fights target creature an opponent controls. (To earthbend 2, target land you control becomes a 0/0 creature with haste that's still a land. Put two +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped. Creatures that fight each deal damage equal to their power to the other.)","Fight, Earthbend",G,uncommon,TLA,normal
+Earth Rumble Wrestlers,{3}{R/G},Creature,"Human, Warrior, Performer",,3,4,"Reach
+This creature gets +1/+0 and has trample as long as you control a land creature or a land entered the battlefield under your control this turn.",Reach,"R, G",common,TLA,normal
+Earth Village Ruffians,{2}{B/G},Creature,"Human, Soldier, Rogue",,3,1,"When this creature dies, earthbend 2. (Target land you control becomes a 0/0 creature with haste that's still a land. Put two +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)",Earthbend,"B, G",common,TLA,normal
+Earthbender Ascension,{2}{G},Enchantment,,,,,"When this enchantment enters, earthbend 2. Then search your library for a basic land card, put it onto the battlefield tapped, then shuffle.
+Landfall — Whenever a land you control enters, put a quest counter on this enchantment. When you do, if it has four or more quest counters on it, put a +1/+1 counter on target creature you control. It gains trample until end of turn.","Earthbend, Landfall",G,rare,TLA,normal
+Earthbending Lesson,{3}{G},Sorcery,Lesson,,,,"Earthbend 4. (Target land you control becomes a 0/0 creature with haste that's still a land. Put four +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)",Earthbend,G,common,TLA,normal
+Earthbending Student,{2}{G},Creature,"Human, Warrior, Ally",,1,3,"When this creature enters, earthbend 2. (Target land you control becomes a 0/0 creature with haste that's still a land. Put two +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)
+Land creatures you control have vigilance. (Attacking doesn't cause them to tap.)",Earthbend,G,uncommon,TLE,normal
+Earthen Ally,{G},Creature,"Human, Soldier, Ally",,0,2,"This creature gets +1/+0 for each color among Allies you control.
+{2}{W}{U}{B}{R}{G}: Earthbend 5. (Target land you control becomes a 0/0 creature with haste that's still a land. Put five +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)",Earthbend,G,rare,TLA,normal
+Earthshape,{2}{W},Instant,,,,,Earthbend 3. Then each creature you control with power less than or equal to that land's power gains hexproof and indestructible until end of turn. You gain hexproof until end of turn.,Earthbend,W,rare,TLE,normal
+Eel-Hounds,{3}{G},Creature,"Fish, Dog",,4,2,"Trample (This creature can deal excess combat damage to the player it's attacking.)
+Whenever this creature attacks, another target creature you control gets +2/+2 and gains trample until end of turn.",Trample,G,uncommon,TLE,normal
+Eladamri's Call,{G}{W},Instant,,,,,"Search your library for a creature card, reveal that card, put it into your hand, then shuffle.",,"W, G",mythic,TLE,normal
+Elemental Bond,{2}{G},Enchantment,,,,,"Whenever a creature you control with power 3 or greater enters, draw a card.",,G,mythic,TLE,normal
+Elemental Teachings,{4}{G},Instant,Lesson,,,,"Search your library for up to four land cards with different names and reveal them. An opponent chooses two of those cards. Put the chosen cards into your graveyard and the rest onto the battlefield tapped, then shuffle.",,G,rare,TLA,normal
+Elephant-Mandrill,{2}{G},Creature,"Elephant, Monkey",,3,2,"Reach
+When this creature enters, each player creates a Food token. (It's an artifact with ""{2}, {T}, Sacrifice this token: You gain 3 life."")
+At the beginning of combat on your turn, this creature gets +1/+1 until end of turn for each artifact your opponents control.","Reach, Food",G,uncommon,TLE,normal
+Elephant-Rat,{1}{B},Creature,"Elephant, Rat",,1,3,Menace (This creature can't be blocked except by two or more creatures.),Menace,B,common,TLE,normal
+Ember Island Production,{3}{U}{U},Sorcery,,,,,"Choose one—
+• Create a token that's a copy of target creature you control, except it's not legendary and it's a 4/4 Hero in addition to its other types.
+• Create a token that's a copy of target creature an opponent controls, except it's not legendary and it's a 2/2 Coward in addition to its other types.",,U,uncommon,TLA,normal
+Empty City Ruse,{W},Sorcery,,,,,Target opponent skips all combat phases of their next turn.,,W,mythic,TLE,normal
+Energybending,{2},Instant,Lesson,,,,"Lands you control gain all basic land types until end of turn.
+Draw a card.",,,uncommon,TLA,normal
+Enlightened Tutor,{W},Instant,,,,,"Search your library for an artifact or enchantment card, reveal it, then shuffle and put that card on top.",,W,rare,TLE,normal
+Enter the Avatar State,{W},Instant,Lesson,,,,"Until end of turn, target creature you control becomes an Avatar in addition to its other types and gains flying, first strike, lifelink, and hexproof. (A creature with hexproof can't be the target of spells or abilities your opponents control.)","Lifelink, First strike",W,uncommon,TLA,normal
+Entomb,{B},Instant,,,,,"Search your library for a card, put that card into your graveyard, then shuffle.",,B,rare,TLE,normal
+Epic Downfall,{1}{B},Sorcery,,,,,Exile target creature with mana value 3 or greater.,,B,uncommon,TLA,normal
+Explore,{1}{G},Sorcery,,,,,"You may play an additional land this turn.
+Draw a card.",,G,common,TLE,normal
+Explosive Shot,{1}{R},Sorcery,,,,,Explosive Shot deals 4 damage to target creature.,,R,common,TLE,normal
+Fabled Passage,,Land,,,,,"{T}, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle. Then if you control four or more lands, untap that land.",,,mythic,TLE,normal
+Fancy Footwork,{2}{W},Instant,Lesson,,,,Untap one or two target creatures. They each get +2/+2 until end of turn.,,W,uncommon,TLA,normal
+"Fang, Roku's Companion",{3}{R}{R},Creature,Dragon,Legendary,4,4,"Flying
+Whenever Fang attacks, another target legendary creature you control gets +X/+0 until end of turn, where X is Fang's power.
+When Fang dies, if he wasn't a Spirit, return this card to the battlefield under your control. He's a Spirit in addition to his other types.",Flying,R,rare,TLE,normal
+Fatal Fissure,{1}{B},Instant,,,,,"Choose target creature. When that creature dies this turn, you earthbend 4. (Target land you control becomes a 0/0 creature with haste that's still a land. Put four +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)",Earthbend,B,uncommon,TLA,normal
+Fated Firepower,{X}{R}{R}{R},Enchantment,,,,,"Flash
+This enchantment enters with X fire counters on it.
+If a source you control would deal damage to an opponent or a permanent an opponent controls, it deals that much damage plus an amount of damage equal to the number of fire counters on this enchantment instead.",Flash,R,mythic,TLA,normal
+Feed the Swarm,{1}{B},Sorcery,,,,,Destroy target creature or enchantment an opponent controls. You lose life equal to that permanent's mana value.,,B,common,TLE,normal
+Fervor,{2}{R},Enchantment,,,,,Creatures you control have haste. (They can attack and {T} as soon as they come under your control.),,R,mythic,TLE,normal
+Fevered Visions,{1}{U}{R},Enchantment,,,,,"At the beginning of each player's end step, that player draws a card. If the player is your opponent and has four or more cards in hand, this enchantment deals 2 damage to that player.",,"U, R",mythic,TLE,normal
+Fierce Guardianship,{2}{U},Instant,,,,,"If you control a commander, you may cast this spell without paying its mana cost.
+Counter target noncreature spell.",,U,rare,TLE,normal
+Fiery Confluence,{2}{R}{R},Sorcery,,,,,"Choose three. You may choose the same mode more than once.
+• Fiery Confluence deals 1 damage to each creature.
+• Fiery Confluence deals 2 damage to each opponent.
+• Destroy target artifact.",,R,rare,TLE,normal
+Fire Lord Azula,{1}{U}{B}{R},Creature,"Human, Noble",Legendary,4,4,"Firebending 2 (Whenever this creature attacks, add {R}{R}. This mana lasts until end of combat.)
+Whenever you cast a spell while Fire Lord Azula is attacking, copy that spell. You may choose new targets for the copy. (A copy of a permanent spell becomes a token.)",Firebending,"U, B, R",rare,TLA,normal
+Fire Lord Ozai,{3}{B},Creature,"Human, Noble",Legendary,4,4,"Whenever Fire Lord Ozai attacks, you may sacrifice another creature. If you do, add an amount of {R} equal to the sacrificed creature's power. Until end of combat, you don't lose this mana as steps end.
+{6}: Exile the top card of each opponent's library. Until end of turn, you may play one of those cards without paying its mana cost.",,B,mythic,TLE,normal
+Fire Lord Zuko,{R}{W}{B},Creature,"Human, Noble, Ally",Legendary,2,4,"Firebending X, where X is Fire Lord Zuko's power. (Whenever this creature attacks, add X {R}. This mana lasts until end of combat.)
+Whenever you cast a spell from exile and whenever a permanent you control enters from exile, put a +1/+1 counter on each creature you control.",Firebending,"W, B, R",rare,TLA,normal
+Fire Nation Ambushers,{2}{B},Creature,"Human, Soldier",,3,2,Flash (You may cast this spell any time you could cast an instant.),Flash,B,common,TLE,normal
+Fire Nation Archers,{3}{R},Creature,"Human, Archer",,3,4,"Reach (This creature can block creatures with flying.)
+{5}: This creature deals 2 damage to each opponent. Create a 2/2 red Soldier creature token.",Reach,R,rare,TLE,normal
+Fire Nation Attacks,{4}{R},Instant,,,,,"Create two 2/2 red Soldier creature tokens with firebending 1. (Whenever a creature with firebending 1 attacks, add {R}. This mana lasts until end of combat.)
+Flashback {8}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.)",Flashback,R,uncommon,TLA,normal
+Fire Nation Cadets,{R},Creature,"Human, Soldier",,1,2,"This creature has firebending 2 as long as there's a Lesson card in your graveyard. (Whenever this creature attacks, add {R}{R}. This mana lasts until end of combat.)
+{2}: This creature gets +1/+0 until end of turn.",,R,common,TLA,normal
+Fire Nation Engineer,{2}{B},Creature,"Human, Artificer",,2,3,"Raid — At the beginning of your end step, if you attacked this turn, put a +1/+1 counter on another target creature or Vehicle you control.",Raid,B,uncommon,TLA,normal
+Fire Nation Occupation,{2}{B},Enchantment,,,,,"When this enchantment enters, create a 2/2 red Soldier creature token with firebending 1. (Whenever it attacks, add {R}. This mana lasts until end of combat.)
+Whenever you cast a spell during an opponent's turn, create a 2/2 red Soldier creature token with firebending 1.",,B,rare,TLE,normal
+Fire Nation Palace,,Land,,,,,"This land enters tapped unless you control a basic land.
+{T}: Add {R}.
+{1}{R}, {T}: Target creature you control gains firebending 4 until end of turn. (Whenever it attacks, add {R}{R}{R}{R}. This mana lasts until end of combat.)",,,rare,TLA,normal
+Fire Nation Raider,{3}{R},Creature,"Human, Soldier",,4,2,"Raid — When this creature enters, if you attacked this turn, create a Clue token. (It's an artifact with ""{2}, Sacrifice this token: Draw a card."")",Raid,R,common,TLA,normal
+Fire Nation Salvagers,{3}{B}{B},Creature,"Human, Soldier",,3,3,"Menace
+When this creature enters, put a +1/+1 counter on target creature or Vehicle you control.
+Whenever one or more creatures you control with counters on them deal combat damage to a player, put target creature or Vehicle card from that player's graveyard onto the battlefield under your control.",Menace,B,rare,TLE,normal
+Fire Nation Sentinels,{3}{B}{B},Creature,"Human, Soldier",,4,4,"Whenever a nontoken creature an opponent controls dies, put a +1/+1 counter on each creature you control.",,B,rare,TLE,normal
+Fire Nation Soldier,{2}{R},Creature,"Human, Soldier",,3,2,Haste (This creature can attack and {T} as soon as it comes under your control.),Haste,R,common,TLE,normal
+Fire Nation Turret,{2}{R},Artifact,,,,,"At the beginning of combat on your turn, up to one target creature gets +2/+0 and gains firebending 2 until end of turn.
+{R}: Put a charge counter on this artifact.
+Remove fifty charge counters from this artifact: It deals 50 damage to any target.",,R,rare,TLE,normal
+Fire Nation Warship,{3},Artifact,Vehicle,,4,4,"Reach
+When this Vehicle dies, create a Clue token. (It's an artifact with ""{2}, Sacrifice this token: Draw a card."")
+Crew 2 (Tap any number of creatures you control with total power 2 or more: This Vehicle becomes an artifact creature until end of turn.)","Reach, Crew",,uncommon,TLA,normal
+Fire Nation's Conquest,{2}{R},Enchantment,,,,,Creatures you control get +1/+0.,,R,uncommon,TLE,normal
+Fire Navy Trebuchet,{2}{B},"Artifact, Creature",Wall,,0,4,"Defender, reach
+Whenever you attack, create a 2/1 colorless Construct artifact creature token with flying named Ballistic Boulder that's tapped and attacking. Sacrifice that token at the beginning of the next end step.","Reach, Defender",B,uncommon,TLA,normal
+Fire Sages,{1}{R},Creature,"Human, Cleric",,2,2,"Firebending 1 (Whenever this creature attacks, add {R}. This mana lasts until end of combat.)
+{1}{R}{R}: Put a +1/+1 counter on this creature.",Firebending,R,uncommon,TLA,normal
+Firebender Ascension,{1}{R},Enchantment,,,,,"When this enchantment enters, create a 2/2 red Soldier creature token with firebending 1.
+Whenever a creature you control attacking causes a triggered ability of that creature to trigger, put a quest counter on this enchantment. Then if it has four or more quest counters on it, you may copy that ability. You may choose new targets for the copy.",,R,rare,TLA,normal
+Firebending Lesson,{R},Instant,Lesson,,,,"Kicker {4} (You may pay an additional {4} as you cast this spell.)
+Firebending Lesson deals 2 damage to target creature. If this spell was kicked, it deals 5 damage to that creature instead.",Kicker,R,common,TLA,normal
+Firebending Student,{1}{R},Creature,"Human, Monk",,1,2,"Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)
+Firebending X, where X is this creature's power. (Whenever this creature attacks, add X {R}. This mana lasts until end of combat.)","Prowess, Firebending",R,rare,TLA,normal
+First-Time Flyer,{1}{U},Creature,"Human, Pilot, Ally",,1,2,"Flying
+This creature gets +1/+1 as long as there's a Lesson card in your graveyard.",Flying,U,common,TLA,normal
+Fists of Flame,{1}{R},Instant,,,,,"Draw a card. Until end of turn, target creature gains trample and gets +1/+0 for each card you've drawn this turn. (A creature with trample can deal excess combat damage to the player or planeswalker it's attacking.)",,R,common,TLE,normal
+Flawless Maneuver,{2}{W},Instant,,,,,"If you control a commander, you may cast this spell without paying its mana cost.
+Creatures you control gain indestructible until end of turn.",,W,rare,TLE,normal
+Flexible Waterbender,{3}{U},Creature,"Human, Warrior, Ally",,2,5,"Vigilance
+Waterbend {3}: This creature has base power and toughness 5/2 until end of turn. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)","Vigilance, Waterbend",U,common,TLA,normal
+"Flopsie, Bumi's Buddy",{4}{G}{G},Creature,"Ape, Goat",Legendary,4,4,"When Flopsie enters, put a +1/+1 counter on each creature you control.
+Each creature you control with power 4 or greater can't be blocked by more than one creature.",,G,uncommon,TLA,normal
+Flying Dolphin-Fish,{1}{U},Creature,"Whale, Fish",,1,3,Flying (This creature can't be blocked except by creatures with flying or reach.),Flying,U,common,TLE,normal
+Foggy Bottom Swamp,,Land,,,,,"This land enters tapped.
+{T}: Add {B} or {G}.
+{4}, {T}, Sacrifice this land: Draw a card.",,,common,TLA,normal
+Foggy Swamp Hunters,{3}{B},Creature,"Human, Ranger, Ally",,3,4,"As long as you've drawn two or more cards this turn, this creature has lifelink and menace. (It can't be blocked except by two or more creatures.)",,B,common,TLA,normal
+Foggy Swamp Spirit Keeper,{1}{U}{B},Creature,"Human, Druid, Ally",,2,4,"Lifelink
+Whenever you draw your second card each turn, create a 1/1 colorless Spirit creature token with ""This token can't block or be blocked by non-Spirit creatures.""",Lifelink,"U, B",uncommon,TLA,normal
+Foggy Swamp Vinebender,{3}{G},Creature,"Human, Plant, Ally",,4,3,"This creature can't be blocked by creatures with power 2 or less.
+Waterbend {5}: Put a +1/+1 counter on this creature. Activate only during your turn. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)",Waterbend,G,common,TLA,normal
+Foggy Swamp Visions,{1}{B}{B},Sorcery,,,,,"As an additional cost to cast this spell, waterbend {X}. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)
+Exile X target creature cards from graveyards. For each creature card exiled this way, create a token that's a copy of it. At the beginning of your next end step, sacrifice those tokens.",Waterbend,B,rare,TLA,normal
+Force of Negation,{1}{U}{U},Instant,,,,,"If it's not your turn, you may exile a blue card from your hand rather than pay this spell's mana cost.
+Counter target noncreature spell. If that spell is countered this way, exile it instead of putting it into its owner's graveyard.",,U,mythic,TLE,normal
+Forecasting Fortune Teller,{1}{U},Creature,"Human, Advisor, Ally",,1,3,"When this creature enters, create a Clue token. (It's an artifact with ""{2}, Sacrifice this token: Draw a card."")",,U,common,TLA,normal
+Forest,,Land,Forest,Basic,,,({T}: Add {G}.),,,common,TLA,normal
+Founding of Omashu,{2}{R},Enchantment,Saga,,,,"(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)
+I — Create two 1/1 white Ally creature tokens.
+II — You may discard a card. If you do, draw a card.
+III — Creatures you control get +1/+0 until end of turn.",,R,uncommon,TLE,saga
+Frantic Confrontation,{X}{R},Instant,,,,,Target creature you control gets +X/+0 and gains first strike and trample until end of turn.,,R,uncommon,TLE,normal
+Frantic Search,{2}{U},Instant,,,,,"Draw two cards, then discard two cards. Untap up to three lands.",,U,common,TLE,normal
+Freedom Fighter Recruit,{1}{R},Creature,"Human, Rebel, Ally",,*,2,Freedom Fighter Recruit's power is equal to the number of creatures you control.,,R,common,TLE,normal
+Frog-Squirrels,{1}{G},Creature,"Frog, Squirrel",,2,2,Reach (This creature can block creatures with flying.),Reach,G,common,TLE,normal
+Gamble,{R},Sorcery,,,,,"Search your library for a card, put that card into your hand, discard a card at random, then shuffle.",,R,rare,TLE,normal
+Gather the White Lotus,{4}{W},Sorcery,,,,,"Create a 1/1 white Ally creature token for each Plains you control. Scry 2. (Look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.)",Scry,W,uncommon,TLA,normal
+Geyser Leaper,{4}{U},Creature,"Human, Warrior, Ally",,4,3,"Flying
+Waterbend {4}: Draw a card, then discard a card. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)","Flying, Waterbend",U,common,TLA,normal
+Giant Fly,{2}{B},Creature,Insect,,2,2,"Flying
+Whenever you sacrifice another permanent, this creature gets +1/+0 until end of turn.",Flying,B,common,TLE,normal
+Giant Koi,{4}{U}{U},Creature,Fish,,5,7,"Waterbend {3}: This creature can't be blocked this turn. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)
+Islandcycling {2} ({2}, Discard this card: Search your library for an Island card, reveal it, put it into your hand, then shuffle.)","Islandcycling, Landcycling, Typecycling, Waterbend, Cycling",U,common,TLA,normal
+Gilacorn,{B},Creature,Lizard,,1,1,Deathtouch (Any amount of damage this deals to a creature is enough to destroy it.),Deathtouch,B,common,TLE,normal
+Glider Kids,{2}{W},Creature,"Human, Pilot, Ally",,2,3,"Flying
+When this creature enters, scry 1. (Look at the top card of your library. You may put it on the bottom.)","Scry, Flying",W,common,TLA,normal
+Glider Staff,{2}{W},Artifact,Equipment,,,,"When this Equipment enters, airbend up to one target creature. (Exile it. While it's exiled, its owner may cast it for {2} rather than its mana cost.)
+Equipped creature gets +1/+1 and has flying.
+Equip {2}","Airbend, Equip",W,uncommon,TLA,normal
+Gran-Gran,{U},Creature,"Human, Peasant, Ally",Legendary,1,2,"Whenever Gran-Gran becomes tapped, draw a card, then discard a card.
+Noncreature spells you cast cost {1} less to cast as long as there are three or more Lesson cards in your graveyard.",,U,uncommon,TLA,normal
+Great Divide Guide,{1}{G},Creature,"Human, Scout, Ally",,2,3,"Each land and Ally you control has ""{T}: Add one mana of any color.""",,G,rare,TLA,normal
+Guru Pathik,{2}{G/U}{G/U},Creature,"Human, Monk, Ally",Legendary,2,4,"When Guru Pathik enters, look at the top five cards of your library. You may reveal a Lesson, Saga, or Shrine card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
+Whenever you cast a Lesson, Saga, or Shrine spell, put a +1/+1 counter on another target creature you control.",,"U, G",uncommon,TLA,normal
+"Hakoda, Selfless Commander",{3}{W},Creature,"Human, Warrior, Ally",Legendary,3,5,"Vigilance
+You may look at the top card of your library any time.
+You may cast Ally spells from the top of your library.
+Sacrifice Hakoda: Creatures you control get +0/+5 and gain indestructible until end of turn.",Vigilance,W,rare,TLA,normal
+"Hama, the Bloodbender",{2}{U/B}{U/B}{U/B},Creature,"Human, Warlock",Legendary,3,3,"When Hama enters, target opponent mills three cards. Exile up to one noncreature, nonland card from that player's graveyard. For as long as you control Hama, you may cast the exiled card during your turn by waterbending {X} rather than paying its mana cost, where X is its mana value. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)","Mill, Waterbend","U, B",uncommon,TLA,normal
+"Haru, Hidden Talent",{1}{G},Creature,"Human, Peasant, Ally",Legendary,1,1,"Whenever another Ally you control enters, earthbend 1. (Target land you control becomes a 0/0 creature with haste that's still a land. Put a +1/+1 counter on it. When it dies or is exiled, return it to the battlefield tapped.)",Earthbend,G,uncommon,TLA,normal
+Heartbeat of Spring,{2}{G},Enchantment,,,,,"Whenever a player taps a land for mana, that player adds one mana of any type that land produced.",,G,mythic,TLE,normal
+Heartless Act,{1}{B},Instant,,,,,"Choose one —
+• Destroy target creature with no counters on it.
+• Remove up to three counters from target creature.",,B,uncommon,TLA,normal
+"Hei Bai, Forest Guardian",{3}{G},Creature,"Bear, Spirit",Legendary,4,4,"When Hei Bai enters, reveal cards from the top of your library until you reveal a Shrine card. You may put that card onto the battlefield. Then shuffle.
+{W}{U}{B}{R}{G}, {T}: For each legendary enchantment you control, create a 1/1 colorless Spirit creature token with ""This token can't block or be blocked by non-Spirit creatures.""",,G,mythic,TLE,normal
+"Hei Bai, Spirit of Balance",{2}{W/B}{W/B},Creature,"Bear, Spirit",Legendary,3,3,"Whenever Hei Bai enters or attacks, you may sacrifice another creature or artifact. If you do, put two +1/+1 counters on Hei Bai.
+When Hei Bai leaves the battlefield, put its counters on target creature you control.",,"W, B",uncommon,TLA,normal
+Hermitic Herbalist,{G}{U},Creature,"Human, Druid, Ally",,2,3,"{T}: Add one mana of any color.
+{T}: Add two mana in any combination of colors. Spend this mana only to cast Lesson spells.",,"U, G",uncommon,TLA,normal
+Heroic Intervention,{1}{G},Instant,,,,,Permanents you control gain hexproof and indestructible until end of turn.,,G,mythic,TLE,normal
+Hippo-Cows,{4}{G},Creature,"Hippo, Ox",,5,4,Trample (This creature can deal excess combat damage to the player it's attacking.),Trample,G,common,TLE,normal
+Hog-Monkey,{2}{B},Creature,"Boar, Monkey",,3,2,"At the beginning of combat on your turn, target creature you control with a +1/+1 counter on it gains menace until end of turn. (It can't be blocked except by two or more creatures.)
+Exhaust — {5}: Put two +1/+1 counters on this creature. (Activate each exhaust ability only once.)",Exhaust,B,common,TLA,normal
+Hog-Monkey Rampage,{1}{R/G},Instant,,,,,Choose target creature you control and target creature an opponent controls. Put a +1/+1 counter on the creature you control if it has power 4 or greater. Then those creatures fight each other. (Each deals damage equal to its power to the other.),Fight,"R, G",uncommon,TLE,normal
+Honest Work,{U},Enchantment,Aura,,,,"Enchant creature an opponent controls
+When this Aura enters, tap enchanted creature and remove all counters from it.
+Enchanted creature loses all abilities and is a Citizen with base power and toughness 1/1 and ""{T}: Add {C}"" named Humble Merchant. (It loses all other creature types and names.)",Enchant,U,uncommon,TLA,normal
+Hook Swords,{2}{R/W},Artifact,Equipment,,,,"When this Equipment enters, create a 1/1 white Ally creature token, then attach this Equipment to it.
+During your turn, equipped creature gets +1/+1 and has first strike.
+Equip {3}",Equip,"W, R",uncommon,TLE,normal
+How to Start a Riot,{2}{R},Instant,Lesson,,,,"Target creature gains menace until end of turn. (It can't be blocked except by two or more creatures.)
+Creatures target player controls get +2/+0 until end of turn.",,R,common,TLA,normal
+Humble Defector,{1}{R},Creature,"Human, Rogue",,2,1,{T}: Draw two cards. Target opponent gains control of this creature. Activate only during your turn.,,R,mythic,TLE,normal
+Iguana Parrot,{2}{U},Creature,"Lizard, Bird, Pirate",,2,2,"Flying, vigilance
+Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)","Flying, Prowess, Vigilance",U,common,TLA,normal
+Imprisoned in the Moon,{2}{U},Enchantment,Aura,,,,"Enchant creature, land, or planeswalker
+Enchanted permanent is a colorless land with ""{T}: Add {C}"" and loses all other card types and abilities.",Enchant,U,mythic,TLE,normal
+Inspired Insurgent,{1}{W},Creature,"Human, Peasant, Ally",,2,2,"{1}, Sacrifice this creature: Destroy target artifact or enchantment.",,W,common,TLE,normal
+Inspiring Call,{2}{G},Instant,,,,,"Draw a card for each creature you control with a +1/+1 counter on it. Those creatures gain indestructible until end of turn. (Damage and effects that say ""destroy"" don't destroy them.)",,G,uncommon,TLE,normal
+Insurrection,{5}{R}{R}{R},Sorcery,,,,,Untap all creatures and gain control of them until end of turn. They gain haste until end of turn.,,R,mythic,TLE,normal
+Intruder Alarm,{2}{U},Enchantment,,,,,"Creatures don't untap during their controllers' untap steps.
+Whenever a creature enters, untap all creatures.",,U,mythic,TLE,normal
+Invasion Reinforcements,{1}{W},Creature,"Human, Warrior, Ally",,1,1,"Flash
+When this creature enters, create a 1/1 white Ally creature token.",Flash,W,uncommon,TLA,normal
+Invasion Submersible,{2}{U},Artifact,Vehicle,,0,0,"When this Vehicle enters, return up to one other target nonland permanent to its owner's hand.
+Exhaust — Waterbend {3}: This Vehicle becomes an artifact creature. Put three +1/+1 counters on it. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}. Activate each exhaust ability only once.)","Exhaust, Waterbend",U,uncommon,TLA,normal
+Invasion Tactics,{4}{G},Enchantment,,,,,"When this enchantment enters, creatures you control get +2/+2 until end of turn.
+Whenever one or more Allies you control deal combat damage to a player, draw a card.",,G,uncommon,TLA,normal
+"Iroh, Dragon of the West",{2}{R}{R},Creature,"Human, Noble, Ally",Legendary,4,4,"Haste
+Mentor (Whenever this creature attacks, put a +1/+1 counter on target attacking creature with lesser power.)
+At the beginning of combat on your turn, each creature you control with a counter on it gains firebending 2 until end of turn. (Whenever it attacks, add {R}{R}. This mana lasts until end of combat.)","Mentor, Haste",R,rare,TLE,normal
+"Iroh, Firebending Instructor",{2}{R},Creature,"Human, Noble, Ally",Legendary,2,2,"Whenever Iroh attacks, attacking creatures get +1/+1 until end of turn.",,R,uncommon,TLE,normal
+"Iroh, Grand Lotus",{3}{G}{U}{R},Creature,"Human, Noble, Ally",Legendary,5,5,"Firebending 2
+During your turn, each non-Lesson instant and sorcery card in your graveyard has flashback. The flashback cost is equal to that card's mana cost. (You may cast a card from your graveyard for its flashback cost. Then exile it.)
+During your turn, each Lesson card in your graveyard has flashback {1}.",Firebending,"U, R, G",rare,TLA,normal
+"Iroh, Tea Master",{1}{R}{W},Creature,"Human, Citizen, Ally",Legendary,2,2,"When Iroh enters, create a Food token.
+At the beginning of combat on your turn, you may have target opponent gain control of target permanent you control. When you do, create a 1/1 white Ally creature token. Put a +1/+1 counter on that token for each permanent you own that your opponents control.",Food,"W, R",rare,TLA,normal
+Iroh's Demonstration,{1}{R},Sorcery,Lesson,,,,"Choose one —
+• Iroh's Demonstration deals 1 damage to each creature your opponents control.
+• Iroh's Demonstration deals 4 damage to target creature.",,R,uncommon,TLA,normal
+Island,,Land,Island,Basic,,,({T}: Add {U}.),,,common,TLA,normal
+It'll Quench Ya!,{1}{U},Instant,Lesson,,,,Counter target spell unless its controller pays {2}.,,U,common,TLA,normal
+Jasmine Dragon Tea Shop,,Land,,,,,"{T}: Add {C}.
+{T}: Add one mana of any color. Spend this mana only to cast an Ally spell or activate an ability of an Ally source.
+{5}, {T}: Create a 1/1 white Ally creature token.",,,rare,TLA,normal
+"Jeong Jeong, the Deserter",{2}{R},Creature,"Human, Rebel, Ally",Legendary,2,3,"Firebending 1 (Whenever this creature attacks, add {R}. This mana lasts until end of combat.)
+Exhaust — {3}: Put a +1/+1 counter on Jeong Jeong. When you next cast a Lesson spell this turn, copy it and you may choose new targets for the copy. (Activate each exhaust ability only once.)","Exhaust, Firebending",R,uncommon,TLA,normal
+Jeong Jeong's Deserters,{1}{W},Creature,"Human, Rebel, Ally",,1,2,"When this creature enters, put a +1/+1 counter on target creature.",,W,common,TLA,normal
+"Jet, Freedom Fighter",{2}{R/W}{R/W}{R/W},Creature,"Human, Rebel, Ally",Legendary,3,1,"When Jet enters, he deals damage equal to the number of creatures you control to target creature an opponent controls.
+When Jet dies, put a +1/+1 counter on each of up to two target creatures.",,"W, R",uncommon,TLA,normal
+"Jet, Rebel Leader",{3}{W},Creature,"Human, Rebel, Ally",Legendary,3,4,"Whenever Jet attacks, look at the top five cards of your library. You may put a creature card with mana value 3 or less from among them onto the battlefield tapped and attacking. Put the rest on the bottom of your library in a random order.",,W,rare,TLE,normal
+Jet's Brainwashing,{R},Sorcery,,,,,"Kicker {3} (You may pay an additional {3} as you cast this spell.)
+Target creature can't block this turn. If this spell was kicked, gain control of that creature until end of turn, untap it, and it gains haste until end of turn.
+Create a Clue token. (It's an artifact with ""{2}, Sacrifice this token: Draw a card."")",Kicker,R,uncommon,TLA,normal
+Join the Dance,{G}{W},Sorcery,,,,,"Create two 1/1 white Human creature tokens.
+Flashback {3}{G}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.)",Flashback,"W, G",mythic,TLE,normal
+"Joo Dee, One of Many",{1}{B},Creature,"Human, Advisor",,2,2,"{B}, {T}: Surveil 1. Create a token that's a copy of this creature, then sacrifice an artifact or creature. Activate only as a sorcery. (To surveil 1, look at the top card of your library. You may put it into your graveyard.)",Surveil,B,uncommon,TLA,normal
+"June, Bounty Hunter",{1}{B},Creature,"Human, Mercenary",Legendary,2,2,"June can't be blocked as long as you've drawn two or more cards this turn.
+{1}, Sacrifice another creature: Create a Clue token. Activate only during your turn. (It's an artifact with ""{2}, Sacrifice this token: Draw a card."")",,B,uncommon,TLA,normal
+"Katara, Bending Prodigy",{2}{U},Creature,"Human, Warrior, Ally",Legendary,2,3,"At the beginning of your end step, if Katara is tapped, put a +1/+1 counter on her.
+Waterbend {6}: Draw a card. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)",Waterbend,U,uncommon,TLA,normal
+"Katara, Heroic Healer",{4}{W},Creature,"Human, Warrior, Ally",Legendary,2,3,"Lifelink (Damage dealt by this creature also causes you to gain that much life.)
+When Katara enters, put a +1/+1 counter on each other creature you control.",Lifelink,W,uncommon,TLE,normal
+"Katara, Seeking Revenge",{3}{U/B},Creature,"Human, Warrior, Ally",Legendary,3,3,"As an additional cost to cast this spell, you may waterbend {2}. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)
+When Katara enters, draw a card, then discard a card unless her additional cost was paid.
+Katara gets +1/+1 for each Lesson card in your graveyard.",Waterbend,"U, B",uncommon,TLE,normal
+"Katara, the Fearless",{G}{W}{U},Creature,"Human, Warrior, Ally",Legendary,3,3,"If a triggered ability of an Ally you control triggers, that ability triggers an additional time.",,"W, U, G",rare,TLA,normal
+"Katara, Water Tribe's Hope",{2}{W}{U}{U},Creature,"Human, Warrior, Ally",Legendary,3,3,"Vigilance
+When Katara enters, create a 1/1 white Ally creature token.
+Waterbend {X}: Creatures you control have base power and toughness X/X until end of turn. X can't be 0. Activate only during your turn. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)","Vigilance, Waterbend","W, U",rare,TLA,normal
+"Katara, Waterbending Master",{1}{U},Creature,"Human, Warrior, Ally",Legendary,1,3,"Whenever you cast a spell during an opponent's turn, you get an experience counter.
+Whenever Katara attacks, you may draw a card for each experience counter you have. If you do, discard a card.",,U,mythic,TLE,normal
+Katara's Reversal,{2}{U}{U},Instant,,,,,"Counter up to four target spells and/or abilities.
+Untap up to four target artifacts and/or creatures.",,U,rare,TLE,normal
+Kindly Customer,{1}{W},Creature,"Human, Citizen",,1,1,"When this creature enters, draw a card.",,W,common,TLE,normal
+Knowledge Seeker,{1}{U},Creature,"Fox, Spirit",,2,1,"Vigilance
+Whenever you draw your second card each turn, put a +1/+1 counter on this creature.
+When this creature dies, create a Clue token. (It's an artifact with ""{2}, Sacrifice this token: Draw a card."")",Vigilance,U,uncommon,TLA,normal
+Koala-Sheep,{2}{W},Creature,"Bear, Sheep",,3,2,"When this creature enters, you gain 3 life.",,W,common,TLE,normal
+"Koh, the Face Stealer",{4}{B}{B},Creature,"Shapeshifter, Spirit",Legendary,6,6,"When Koh enters, exile up to one other target creature.
+Whenever another nontoken creature dies, you may exile it.
+Pay 1 life: Choose a creature card exiled with Koh.
+Koh has all activated and triggered abilities of the last chosen card.",,B,mythic,TLA,normal
+"Koma, Cosmos Serpent",{3}{G}{G}{U}{U},Creature,Serpent,Legendary,6,6,"This spell can't be countered.
+At the beginning of each upkeep, create a 3/3 blue Serpent creature token named Koma's Coil.
+Sacrifice another Serpent: Choose one —
+• Tap target permanent. Its activated abilities can't be activated this turn.
+• Koma gains indestructible until end of turn.",,"U, G",mythic,TLE,normal
+Komodo Rhino,{3}{R},Creature,"Lizard, Rhino",,5,2,Trample (This creature can deal excess combat damage to the player it's attacking.),Trample,R,common,TLE,normal
+Kyoshi Battle Fan,{2},Artifact,Equipment,,,,"When this Equipment enters, create a 1/1 white Ally creature token, then attach this Equipment to it.
+Equipped creature gets +1/+0.
+Equip {2} ({2}:Attach to target creature you control. Equip only as a sorcery.)",Equip,,common,TLA,normal
+Kyoshi Island Plaza,{3}{G},Enchantment,Shrine,Legendary,,,"When Kyoshi Island Plaza enters, search your library for up to X basic land cards, where X is the number of Shrines you control. Put those cards onto the battlefield tapped, then shuffle.
+Whenever another Shrine you control enters, search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",,G,uncommon,TLA,normal
+Kyoshi Village,,Land,,,,,"This land enters tapped.
+{T}: Add {G} or {W}.
+{4}, {T}, Sacrifice this land: Draw a card.",,,common,TLA,normal
+Kyoshi Warrior Exemplars,{3}{G},Creature,"Human, Warrior, Ally",,4,3,"Whenever this creature attacks, if you control eight or more lands, creatures you control get +2/+2 until end of turn.",,G,uncommon,TLE,normal
+Kyoshi Warrior Guard,{1}{W},Creature,"Human, Warrior, Ally",,2,3,,,W,common,TLE,normal
+Kyoshi Warriors,{3}{W},Creature,"Human, Warrior, Ally",,3,3,"When this creature enters, create a 1/1 white Ally creature token.",,W,common,TLA,normal
+Leaves from the Vine,{1}{G},Enchantment,Saga,,,,"(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)
+I — Mill three cards, then create a Food token. (It's an artifact with ""{2}, {T}, Sacrifice this token: You gain 3 life."")
+II — Put a +1/+1 counter on each of up to two target creatures you control.
+III — Draw a card if there's a creature or Lesson card in your graveyard.","Food, Mill",G,uncommon,TLA,normal
+Lightning Bolt,{R},Instant,,,,,Lightning Bolt deals 3 damage to any target.,,R,mythic,TLE,normal
+Lightning Strike,{1}{R},Instant,,,,,Lightning Strike deals 3 damage to any target.,,R,common,TLA,normal
+Lion Vulture,{3}{B},Creature,"Cat, Bird",,2,2,"Flying (This creature can't be blocked except by creatures with flying or reach.)
+At the beginning of your end step, if an opponent lost life this turn, put a +1/+1 counter on this creature and draw a card. (Damage causes loss of life.)",Flying,B,rare,TLE,normal
+"Lita, Mechanical Engineer",{2}{W},"Artifact, Creature",Artificer,Legendary,3,3,"Vigilance
+At the beginning of your end step, untap each other artifact creature you control.
+{3}{W}, {T}: Create a 5/5 colorless Vehicle artifact token named Zeppelin with flying and crew 3. (It has ""Tap any number of creatures you control with total power 3 or more: This token becomes an artifact creature until end of turn."")",Vigilance,W,mythic,TLE,normal
+"Lo and Li, Royal Advisors",{2}{B}{B},Creature,"Human, Advisor",Legendary,3,3,"Whenever an opponent discards a card or mills one or more cards, put a +1/+1 counter on each Advisor you control.
+{2}{U/B}: Target player mills four cards. (They put the top four cards of their library into their graveyard.)",Mill,B,rare,TLE,normal
+"Lo and Li, Twin Tutors",{4}{B},Creature,"Human, Advisor",Legendary,2,2,"When Lo and Li enter, search your library for a Lesson or Noble card, reveal it, put it into your hand, then shuffle.
+Noble creatures you control and Lesson spells you control have lifelink.",,B,uncommon,TLA,normal
+"Long Feng, Grand Secretariat",{1}{B/G}{B/G},Creature,"Human, Advisor",Legendary,2,3,"Whenever another creature you control or a land you control is put into a graveyard from the battlefield, put a +1/+1 counter on target creature you control.",,"B, G",uncommon,TLA,normal
+"Longshot, Rebel Bowman",{3}{R},Creature,"Human, Rebel, Ally",Legendary,3,3,"Reach (This creature can block creatures with flying.)
+Noncreature spells you cast cost {1} less to cast.
+Whenever you cast a noncreature spell, Longshot deals 2 damage to each opponent.",Reach,R,uncommon,TLE,normal
+Lost Days,{4}{U},Instant,Lesson,,,,"The owner of target creature or enchantment puts it into their library second from the top or on the bottom. You create a Clue token. (It's an artifact with ""{2}, Sacrifice this token: Draw a card."")",,U,common,TLA,normal
+Lost in Memories,{1}{R},Enchantment,Aura,,,,"Flash
+Enchant creature you control
+Enchanted creature gets +1/+1 and has ""Whenever this creature deals combat damage to a player, target instant or sorcery card in your graveyard gains flashback until end of turn. The flashback cost is equal to its mana cost."" (You may cast that card from your graveyard for its flashback cost. Then exile it.)","Enchant, Flash",R,rare,TLE,normal
+Lost in the Spirit World,{2}{U},Sorcery,,,,,"Return up to one target creature to its owner's hand. Create a 1/1 colorless Spirit creature token with ""This token can't block or be blocked by non-Spirit creatures.""",,U,uncommon,TLE,normal
+Loyal Fire Sage,{2}{R},Creature,"Human, Cleric, Ally",,3,3,"Firebending 1 (Whenever this creature attacks, add {R}. This mana lasts until end of combat.)
+{5}: Create a 1/1 white Ally creature token.",Firebending,R,uncommon,TLE,normal
+Mai and Zuko,{1}{U}{B}{R},Creature,"Human, Noble, Ally",Legendary,3,5,"Firebending 3
+You may cast Ally spells and artifact spells as though they had flash.",Firebending,"U, B, R",rare,TLE,normal
+"Mai, Jaded Edge",{1}{R},Creature,"Human, Noble",Legendary,1,3,"Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)
+Exhaust — {3}: Put a double strike counter on Mai. (Activate each exhaust ability only once.)","Prowess, Exhaust",R,uncommon,TLA,normal
+"Mai, Scornful Striker",{1}{B},Creature,"Human, Noble, Ally",Legendary,2,2,"First strike
+Whenever a player casts a noncreature spell, they lose 2 life.",First strike,B,rare,TLA,normal
+Many Partings,{G},Sorcery,,,,,"Search your library for a basic land card, reveal it, put it into your hand, then shuffle. Create a Food token. (It's an artifact with ""{2}, {T}, Sacrifice this token: You gain 3 life."")",Food,G,common,TLE,normal
+Master Pakku,{1}{U},Creature,"Human, Advisor, Ally",Legendary,1,3,"Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)
+Whenever Master Pakku becomes tapped, target player mills X cards, where X is the number of Lesson cards in your graveyard. (They put the top X cards of their library into their graveyard.)","Prowess, Mill",U,uncommon,TLA,normal
+Master Piandao,{4}{W},Creature,"Human, Warrior, Ally",Legendary,4,4,"First strike
+Whenever Master Piandao attacks, look at the top four cards of your library. You may reveal an Ally, Equipment, or Lesson card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.",First strike,W,uncommon,TLA,normal
+Master's Guidance,{2}{G},Enchantment,,,,,"Whenever you attack with two or more legendary creatures, put a +1/+1 counter on each of up to two target attacking creatures.
+At the beginning of your end step, if you control a creature with power 4 or greater, draw a card.",,G,rare,TLE,normal
+Match the Odds,{2}{G},Sorcery,Lesson,,,,Create a 1/1 white Ally creature token. Put a +1/+1 counter on it for each creature your opponents control.,,G,uncommon,TLE,normal
+Mechanical Glider,{1},Artifact,Equipment,,,,"When this Equipment enters, attach it to target creature you control.
+Equipped creature has flying. (It can't be blocked except by creatures with flying or reach.)
+Equip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)",Equip,,common,TLE,normal
+Meditation Pools,,Land,,,,,"This land enters tapped.
+{T}: Add {G} or {U}.
+{4}, {T}, Sacrifice this land: Draw a card.",,,common,TLA,normal
+Merchant of Many Hats,{1}{B},Creature,"Human, Peasant, Ally",,2,2,{2}{B}: Return this card from your graveyard to your hand.,,B,common,TLA,normal
+Messenger Hawk,{2}{U/B},Creature,"Bird, Scout",,1,2,"Flying
+When this creature enters, create a Clue token. (It's an artifact with ""{2}, Sacrifice this token: Draw a card."")
+This creature gets +2/+0 as long as you've drawn two or more cards this turn.",Flying,"U, B",common,TLA,normal
+Meteor Sword,{7},Artifact,Equipment,,,,"When this Equipment enters, destroy target permanent.
+Equipped creature gets +3/+3.
+Equip {3} ({3}:Attach to target creature you control. Equip only as a sorcery.)",Equip,,uncommon,TLA,normal
+Meteorite,{5},Artifact,,,,,"When this artifact enters, it deals 2 damage to any target.
+{T}: Add one mana of any color.",,,mythic,TLE,normal
+Mirrorwing Dragon,{3}{R}{R},Creature,Dragon,,4,5,"Flying
+Whenever a player casts an instant or sorcery spell that targets only this creature, that player copies that spell for each other creature they control that the spell could target. Each copy targets a different one of those creatures.",Flying,R,mythic,TLE,normal
+Misty Palms Oasis,,Land,,,,,"This land enters tapped.
+{T}: Add {W} or {B}.
+{4}, {T}, Sacrifice this land: Draw a card.",,,common,TLA,normal
+"Moku, Meandering Drummer",{1}{R},Creature,"Human, Bard, Ally",Legendary,2,2,"Whenever you cast a noncreature spell, you may pay {1}. If you do, Moku gets +2/+1 and creatures you control gain haste until end of turn.",,R,uncommon,TLE,normal
+"Momo, Friendly Flier",{W},Creature,"Lemur, Bat, Ally",Legendary,1,1,"Flying
+The first non-Lemur creature spell with flying you cast during each of your turns costs {1} less to cast.
+Whenever another creature you control with flying enters, Momo gets +1/+1 until end of turn.",Flying,W,rare,TLA,normal
+"Momo, Playful Pet",{W},Creature,"Lemur, Bat, Ally",Legendary,1,1,"Flying, vigilance
+When Momo leaves the battlefield, choose one —
+• Create a Food token. (It's an artifact with ""{2}, {T}, Sacrifice this token: You gain 3 life."")
+• Put a +1/+1 counter on target creature you control.
+• Scry 2.","Scry, Flying, Vigilance, Food",W,uncommon,TLA,normal
+"Momo, Rambunctious Rascal",{2}{W},Creature,"Lemur, Bat, Ally",Legendary,1,1,"Flying (This creature can't be blocked except by creatures with flying or reach.)
+When Momo enters, he deals 4 damage to target tapped creature an opponent controls.",Flying,W,uncommon,TLE,normal
+Momo's Heist,{2}{R},Sorcery,,,,,"Gain control of target artifact. Untap it. It gains haste. At the beginning of the next end step, sacrifice it.",,R,rare,TLE,normal
+Mongoose Lizard,{4}{R}{R},Creature,"Mongoose, Lizard",,5,6,"Menace (This creature can't be blocked except by two or more creatures.)
+When this creature enters, it deals 1 damage to any target.
+Mountaincycling {2} ({2}, Discard this card: Search your library for a Mountain card, reveal it, put it into your hand, then shuffle.)","Mountaincycling, Landcycling, Menace, Typecycling, Cycling",R,common,TLA,normal
+Monk Gyatso,{3}{W},Creature,"Human, Monk",Legendary,3,3,"Whenever another creature you control becomes the target of a spell or ability, you may airbend that creature. (Exile it. While it's exiled, its owner may cast it for {2} rather than its mana cost.)",Airbend,W,rare,TLE,normal
+Mountain,,Land,Mountain,Basic,,,({T}: Add {R}.),,,common,TLA,normal
+Mystic Remora,{U},Enchantment,,,,,"Cumulative upkeep {1} (At the beginning of your upkeep, put an age counter on this permanent, then sacrifice it unless you pay its upkeep cost for each age counter on it.)
+Whenever an opponent casts a noncreature spell, you may draw a card unless that player pays {4}.",Cumulative upkeep,U,mythic,TLE,normal
+Mystical Tutor,{U},Instant,,,,,"Search your library for an instant or sorcery card, reveal it, then shuffle and put that card on top.",,U,rare,TLE,normal
+Nightmares and Daydreams,{2}{U},Enchantment,Saga,,,,"(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)
+I, II, III — Until your next turn, whenever you cast an instant or sorcery spell, target player mills cards equal to that spell's mana value.
+IV — Draw a card. If a graveyard has twenty or more cards in it, draw three cards instead.",Mill,U,rare,TLE,saga
+North Pole Gates,,Land,,,,,"This land enters tapped.
+{T}: Add {W} or {U}.
+{4}, {T}, Sacrifice this land: Draw a card.",,,common,TLA,normal
+North Pole Patrol,{2}{U},Creature,"Human, Soldier, Ally",,2,3,"{T}: Untap another target permanent you control.
+Waterbend {3}, {T}: Tap target creature an opponent controls. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)",Waterbend,U,uncommon,TLA,normal
+Northern Air Temple,{B},Enchantment,Shrine,Legendary,,,"When Northern Air Temple enters, each opponent loses X life and you gain X life, where X is the number of Shrines you control.
+Whenever another Shrine you control enters, each opponent loses 1 life and you gain 1 life.",,B,uncommon,TLA,normal
+Noxious Gearhulk,{4}{B}{B},"Artifact, Creature",Construct,,5,4,"Menace
+When this creature enters, you may destroy another target creature. If a creature is destroyed this way, you gain life equal to its toughness.",Menace,B,mythic,TLE,normal
+"Nyla, Shirshu Sleuth",{4}{B},Creature,"Mole, Beast",Legendary,4,5,"When Nyla enters, exile up to one target creature card from your graveyard. If you do, you lose X life and create X Clue tokens, where X is that card's mana value. (A Clue token is an artifact with ""{2}, Sacrifice this token: Draw a card."")
+At the beginning of your end step, if you control no Clues, return target card exiled with Nyla to its owner's hand.",,B,rare,TLE,normal
+Obscuring Haze,{2}{G},Instant,,,,,"If you control a commander, you may cast this spell without paying its mana cost.
+Prevent all damage that would be dealt this turn by creatures your opponents control.",,G,rare,TLE,normal
+Obsessive Pursuit,{1}{B},Enchantment,,,,,"When this enchantment enters and at the beginning of your upkeep, you lose 1 life and create a Clue token. (It's an artifact with ""{2}, Sacrifice this token: Draw a card."")
+Whenever you attack, put X +1/+1 counters on target attacking creature, where X is the number of permanents you've sacrificed this turn. If X is three or greater, that creature gains lifelink until end of turn.",,B,rare,TLA,normal
+Octopus Form,{U},Instant,Lesson,,,,Target creature you control gets +1/+1 and gains hexproof until end of turn. Untap it. (It can't be the target of spells or abilities your opponents control.),,U,common,TLA,normal
+Omashu City,,Land,,,,,"This land enters tapped.
+{T}: Add {R} or {G}.
+{4}, {T}, Sacrifice this land: Draw a card.",,,common,TLA,normal
+Origin of Metalbending,{1}{G},Instant,Lesson,,,,"Choose one —
+• Destroy target artifact or enchantment.
+• Put a +1/+1 counter on target creature you control. It gains indestructible until end of turn. (Damage and effects that say ""destroy"" don't destroy it.)",,G,common,TLA,normal
+Ostrich-Horse,{2}{G},Creature,"Bird, Horse",,3,1,"When this creature enters, mill three cards. You may put a land card from among them into your hand. If you don't, put a +1/+1 counter on this creature. (To mill three cards, put the top three cards of your library into your graveyard.)",Mill,G,common,TLA,normal
+Otter-Penguin,{1}{U},Creature,"Otter, Bird",,2,1,"Whenever you draw your second card each turn, this creature gets +1/+2 until end of turn and can't be blocked this turn.",,U,common,TLA,normal
+Overwhelming Victory,{4}{R},Instant,Lesson,,,,"Overwhelming Victory deals 5 damage to target creature. Each creature you control gains trample and gets +X/+0 until end of turn, where X is the amount of excess damage dealt this way.",,R,rare,TLE,normal
+"Ozai, the Phoenix King",{2}{B}{B}{R}{R},Creature,"Human, Noble",Legendary,7,7,"Trample, firebending 4, haste
+If you would lose unspent mana, that mana becomes red instead.
+Ozai has flying and indestructible as long as you have six or more unspent mana.","Haste, Trample, Firebending","B, R",mythic,TLA,normal
+Ozai's Cruelty,{2}{B},Sorcery,Lesson,,,,Ozai's Cruelty deals 2 damage to target player. That player discards two cards.,,B,uncommon,TLA,normal
+Path to Redemption,{1}{W},Enchantment,Aura,,,,"Enchant creature
+Enchanted creature can't attack or block.
+{5}, Sacrifice this Aura: Exile enchanted creature. Create a 1/1 white Ally creature token. Activate only during your turn.",Enchant,W,common,TLA,normal
+Phoenix Fleet Airship,{2}{B}{B},Artifact,Vehicle,,4,4,"Flying
+At the beginning of your end step, if you sacrificed a permanent this turn, create a token that's a copy of this Vehicle.
+As long as you control eight or more permanents named Phoenix Fleet Airship, this Vehicle is an artifact creature.
+Crew 1","Flying, Crew",B,mythic,TLA,normal
+Pillar Launch,{G},Instant,,,,,Target creature gets +2/+2 and gains reach until end of turn. Untap it.,,G,common,TLA,normal
+"Pipsqueak, Rebel Strongarm",{2}{W},Creature,"Human, Rebel, Ally",Legendary,4,4,Pipsqueak can't attack alone unless he has a +1/+1 counter on him.,,W,uncommon,TLE,normal
+Pirate Peddlers,{2}{B},Creature,"Human, Pirate",,2,2,"Deathtouch
+Whenever you sacrifice another permanent, put a +1/+1 counter on this creature.",Deathtouch,B,common,TLA,normal
+Plains,,Land,Plains,Basic,,,({T}: Add {W}.),,,common,TLA,normal
+Planetarium of Wan Shi Tong,{6},Artifact,,Legendary,,,"{1}, {T}: Scry 2.
+Whenever you scry or surveil, look at the top card of your library. You may cast that card without paying its mana cost. Do this only once each turn. (Look at the card after you scry or surveil.)",Scry,,mythic,TLA,normal
+Platypus-Bear,{1}{G/U},Creature,"Platypus, Bear",,2,3,"Defender
+When this creature enters, mill two cards. (Put the top two cards of your library into your graveyard.)
+As long as there is a Lesson card in your graveyard, this creature can attack as though it didn't have defender.","Mill, Defender","U, G",common,TLA,normal
+Pretending Poxbearers,{1}{W/B},Creature,"Human, Citizen, Ally",,2,1,"When this creature dies, create a 1/1 white Ally creature token.",,"W, B",common,TLA,normal
+Price of Freedom,{1}{R},Sorcery,Lesson,,,,"Destroy target artifact or land an opponent controls. Its controller may search their library for a basic land card, put it onto the battlefield tapped, then shuffle.
+Draw a card.",,R,uncommon,TLA,normal
+Princess Yue,{2}{U},Creature,"Human, Noble, Ally",Legendary,3,2,"When Princess Yue dies, if she was a nonland creature, return this card to the battlefield tapped under your control. She's a land named Moon. She gains ""{T}: Add {C}."" (She's still legendary.)
+{T}: Scry 2.",Scry,U,uncommon,TLE,normal
+"Professor Zei, Anthropologist",{U/R}{U/R},Creature,"Human, Advisor, Ally",Legendary,0,3,"{T}, Discard a card: Draw a card.
+{1}, {T}, Sacrifice Professor Zei: Return target instant or sorcery card from your graveyard to your hand. Activate only during your turn.",,"U, R",uncommon,TLA,normal
+Prosperity,{X}{U},Sorcery,,,,,Each player draws X cards.,,U,mythic,TLE,normal
+Purple Pentapus,{B},Creature,"Octopus, Starfish",,1,1,"When this creature enters, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)
+{2}{B}, Tap an untapped creature you control: Return this card from your graveyard to the battlefield tapped.",Surveil,B,common,TLE,normal
+Rabaroo Troop,{3}{W}{W},Creature,"Rabbit, Kangaroo",,3,5,"Landfall — Whenever a land you control enters, this creature gains flying until end of turn and you gain 1 life.
+Plainscycling {2} ({2}, Discard this card: Search your library for a Plains card, reveal it, put it into your hand, then shuffle.)","Plainscycling, Landcycling, Typecycling, Cycling, Landfall",W,common,TLA,normal
+Ran and Shaw,{3}{R}{R},Creature,Dragon,Legendary,4,4,"Flying, firebending 2
+When Ran and Shaw enter, if you cast them and there are three or more Dragon and/or Lesson cards in your graveyard, create a token that's a copy of Ran and Shaw, except it's not legendary.
+{3}{R}: Dragons you control get +2/+0 until end of turn.","Flying, Firebending",R,rare,TLA,normal
+Raucous Audience,{1}{G},Creature,"Human, Citizen",,2,1,"{T}: Add {G}. If you control a creature with power 4 or greater, add {G}{G} instead.",,G,common,TLA,normal
+Raven Eagle,{2}{B},Creature,"Bird, Assassin",,2,3,"Flying
+Whenever this creature enters or attacks, exile up to one target card from a graveyard. If a creature card is exiled this way, create a Clue token. (It's an artifact with ""{2}, Sacrifice this token: Draw a card."")
+Whenever you draw your second card each turn, each opponent loses 1 life and you gain 1 life.",Flying,B,rare,TLA,normal
+Razor Rings,{1}{W},Instant,,,,,Razor Rings deals 4 damage to target attacking or blocking creature. You gain life equal to the excess damage dealt this way.,,W,common,TLA,normal
+Realm of Koh,,Land,,,,,"This land enters tapped unless you control a basic land.
+{T}: Add {B}.
+{3}{B}, {T}: Create a 1/1 colorless Spirit creature token with ""This token can't block or be blocked by non-Spirit creatures.""",,,rare,TLA,normal
+Rebellious Captives,{1}{G},Creature,"Human, Peasant, Ally",,2,2,"Exhaust — {6}: Put two +1/+1 counters on this creature, then earthbend 2. (Target land you control becomes a 0/0 creature with haste that's still a land. Put two +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped. Activate each exhaust ability only once.)","Exhaust, Earthbend",G,common,TLA,normal
+Reckless Blaze,{3}{R}{R},Sorcery,Lesson,,,,"Reckless Blaze deals 5 damage to each creature. Whenever a creature you control dealt damage this way dies this turn, add {R}.",,R,rare,TLE,normal
+Redirect Lightning,{R},Instant,Lesson,,,,"As an additional cost to cast this spell, pay 5 life or pay {2}.
+Change the target of target spell or ability with a single target.",,R,rare,TLA,normal
+Release to Memory,{3}{W},Instant,,,,,"Exile target opponent's graveyard. For each creature card exiled this way, create a 1/1 colorless Spirit creature token.",,W,mythic,TLE,normal
+Rending Volley,{R},Instant,,,,,"This spell can't be countered.
+Rending Volley deals 4 damage to target white or blue creature.",,R,mythic,TLE,normal
+Return of the Wildspeaker,{4}{G},Instant,,,,,"Choose one —
+• Draw cards equal to the greatest power among non-Human creatures you control.
+• Non-Human creatures you control get +3/+3 until end of turn.",,G,mythic,TLE,normal
+Rhys the Redeemed,{G/W},Creature,"Elf, Warrior",Legendary,1,1,"{2}{G/W}, {T}: Create a 1/1 green and white Elf Warrior creature token.
+{4}{G/W}{G/W}, {T}: For each creature token you control, create a token that's a copy of that creature.",,"W, G",mythic,TLE,normal
+Rites of Flourishing,{2}{G},Enchantment,,,,,"At the beginning of each player's draw step, that player draws an additional card.
+Each player may play an additional land on each of their turns.",,G,mythic,TLE,normal
+Rockalanche,{2}{G},Sorcery,Lesson,,,,"Earthbend X, where X is the number of Forests you control. (Target land you control becomes a 0/0 creature with haste that's still a land. Put X +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)
+Flashback {5}{G} (You may cast this card from your graveyard for its flashback cost. Then exile it.)","Earthbend, Flashback",G,uncommon,TLA,normal
+Rocky Rebuke,{1}{G},Instant,,,,,Target creature you control deals damage equal to its power to target creature an opponent controls.,,G,common,TLA,normal
+Roku's Mastery,{X}{R}{R},Instant,,,,,"Roku's Mastery deals X damage to target creature. If X is 4 or greater, scry 2. (Look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.)",Scry,R,uncommon,TLE,normal
+Rough Rhino Cavalry,{4}{R},Creature,"Human, Mercenary",,5,5,"Firebending 2 (Whenever this creature attacks, add {R}{R}. This mana lasts until end of combat.)
+Exhaust — {8}: Put two +1/+1 counters on this creature. It gains trample until end of turn. (Activate each exhaust ability only once.)","Exhaust, Firebending",R,common,TLA,normal
+Rowdy Snowballers,{2}{U},Creature,"Human, Peasant, Ally",,2,2,"When this creature enters, tap target creature an opponent controls and put a stun counter on it. (If a permanent with a stun counter would become untapped, remove one from it instead.)",,U,common,TLA,normal
+Ruinous Waterbending,{1}{B}{B},Sorcery,Lesson,,,,"As an additional cost to cast this spell, you may waterbend {4}. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)
+All creatures get -2/-2 until end of turn. If this spell's additional cost was paid, whenever a creature dies this turn, you gain 1 life.",Waterbend,B,uncommon,TLA,normal
+Rumble Arena,,Land,,,,,"Vigilance
+When this land enters, scry 1. (Look at the top card of your library. You may put it on the bottom.)
+{T}: Add {C}.
+{1}, {T}: Add one mana of any color.","Vigilance, Scry",,common,TLA,normal
+Run Amok,{1}{R},Instant,,,,,Target attacking creature gets +3/+3 and gains trample until end of turn.,,R,common,TLE,normal
+Ruthless Waterbender,{1}{B},Creature,"Human, Soldier, Ally",,1,3,"Waterbend {2}: This creature gets +1/+1 until end of turn. Activate only during your turn. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)",Waterbend,B,uncommon,TLE,normal
+Saber-Tooth Moose-Lion,{4}{G}{G},Creature,"Elk, Cat",,7,7,"Reach
+Forestcycling {2} ({2}, Discard this card: Search your library for a Forest card, reveal it, put it into your hand, then shuffle.)","Reach, Landcycling, Forestcycling, Typecycling, Cycling",G,common,TLA,normal
+Sakashima of a Thousand Faces,{3}{U},Creature,"Human, Rogue",Legendary,3,1,"You may have Sakashima enter as a copy of another creature you control, except it has Sakashima's other abilities.
+The ""legend rule"" doesn't apply to permanents you control.
+Partner (You can have two commanders if both have partner.)",Partner,U,mythic,TLE,normal
+Sandbender Scavengers,{W}{B},Creature,"Human, Rogue",,1,1,"Whenever you sacrifice another permanent, put a +1/+1 counter on this creature.
+When this creature dies, you may exile it. When you do, return target creature card with mana value less than or equal to this creature's power from your graveyard to the battlefield.",,"W, B",rare,TLA,normal
+Sandbenders' Storm,{3}{W},Instant,,,,,"Choose one—
+• Destroy target creature with power 4 or greater.
+• Earthbend 3. (Target land you control becomes a 0/0 creature with haste that's still a land. Put three +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)",Earthbend,W,common,TLA,normal
+Scarring Memories,{3}{B},Sorcery,Lesson,,,,"You may cast this spell as though it had flash if you control an attacking legendary creature.
+Target opponent sacrifices a creature of their choice, discards a card, and loses 3 life.",,B,uncommon,TLE,normal
+Scout's Warning,{W},Instant,,,,,"The next creature card you play this turn can be played as though it had flash.
+Draw a card.",,W,mythic,TLE,normal
+Searing Blood,{R}{R},Instant,,,,,"Searing Blood deals 2 damage to target creature. When that creature dies this turn, Searing Blood deals 3 damage to the creature's controller.",,R,mythic,TLE,normal
+Secret of Bloodbending,{U}{U}{U}{U},Sorcery,Lesson,,,,"As an additional cost to cast this spell, you may waterbend {10}.
+You control target opponent during their next combat phase. If this spell's additional cost was paid, you control that player during their next turn instead. (You see all cards that player could see and make all decisions for them.)
+Exile Secret of Bloodbending.",Waterbend,U,mythic,TLA,normal
+Secret Tunnel,,Land,Cave,,,,"This land can't be blocked.
+{T}: Add {C}.
+{4}, {T}: Two target creatures you control that share a creature type can't be blocked this turn.",,,rare,TLA,normal
+Seismic Sense,{G},Sorcery,Lesson,,,,"Look at the top X cards of your library, where X is the number of lands you control. You may reveal a creature or land card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.",,G,uncommon,TLA,normal
+Seismic Tutelage,{3}{G},Enchantment,Aura,,,,"Enchant creature
+When this Aura enters, put a +1/+1 counter on enchanted creature.
+Whenever enchanted creature attacks, double the number of +1/+1 counters on it.",Enchant,G,rare,TLE,normal
+Serpent of the Pass,{5}{U}{U},Creature,Serpent,,6,5,"If there are three or more Lesson cards in your graveyard, you may cast this spell as though it had flash.
+This spell costs {1} less to cast for each noncreature, nonland card in your graveyard.",,U,uncommon,TLA,normal
+Serpent's Pass,,Land,,,,,"This land enters tapped.
+{T}: Add {U} or {B}.
+{4}, {T}, Sacrifice this land: Draw a card.",,,common,TLA,normal
+Shared Roots,{1}{G},Sorcery,Lesson,,,,"Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",,G,uncommon,TLA,normal
+Shattering Spree,{R},Sorcery,,,,,"Replicate {R} (When you cast this spell, copy it for each time you paid its replicate cost. You may choose new targets for the copies.)
+Destroy target artifact.",Replicate,R,mythic,TLE,normal
+Sledding Otter-Penguin,{2}{W},Creature,"Otter, Bird",,2,3,{3}: Put a +1/+1 counter on this creature.,,W,common,TLE,normal
+"Smellerbee, Rebel Fighter",{3}{R},Creature,"Human, Rebel, Ally",Legendary,3,3,"First strike
+Other creatures you control have haste.
+Whenever Smellerbee attacks, you may discard your hand. If you do, draw cards equal to the number of attacking creatures.",First strike,R,rare,TLE,normal
+Sokka and Suki,{U}{R}{W},Creature,"Human, Warrior, Ally",Legendary,3,3,"Whenever Sokka and Suki or another Ally you control enters, attach up to one target Equipment you control to that creature.
+Whenever an Equipment you control enters, create a 1/1 white Ally creature token.",,"W, U, R",rare,TLE,normal
+"Sokka, Bold Boomeranger",{U}{R},Creature,"Human, Warrior, Ally",Legendary,1,1,"When Sokka enters, discard up to two cards, then draw that many cards.
+Whenever you cast an artifact or Lesson spell, put a +1/+1 counter on Sokka.",,"U, R",rare,TLA,normal
+"Sokka, Lateral Strategist",{1}{W/U}{W/U},Creature,"Human, Warrior, Ally",Legendary,2,4,"Vigilance
+Whenever Sokka and at least one other creature attack, draw a card.",Vigilance,"W, U",uncommon,TLA,normal
+"Sokka, Swordmaster",{2}{W},Creature,"Human, Warrior, Ally",Legendary,3,3,"Vigilance
+Equipment spells you cast cost {1} less to cast for each Ally you control.
+At the beginning of combat on your turn, attach up to one target Equipment you control to Sokka.",Vigilance,W,mythic,TLE,normal
+"Sokka, Tenacious Tactician",{1}{U}{R}{W},Creature,"Human, Warrior, Ally",Legendary,3,3,"Menace, prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)
+Other Allies you control have menace and prowess.
+Whenever you cast a noncreature spell, create a 1/1 white Ally creature token.","Prowess, Menace","W, U, R",rare,TLA,normal
+"Sokka, Wolf Cove's Protector",{2}{W},Creature,"Human, Warrior, Ally",Legendary,3,3,Vigilance (Attacking doesn't cause this creature to tap.),Vigilance,W,uncommon,TLE,normal
+Sokka's Charge,{3}{W},Enchantment,,,,,"During your turn, Allies you control have double strike and lifelink.",,W,rare,TLE,normal
+Sokka's Haiku,{3}{U}{U},Instant,Lesson,,,,"Counter target spell.
+Draw a card, then mill three cards.
+Untap target land.",Mill,U,uncommon,TLA,normal
+Sokka's Sword Training,{1}{W},Instant,Lesson,,,,"Target creature gets +2/+2 until end of turn.
+Create a Clue token. (It's an artifact with ""{2}, Sacrifice this token: Draw a card."")",,W,common,TLE,normal
+Sol Ring,{1},Artifact,,,,,{T}: Add {C}{C}.,,,rare,TLE,normal
+Sold Out,{3}{B},Instant,,,,,"Exile target creature. If it was dealt damage this turn, create a Clue token. (It's an artifact with ""{2}, Sacrifice this token: Draw a card."")",,B,common,TLA,normal
+Solid Ground,{3}{G},Enchantment,,,,,"When this enchantment enters, earthbend 3. (Target land you control becomes a 0/0 creature with haste that's still a land. Put three +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)
+If one or more +1/+1 counters would be put on a permanent you control, that many plus one +1/+1 counters are put on it instead.",Earthbend,G,uncommon,TLE,normal
+Solstice Revelations,{2}{R},Instant,Lesson,,,,"Exile cards from the top of your library until you exile a nonland card. You may cast that card without paying its mana cost if the spell's mana value is less than the number of Mountains you control. If you don't cast that card this way, put it into your hand.
+Flashback {6}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.)",Flashback,R,uncommon,TLA,normal
+South Pole Voyager,{1}{W},Creature,"Human, Scout, Ally",,2,2,"Whenever this creature or another Ally you control enters, you gain 1 life. If this is the second time this ability has resolved this turn, draw a card.",,W,rare,TLA,normal
+Southern Air Temple,{3}{W},Enchantment,Shrine,Legendary,,,"When Southern Air Temple enters, put X +1/+1 counters on each creature you control, where X is the number of Shrines you control.
+Whenever another Shrine you control enters, put a +1/+1 counter on each creature you control.",,W,uncommon,TLA,normal
+Sozin's Comet,{3}{R}{R},Sorcery,,,,,"Each creature you control gains firebending 5 until end of turn. (Whenever it attacks, add {R}{R}{R}{R}{R}. This mana lasts until end of combat.)
+Foretell {2}{R} (During your turn, you may pay {2} and exile this card from your hand face down. Cast it on a later turn for its foretell cost.)",Foretell,R,mythic,TLA,normal
+Sparring Dummy,{1}{G},"Artifact, Creature",Scarecrow,,1,3,"Defender
+{T}: Mill a card. You may put a land card milled this way into your hand. You gain 2 life if a Lesson card is milled this way. (To mill a card, put the top card of your library into your graveyard.)","Mill, Defender",G,uncommon,TLA,normal
+Spirit Water Revival,{1}{U}{U},Sorcery,,,,,"As an additional cost to cast this spell, you may waterbend {6}. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)
+Draw two cards. If this spell's additional cost was paid, instead shuffle your graveyard into your library, draw seven cards, and you have no maximum hand size for the rest of the game.
+Exile Spirit Water Revival.",Waterbend,U,rare,TLA,normal
+Stand United,{1}{G/W},Instant,,,,,"Target creature gets +2/+2 until end of turn. If it's an Ally, scry 2. (Look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.)",Scry,"W, G",common,TLE,normal
+Standstill,{1}{U},Enchantment,,,,,"When a player casts a spell, sacrifice this enchantment. If you do, each of that player's opponents draws three cards.",,U,mythic,TLE,normal
+Storm of Memories,{2}{R}{R}{R},Sorcery,,,,,"Storm (When you cast this spell, copy it for each spell cast before it this turn.)
+Exile an instant or sorcery card with mana value 3 or less from your graveyard at random. You may cast it without paying its mana cost. If that spell would be put into a graveyard, exile it instead.",Storm,R,rare,TLE,normal
+"Suki, Courageous Rescuer",{1}{W}{W},Creature,"Human, Warrior, Ally",Legendary,2,4,"Other creatures you control get +1/+0.
+Whenever another permanent you control leaves the battlefield during your turn, create a 1/1 white Ally creature token. This ability triggers only once each turn.",,W,rare,TLA,normal
+"Suki, Kyoshi Captain",{2}{W},Creature,"Human, Warrior, Ally",Legendary,3,3,"Other Warriors you control get +1/+1.
+{3}{W}: Attacking Warriors you control gain double strike until end of turn.",,W,rare,TLE,normal
+"Suki, Kyoshi Warrior",{2}{G/W}{G/W},Creature,"Human, Warrior, Ally",Legendary,*,4,"Suki's power is equal to the number of creatures you control.
+Whenever Suki attacks, create a 1/1 white Ally creature token that's tapped and attacking.",,"W, G",uncommon,TLA,normal
+Sun Warriors,{2}{R}{W},Creature,"Human, Warrior, Ally",,3,5,"Firebending X, where X is the number of creatures you control. (Whenever this creature attacks, add X {R}. This mana lasts until end of combat.)
+{5}: Create a 1/1 white Ally creature token.",Firebending,"W, R",uncommon,TLA,normal
+Sun-Blessed Peak,,Land,,,,,"This land enters tapped.
+{T}: Add {R} or {W}.
+{4}, {T}, Sacrifice this land: Draw a card.",,,common,TLA,normal
+Sunbaked Canyon,,Land,,,,,"{T}, Pay 1 life: Add {R} or {W}.
+{1}, {T}, Sacrifice this land: Draw a card.",,,mythic,TLE,normal
+Sundial of the Infinite,{2},Artifact,,,,,"{1}, {T}: End the turn. Activate only during your turn. (Exile all spells and abilities from the stack. Discard down to your maximum hand size. Damage wears off, and ""this turn"" and ""until end of turn"" effects end.)",,,mythic,TLE,normal
+Suspicious Bookcase,{2},"Artifact, Creature",Wall,,0,4,"Defender
+{3}, {T}: Target creature can't be blocked this turn.",Defender,,uncommon,TLE,normal
+Swamp,,Land,Swamp,Basic,,,({T}: Add {B}.),,,common,TLA,normal
+Swampbenders,{4}{G}{G},Creature,"Human, Druid, Ally",,*,*,"Swampbenders's power and toughness are each equal to the number of Swamps on the battlefield.
+Lands you control are Swamps in addition to their other types.",,G,rare,TLE,normal
+Swampsnare Trap,{2}{B},Enchantment,Aura,,,,"This spell costs {1} less to cast if it targets a creature with flying.
+Enchant creature
+Enchanted creature gets -5/-3.",Enchant,B,common,TLA,normal
+Swiftfoot Boots,{2},Artifact,Equipment,,,,"Equipped creature has hexproof and haste. (It can't be the target of spells or abilities your opponents control. It can attack and {T} no matter when it came under your control.)
+Equip {1} ({1}: Attach to target creature you control. Equip only as a sorcery.)",Equip,,rare,TLE,normal
+Tale of Katara and Toph,{2}{G},Enchantment,,,,,"Creatures you control have ""Whenever this creature becomes tapped for the first time during each of your turns, put a +1/+1 counter on it.""",,G,rare,TLE,normal
+Tale of Momo,{2}{W},Sorcery,,,,,"This spell costs {2} less to cast if a creature left the battlefield under your control this turn.
+Search your library and/or graveyard for an Ally creature card, reveal it, and put it into your hand. If you search your library this way, shuffle.",,W,rare,TLE,normal
+Tarnished Citadel,,Land,,,,,"{T}: Add {C}.
+{T}: Add one mana of any color. This land deals 3 damage to you.",,,mythic,TLE,normal
+Taunting Challenge,{1}{G}{G},Sorcery,,,,,All creatures able to block target creature this turn do so.,,G,mythic,TLE,normal
+Team Avatar,{2}{W},Enchantment,,,,,"Whenever a creature you control attacks alone, it gets +X/+X until end of turn, where X is the number of creatures you control.
+{2}{W}, Discard this card: It deals damage equal to the number of creatures you control to target creature.",,W,uncommon,TLA,normal
+Tectonic Split,{4}{G}{G},Enchantment,,,,,"As an additional cost to cast this spell, sacrifice half the lands you control, rounded up.
+Hexproof
+Lands you control have ""{T}: Add three mana of any one color.""",Hexproof,G,rare,TLE,normal
+Teferi's Protection,{2}{W},Instant,,,,,"Until your next turn, your life total can't change and you gain protection from everything. All permanents you control phase out. (While they're phased out, they're treated as though they don't exist. They phase in before you untap during your untap step.)
+Exile Teferi's Protection.",,W,mythic,TLE,normal
+"Teo, Spirited Glider",{3}{U},Creature,"Human, Pilot, Ally",Legendary,1,4,"Flying
+Whenever one or more creatures you control with flying attack, draw a card, then discard a card. When you discard a nonland card this way, put a +1/+1 counter on target creature you control.",Flying,U,uncommon,TLA,normal
+That's Rough Buddy,{1}{W},Instant,Lesson,,,,"Put a +1/+1 counter on target creature. Put two +1/+1 counters on that creature instead if a creature left the battlefield under your control this turn.
+Draw a card.",,W,uncommon,TLE,normal
+The Art of Tea,{1}{G},Instant,Lesson,,,,"Put a +1/+1 counter on up to one target creature you control. Create a Food token. (It's an artifact with ""{2}, {T}, Sacrifice this token: You gain 3 life."")",Food,G,common,TLE,normal
+The Blue Spirit,{3}{U},Creature,"Human, Rogue, Ally",Legendary,2,4,"You may cast the first creature spell you cast each turn as though it had flash.
+Whenever a nontoken creature you control enters during combat, draw a card.",,U,rare,TLE,normal
+"The Boulder, Ready to Rumble",{3}{G},Creature,"Human, Warrior, Performer",Legendary,4,4,"Whenever The Boulder attacks, earthbend X, where X is the number of creatures you control with power 4 or greater. (Target land you control becomes a 0/0 creature with haste that's still a land. Put X +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)",Earthbend,G,uncommon,TLA,normal
+The Cabbage Merchant,{2}{G},Creature,"Human, Citizen",Legendary,2,2,"Whenever an opponent casts a noncreature spell, create a Food token. (It's an artifact with ""{2}, {T}, Sacrifice this token: You gain 3 life."")
+Whenever a creature deals combat damage to you, sacrifice a Food token.
+Tap two untapped Foods you control: Add one mana of any color.",Food,G,rare,TLE,normal
+The Cave of Two Lovers,{3}{R},Enchantment,Saga,,,,"(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)
+I — Create two 1/1 white Ally creature tokens.
+II — Search your library for a Mountain or Cave card, reveal it, put it into your hand, then shuffle.
+III — Earthbend 3. (Target land you control becomes a 0/0 creature with haste that's still a land. Put three +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)",Earthbend,R,uncommon,TLA,saga
+"The Duke, Rebel Sentry",{W},Creature,"Human, Rebel, Ally",Legendary,0,1,"The Duke enters with a +1/+1 counter on him.
+{T}, Remove a counter from The Duke: Put a +1/+1 counter on another target creature you control. It gains hexproof until end of turn. (It can't be the target of spells or abilities your opponents control.)",,W,uncommon,TLE,normal
+The Earth King,{3}{G},Creature,"Human, Noble, Ally",Legendary,2,2,"When The Earth King enters, create a 4/4 green Bear creature token.
+Whenever one or more creatures you control with power 4 or greater attack, search your library for up to that many basic land cards, put them onto the battlefield tapped, then shuffle.",,G,rare,TLA,normal
+The Fire Nation Drill,{2}{B}{B},Artifact,Vehicle,Legendary,6,3,"Trample
+When The Fire Nation Drill enters, you may tap it. When you do, destroy target creature with power 4 or less.
+{1}: Permanents your opponents control lose hexproof and indestructible until end of turn.
+Crew 2","Crew, Trample",B,rare,TLA,normal
+The Great Henge,{7}{G}{G},Artifact,,Legendary,,,"This spell costs {X} less to cast, where X is the greatest power among creatures you control.
+{T}: Add {G}{G}. You gain 2 life.
+Whenever a nontoken creature you control enters, put a +1/+1 counter on it and draw a card.",,G,mythic,TLE,normal
+The Last Agni Kai,{1}{R},Instant,,,,,"Target creature you control fights target creature an opponent controls. If the creature the opponent controls is dealt excess damage this way, add that much {R}.
+Until end of turn, you don't lose unspent red mana as steps and phases end.",Fight,R,rare,TLA,normal
+The Legend of Kuruk // Avatar Kuruk,{2}{U}{U},Enchantment,Saga,,,,"(As this Saga enters and after your draw step, add a lore counter.)
+I, II — Scry 2, then draw a card.
+III — Exile this Saga, then return it to the battlefield transformed under your control.","Transform, Exhaust, Waterbend, Scry",U,mythic,TLA,transform
+The Legend of Kyoshi // Avatar Kyoshi,{4}{G}{G},Enchantment,Saga,,,,"(As this Saga enters and after your draw step, add a lore counter.)
+I — Draw cards equal to the greatest power among creatures you control.
+II — Earthbend X, where X is the number of cards in your hand. That land becomes an Island in addition to its other types.
+III — Exile this Saga, then return it to the battlefield transformed under your control.","Transform, Earthbend",G,mythic,TLA,transform
+The Legend of Roku // Avatar Roku,{2}{R}{R},Enchantment,Saga,,,,"(As this Saga enters and after your draw step, add a lore counter.)
+I — Exile the top three cards of your library. Until the end of your next turn, you may play those cards.
+II — Add one mana of any color.
+III — Exile this Saga, then return it to the battlefield transformed under your control.","Transform, Firebending",R,mythic,TLA,transform
+The Legend of Yangchen // Avatar Yangchen,{3}{W}{W},Enchantment,Saga,,,,"(As this Saga enters and after your draw step, add a lore counter.)
+I — Starting with you, each player chooses up to one permanent with mana value 3 or greater from among permanents your opponents control. Exile those permanents.
+II — You may have target opponent draw three cards. If you do, draw three cards.
+III — Exile this Saga, then return it to the battlefield transformed under your control.","Flying, Airbend, Transform",W,mythic,TLA,transform
+The Lion-Turtle,{1}{G}{U},Creature,"Elder, Cat, Turtle",Legendary,3,6,"Vigilance, reach
+When The Lion-Turtle enters, you gain 3 life.
+The Lion-Turtle can't attack or block unless there are three or more Lesson cards in your graveyard.
+{T}: Add one mana of any color.","Reach, Vigilance","U, G",rare,TLA,normal
+"The Mechanist, Aerial Artisan",{2}{U},Creature,"Human, Artificer, Ally",Legendary,1,3,"Whenever you cast a noncreature spell, create a Clue token. (It's an artifact with ""{2}, Sacrifice this token: Draw a card."")
+{T}: Until end of turn, target artifact token you control becomes a 3/1 Construct artifact creature with flying.",,U,rare,TLA,normal
+The Rise of Sozin // Fire Lord Sozin,{4}{B}{B},Enchantment,Saga,,,,"(As this Saga enters and after your draw step, add a lore counter.)
+I — Destroy all creatures.
+II — Choose a card name. Search target opponent's graveyard, hand, and library for up to four cards with that name and exile them. Then that player shuffles.
+III — Exile this Saga, then return it to the battlefield transformed under your control.","Transform, Firebending, Menace",B,mythic,TLA,transform
+The Spirit Oasis,{2}{U},Enchantment,Shrine,Legendary,,,"When The Spirit Oasis enters, draw a card for each Shrine you control.
+Whenever another Shrine you control enters, draw a card.",,U,uncommon,TLA,normal
+The Terror of Serpent's Pass,{5}{U}{U},Creature,Serpent,Legendary,8,8,Hexproof (This creature can't be the target of spells or abilities your opponents control.),Hexproof,U,rare,TLE,normal
+The Unagi of Kyoshi Island,{3}{U}{U},Creature,Serpent,Legendary,5,5,"Flash
+Ward—Waterbend {4}. (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {4}. They can tap their artifacts and creatures to help. Each one pays for {1}.)
+Whenever an opponent draws their second card each turn, you draw two cards.","Ward, Flash, Waterbend",U,rare,TLA,normal
+The Walls of Ba Sing Se,{8},"Artifact, Creature",Wall,Legendary,0,30,"Defender
+Other permanents you control have indestructible.",Defender,,mythic,TLA,normal
+Three Dreams,{4}{W},Sorcery,,,,,"Search your library for up to three Aura cards with different names, reveal them, put them into your hand, then shuffle.",,W,mythic,TLE,normal
+Thriving Bluff,,Land,,,,,"This land enters tapped. As it enters, choose a color other than red.
+{T}: Add {R} or one mana of the chosen color.",,,common,TLE,normal
+Thriving Grove,,Land,,,,,"This land enters tapped. As it enters, choose a color other than green.
+{T}: Add {G} or one mana of the chosen color.",,,common,TLE,normal
+Thriving Heath,,Land,,,,,"This land enters tapped. As it enters, choose a color other than white.
+{T}: Add {W} or one mana of the chosen color.",,,common,TLE,normal
+Thriving Isle,,Land,,,,,"This land enters tapped. As it enters, choose a color other than blue.
+{T}: Add {U} or one mana of the chosen color.",,,common,TLE,normal
+Thriving Moor,,Land,,,,,"This land enters tapped. As it enters, choose a color other than black.
+{T}: Add {B} or one mana of the chosen color.",,,common,TLE,normal
+Tiger-Dillo,{1}{R},Creature,"Cat, Armadillo",,4,3,This creature can't attack or block unless you control another creature with power 4 or greater.,,R,uncommon,TLA,normal
+Tiger-Seal,{U},Creature,"Cat, Seal",,3,3,"Vigilance
+At the beginning of your upkeep, tap this creature.
+Whenever you draw your second card each turn, untap this creature.",Vigilance,U,rare,TLA,normal
+Tolls of War,{W}{B},Enchantment,,,,,"When this enchantment enters, create a Clue token. (It's an artifact with ""{2}, Sacrifice this token: Draw a card."")
+Whenever you sacrifice a permanent during your turn, create a 1/1 white Ally creature token. This ability triggers only once each turn.",,"W, B",uncommon,TLA,normal
+"Toph, Earthbending Master",{3}{G},Creature,"Human, Warrior, Ally",Legendary,2,4,"Landfall — Whenever a land you control enters, you get an experience counter.
+Whenever you attack, earthbend X, where X is the number of experience counters you have. (Target land you control becomes a 0/0 creature with haste that's still a land. Put X +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)","Earthbend, Landfall",G,mythic,TLE,normal
+"Toph, Greatest Earthbender",{2}{R}{G},Creature,"Human, Warrior, Ally",Legendary,3,3,"When Toph enters, earthbend X, where X is the amount of mana spent to cast her.
+Land creatures you control have double strike.",Earthbend,"R, G",rare,TLE,normal
+"Toph, Hardheaded Teacher",{2}{R}{G},Creature,"Human, Warrior, Ally",Legendary,3,4,"When Toph enters, you may discard a card. If you do, return target instant or sorcery card from your graveyard to your hand.
+Whenever you cast a spell, earthbend 1. If that spell is a Lesson, put an additional +1/+1 counter on that land. (Target land you control becomes a 0/0 creature with haste that's still a land. Put a +1/+1 counter on it. When it dies or is exiled, return it to the battlefield tapped.)",Earthbend,"R, G",rare,TLA,normal
+"Toph, the Blind Bandit",{2}{G},Creature,"Human, Warrior, Ally",Legendary,*,3,"When Toph enters, earthbend 2. (Target land you control becomes a 0/0 creature with haste that's still a land. Put two +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)
+Toph's power is equal to the number of +1/+1 counters on lands you control.",Earthbend,G,uncommon,TLA,normal
+"Toph, the First Metalbender",{1}{R}{G}{W},Creature,"Human, Warrior, Ally",Legendary,3,3,"Nontoken artifacts you control are lands in addition to their other types. (They don't gain the ability to {T} for mana.)
+At the beginning of your end step, earthbend 2. (Target land you control becomes a 0/0 creature with haste that's still a land. Put two +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)",Earthbend,"W, R, G",rare,TLA,normal
+Toucan-Puffin,{2}{W},Creature,Bird,,2,2,"Flying
+When this creature enters, target creature you control gets +2/+0 until end of turn.",Flying,W,common,TLE,normal
+Training Grounds,{U},Enchantment,,,,,Activated abilities of creatures you control cost {2} less to activate. This effect can't reduce the mana in that cost to less than one mana.,,U,mythic,TLE,normal
+Treetop Freedom Fighters,{2}{R},Creature,"Human, Rebel, Ally",,2,1,"Haste
+When this creature enters, create a 1/1 white Ally creature token.",Haste,R,common,TLA,normal
+Treetop Village,,Land,,,,,"This land enters tapped.
+{T}: Add {G}.
+{1}{G}: This land becomes a 3/3 green Ape creature with trample until end of turn. It's still a land. (It can deal excess combat damage to the player or planeswalker it's attacking.)",,,mythic,TLE,normal
+True Ancestry,{1}{G},Sorcery,Lesson,,,,"Return up to one target permanent card from your graveyard to your hand.
+Create a Clue token. (It's an artifact with ""{2}, Sacrifice this token: Draw a card."")",,G,uncommon,TLA,normal
+Trusty Boomerang,{1},Artifact,Equipment,,,,"Equipped creature has ""{1}, {T}: Tap target creature. Return Trusty Boomerang to its owner's hand.""
+Equip {1} ({1}: Attach to target creature you control. Equip only as a sorcery.)",Equip,,uncommon,TLA,normal
+"Tui and La, Moon and Ocean",{3}{U},Creature,"Fish, Spirit",Legendary,3,3,"Whenever Tui and La become tapped, draw a card.
+Whenever Tui and La become untapped, put a +1/+1 counter on them.",,U,rare,TLE,normal
+Tundra Tank,{2}{B},Artifact,Vehicle,,4,4,"Firebending 1 (Whenever this creature attacks, add {R}. This mana lasts until end of combat.)
+When this Vehicle enters, target creature you control gains indestructible until end of turn.
+Crew 1 (Tap any number of creatures you control with total power 1 or more: This Vehicle becomes an artifact creature until end of turn.)","Crew, Firebending",B,uncommon,TLA,normal
+Tundra Wall,{1}{W},Creature,Wall,,0,4,Defender (This creature can't attack.),Defender,W,common,TLE,normal
+Turtle-Duck,{G},Creature,"Turtle, Bird",,0,4,"{3}: Until end of turn, this creature has base power 4 and gains trample.",,G,common,TLA,normal
+Turtle-Seals,{3}{U},Creature,"Turtle, Seal",,2,4,Vigilance (Attacking doesn't cause this creature to tap.),Vigilance,U,common,TLE,normal
+Twin Blades,{2}{R},Artifact,Equipment,,,,"Flash
+When this Equipment enters, attach it to target creature you control. That creature gains double strike until end of turn.
+Equipped creature gets +1/+1.
+Equip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)","Equip, Flash",R,uncommon,TLA,normal
+"Ty Lee, Artful Acrobat",{2}{R},Creature,"Human, Performer",Legendary,3,2,"Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)
+Whenever Ty Lee attacks, you may pay {1}. When you do, target creature can't block this turn.",Prowess,R,uncommon,TLA,normal
+"Ty Lee, Chi Blocker",{2}{U},Creature,"Human, Performer, Ally",Legendary,2,1,"Flash
+Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)
+When Ty Lee enters, tap up to one target creature. It doesn't untap during its controller's untap step for as long as you control Ty Lee.","Prowess, Flash",U,rare,TLA,normal
+Unagi's Spray,{U},Instant,,,,,"Target creature gets -4/-0 until end of turn. If you control a Fish, Octopus, Otter, Seal, Serpent, or Whale, draw a card.",,U,common,TLE,normal
+Uncle Iroh,{1}{R/G}{R/G},Creature,"Human, Noble, Ally",Legendary,4,2,"Firebending 1 (Whenever this creature attacks, add {R}. This mana lasts until end of combat.)
+Lesson spells you cast cost {1} less to cast.",Firebending,"R, G",uncommon,TLA,normal
+Uncle's Musings,{2}{G}{G},Sorcery,,,,,"Converge — Return up to X permanent cards from your graveyard to your hand, where X is the number of colors of mana spent to cast this spell.
+Exile Uncle's Musings.",Converge,G,rare,TLE,normal
+United Front,{X}{W}{W},Sorcery,,,,,"Create X 1/1 white Ally creature tokens, then put a +1/+1 counter on each creature you control.",,W,mythic,TLA,normal
+Unlucky Cabbage Merchant,{1}{G},Creature,"Human, Citizen",,2,2,"When this creature enters, create a Food token. (It's an artifact with ""{2}, {T}, Sacrifice this token: You gain 3 life."")
+Whenever you sacrifice a Food, you may search your library for a basic land card and put it onto the battlefield tapped. If you search your library this way, put this creature on the bottom of its owner's library, then shuffle.",Food,G,uncommon,TLA,normal
+"Valakut, the Molten Pinnacle",,Land,,,,,"This land enters tapped.
+Whenever a Mountain you control enters, if you control at least five other Mountains, you may have this land deal 3 damage to any target.
+{T}: Add {R}.",,,mythic,TLE,normal
+Valorous Stance,{1}{W},Instant,,,,,"Choose one —
+• Target creature gains indestructible until end of turn. (Damage and effects that say ""destroy"" don't destroy it.)
+• Destroy target creature with toughness 4 or greater.",,W,uncommon,TLE,normal
+Vengeful Villagers,{3}{W},Creature,"Human, Citizen",,3,3,"Whenever this creature attacks, choose target creature an opponent controls. Tap it, then you may sacrifice an artifact or creature. If you do, put a stun counter on the chosen creature. (If a permanent with a stun counter would become untapped, remove one from it instead.)",,W,uncommon,TLA,normal
+Vindictive Warden,{2}{B/R},Creature,"Human, Soldier",,2,3,"Menace (This creature can't be blocked except by two or more creatures.)
+Firebending 1 (Whenever this creature attacks, add {R}. This mana lasts until end of combat.)
+{3}: This creature deals 1 damage to each opponent.","Firebending, Menace","B, R",common,TLA,normal
+Visions of Beyond,{U},Instant,,,,,"Draw a card. If a graveyard has twenty or more cards in it, draw three cards instead.",,U,mythic,TLE,normal
+Volcanic Torrent,{4}{R},Sorcery,,,,,"Cascade (When you cast this spell, exile cards from the top of your library until you exile a nonland card that costs less. You may cast it without paying its mana cost. Put the exiled cards on the bottom in a random order.)
+Volcanic Torrent deals X damage to each creature and planeswalker your opponents control, where X is the number of spells you've cast this turn.",Cascade,R,mythic,TLE,normal
+Walltop Sentries,{2}{G},Creature,"Human, Soldier, Ally",,2,3,"Reach, deathtouch
+When this creature dies, if there's a Lesson card in your graveyard, you gain 2 life.","Reach, Deathtouch",G,common,TLA,normal
+"Wan Shi Tong, All-Knowing",{3}{U}{U},Creature,"Bird, Spirit",Legendary,4,4,"Flying
+When Wan Shi Tong enters, target nonland permanent's owner puts it into their library second from the top or on the bottom.
+Whenever one or more cards are put into a library from anywhere, create two 1/1 colorless Spirit creature tokens with ""This token can't block or be blocked by non-Spirit creatures.""",Flying,U,mythic,TLE,normal
+"Wan Shi Tong, Librarian",{X}{U}{U},Creature,"Bird, Spirit",Legendary,1,1,"Flash
+Flying, vigilance
+When Wan Shi Tong enters, put X +1/+1 counters on him. Then draw half X cards, rounded down.
+Whenever an opponent searches their library, put a +1/+1 counter on Wan Shi Tong and draw a card.","Flying, Vigilance, Flash",U,mythic,TLA,normal
+Wandering Musicians,{3}{R/W},Creature,"Human, Bard, Ally",,2,5,"Whenever this creature attacks, creatures you control get +1/+0 until end of turn.",,"W, R",common,TLA,normal
+War Balloon,{2}{R},Artifact,Vehicle,,4,3,"Flying
+{1}: Put a fire counter on this Vehicle.
+As long as this Vehicle has three or more fire counters on it, it's an artifact creature.
+Crew 3 (Tap any number of creatures you control with total power 3 or more: This Vehicle becomes an artifact creature until end of turn.)","Flying, Crew",R,uncommon,TLA,normal
+Warship Scout,{R},Creature,"Human, Scout",,2,1,,,R,common,TLE,normal
+Warstorm Surge,{5}{R},Enchantment,,,,,"Whenever a creature you control enters, it deals damage equal to its power to any target.",,R,mythic,TLE,normal
+Wartime Protestors,{3}{R},Creature,"Human, Rebel, Ally",,4,4,"Haste
+Whenever another Ally you control enters, put a +1/+1 counter on that creature and it gains haste until end of turn.",Haste,R,rare,TLA,normal
+Water Tribe Captain,{2}{W},Creature,"Human, Soldier, Ally",,3,3,{5}: Creatures you control get +1/+1 until end of turn.,,W,common,TLA,normal
+Water Tribe Rallier,{1}{W},Creature,"Human, Soldier, Ally",,2,2,"Waterbend {5}: Look at the top four cards of your library. You may reveal a creature card with power 3 or less from among them and put it into your hand. Put the rest on the bottom of your library in a random order. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)",Waterbend,W,uncommon,TLA,normal
+Water Whip,{U}{U},Sorcery,Lesson,,,,"As an additional cost to cast this spell, waterbend {5}. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)
+Return up to two target creatures to their owners' hands. Draw two cards.",Waterbend,U,rare,TLE,normal
+Waterbender Ascension,{1}{U},Enchantment,,,,,"Whenever a creature you control deals combat damage to a player, put a quest counter on this enchantment. Then if it has four or more quest counters on it, draw a card.
+Waterbend {4}: Target creature can't be blocked this turn. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)",Waterbend,U,rare,TLA,normal
+Waterbender's Restoration,{U}{U},Instant,Lesson,,,,"As an additional cost to cast this spell, waterbend {X}. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)
+Exile X target creatures you control. Return those cards to the battlefield under their owner's control at the beginning of the next end step.",Waterbend,U,rare,TLE,normal
+Waterbending Lesson,{3}{U},Sorcery,Lesson,,,,"Draw three cards. Then discard a card unless you waterbend {2}. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)",Waterbend,U,common,TLA,normal
+Waterbending Scroll,{1}{U},Artifact,,,,,"{6}, {T}: Draw a card. This ability costs {1} less to activate for each Island you control.",,U,uncommon,TLA,normal
+Watery Grasp,{U},Enchantment,Aura,,,,"Enchant creature
+Enchanted creature doesn't untap during its controller's untap step.
+Waterbend {5}: Enchanted creature's owner shuffles it into their library. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)","Enchant, Waterbend",U,common,TLA,normal
+Whirlwind Technique,{4}{U}{U},Instant,Lesson,,,,"Target player draws two cards, then discards a card.
+Airbend up to two target creatures. (To airbend a creature, exile it. While it's exiled, its owner may cast it for {2} rather than its mana cost.)",Airbend,U,uncommon,TLE,normal
+White Lotus Hideout,,Land,,,,,"{T}: Add {C}.
+{T}: Add one mana of any color. Spend this mana only to cast a Lesson or Shrine spell.
+{1}, {T}: Add one mana of any color.",,,uncommon,TLA,normal
+White Lotus Reinforcements,{1}{G}{W},Creature,"Human, Soldier, Ally",,2,3,"Vigilance
+Other Allies you control get +1/+1.",Vigilance,"W, G",uncommon,TLA,normal
+White Lotus Tile,{4},Artifact,,,,,"This artifact enters tapped.
+{T}: Add X mana of any one color, where X is the greatest number of creatures you control that have a creature type in common.",,,mythic,TLA,normal
+Wolf Cove Villager,{W},Creature,"Human, Peasant",,2,2,This creature enters tapped.,,W,common,TLE,normal
+Wolfbat,{2}{B},Creature,"Wolf, Bat",,2,2,"Flying
+Whenever you draw your second card each turn, you may pay {B}. If you do, return this card from your graveyard to the battlefield with a finality counter on it. (If a creature with a finality counter on it would die, exile it instead.)",Flying,B,uncommon,TLA,normal
+Worldly Tutor,{G},Instant,,,,,"Search your library for a creature card, reveal it, then shuffle and put the card on top.",,G,rare,TLE,normal
+Yip Yip!,{W},Instant,Lesson,,,,"Target creature you control gets +2/+2 until end of turn. If that creature is an Ally, it also gains flying until end of turn.",,W,common,TLA,normal
+"Yue, the Moon Spirit",{3}{U},Creature,"Spirit, Ally",Legendary,3,3,"Flying, vigilance
+Waterbend {5}, {T}: You may cast a noncreature spell from your hand without paying its mana cost. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)","Flying, Vigilance, Waterbend",U,rare,TLA,normal
+Yuyan Archers,{1}{R},Creature,"Human, Archer",,3,1,"Reach
+When this creature enters, you may discard a card. If you do, draw a card.",Reach,R,common,TLA,normal
+"Zhao, Ruthless Admiral",{2}{B/R}{B/R},Creature,"Human, Soldier",Legendary,3,4,"Firebending 2 (Whenever this creature attacks, add {R}{R}. This mana lasts until end of combat.)
+Whenever you sacrifice another permanent, creatures you control get +1/+0 until end of turn.",Firebending,"B, R",uncommon,TLA,normal
+"Zhao, the Moon Slayer",{1}{R},Creature,"Human, Soldier",Legendary,2,2,"Menace
+Nonbasic lands enter tapped.
+{7}: Put a conqueror counter on Zhao.
+As long as Zhao has a conqueror counter on him, nonbasic lands are Mountains. (They lose all other land types and abilities and have ""{T}: Add {R}."")",Menace,R,rare,TLA,normal
+"Zhao, the Seething Flame",{4}{R},Creature,"Human, Soldier",Legendary,5,5,Menace (This creature can't be blocked except by two or more creatures.),Menace,R,uncommon,TLE,normal
+"Zuko, Avatar Hunter",{3}{R}{R},Creature,"Human, Noble",Legendary,4,5,"Reach (This creature can block creatures with flying.)
+Whenever you cast a red spell, create a 2/2 red Soldier creature token.",Reach,R,rare,TLE,normal
+"Zuko, Conflicted",{B}{R},Creature,"Human, Rogue",Legendary,2,3,"At the beginning of your first main phase, choose one that hasn't been chosen and you lose 2 life —
+• Draw a card.
+• Put a +1/+1 counter on Zuko.
+• Add {R}.
+• Exile Zuko, then return him to the battlefield under an opponent's control.",,"B, R",rare,TLA,normal
+"Zuko, Exiled Prince",{3}{R},Creature,"Human, Noble",Legendary,4,3,"Firebending 3 (Whenever this creature attacks, add {R}{R}{R}. This mana lasts until end of combat.)
+{3}: Exile the top card of your library. You may play that card this turn.",Firebending,R,uncommon,TLA,normal
+"Zuko, Firebending Master",{1}{R},Creature,"Human, Noble, Ally",Legendary,2,2,"First strike
+Firebending X, where X is the number of experience counters you have. (Whenever this creature attacks, add X {R}. This mana lasts until end of combat.)
+Whenever you cast a spell during combat, you get an experience counter.","First strike, Firebending",R,mythic,TLE,normal
+"Zuko, Seeking Honor",{2}{B/R},Creature,"Human, Noble",Legendary,2,2,"Firebending 1 (Whenever this creature attacks, add {R}. This mana lasts until end of combat.)
+Whenever you cast a noncreature spell, Zuko gains first strike until end of turn.
+Whenever Zuko deals combat damage to a player, put a +1/+1 counter on him.",Firebending,"B, R",uncommon,TLE,normal
+Zuko's Conviction,{B},Instant,,,,,"Kicker {4} (You may pay an additional {4} as you cast this spell.)
+Return target creature card from your graveyard to your hand. If this spell was kicked, instead put that card onto the battlefield tapped.",Kicker,B,uncommon,TLA,normal
+Zuko's Exile,{5},Instant,Lesson,,,,"Exile target artifact, creature, or enchantment. Its controller creates a Clue token. (It's an artifact with ""{2}, Sacrifice this token: Draw a card."")",,,common,TLA,normal
+Zuko's Offense,{R},Sorcery,,,,,Zuko's Offense deals 2 damage to any target.,,R,common,TLE,normal

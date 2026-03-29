@@ -1,5 +1,5 @@
 import React from 'react';
-import { CardType } from '../../engine/types';
+import { CardType, emptyManaCost } from '../../engine/types';
 import { useCardArt } from '../hooks/useCardArt';
 import type { PreviewCardState } from '../types';
 import { ManaCostView } from './ManaCostView';
@@ -57,7 +57,7 @@ export const CardPreview: React.FC<CardPreviewProps> = ({ preview }) => {
             Controlled by {preview.controllerName} · Owned by {preview.ownerName}
           </div>
         </div>
-        <ManaCostView cost={preview.card.definition.spellCost.mana} />
+        <ManaCostView cost={preview.card.definition.cost?.mana ?? emptyManaCost()} />
       </div>
 
       <div className="arena-preview__art">
