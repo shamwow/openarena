@@ -44,6 +44,7 @@ export interface GameEngine {
   searchLibrary(player: PlayerId, filter: CardFilter, destination: Zone, count: number): Promise<CardInstance[]>;
   searchLibraryWithOptions(options: SearchLibraryOptions): Promise<CardInstance[]>;
   scry(player: PlayerId, count: number): Promise<void>;
+  surveil(player: PlayerId, count: number): Promise<void>;
   mill(player: PlayerId, count: number): void;
   fight(creatureAId: ObjectId, creatureBId: ObjectId): void;
   returnToHand(objectId: ObjectId): void;

@@ -39,6 +39,7 @@ export const GameEventType = {
   TOKEN_CREATED: 'TOKEN_CREATED',
   SEARCHED_LIBRARY: 'SEARCHED_LIBRARY',
   SCRY: 'SCRY',
+  SURVEIL: 'SURVEIL',
   MILLED: 'MILLED',
 } as const;
 export type GameEventType = (typeof GameEventType)[keyof typeof GameEventType];
@@ -240,6 +241,12 @@ export interface ScryEvent extends BaseGameEvent {
   count: number;
 }
 
+export interface SurveilEvent extends BaseGameEvent {
+  type: typeof GameEventType.SURVEIL;
+  player: PlayerId;
+  count: number;
+}
+
 export interface MilledEvent extends BaseGameEvent {
   type: typeof GameEventType.MILLED;
   player: PlayerId;
@@ -277,4 +284,5 @@ export type GameEvent =
   | TokenCreatedEvent
   | SearchedLibraryEvent
   | ScryEvent
+  | SurveilEvent
   | MilledEvent;

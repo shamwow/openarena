@@ -1364,6 +1364,53 @@ export class GameEngineImpl implements IGameEngine {
     this.eventBus.emit(event);
   }
 
+  async surveil(player: PlayerId, count: number): Promise<void> {
+    const topCards = this.zoneManager.peekTop(this.state, player, count);
+    if (topCards.length === 0) return;
+
+    const choices = this.createChoiceHelper(player);
+
+    const toGraveyard = await choices.chooseUpToN(
+      `Surveil ${count}: choose cards to put into your graveyard`,
+      topCards,
+      topCards.length,
+      (card) => card.definition.name,
+    );
+
+    const toTop = topCards.filter(c => !toGraveyard.includes(c));
+
+    let orderedTop = toTop;
+    if (toTop.length > 1) {
+      orderedTop = await choices.orderObjects(
+        'Order cards for the top of your library (first = top)',
+        toTop,
+        (card) => card.definition.name,
+      );
+    }
+
+    for (const card of toGraveyard) {
+      this.zoneManager.moveCard(this.state, card.objectId, 'GRAVEYARD', player);
+    }
+
+    const library = this.state.zones[player].LIBRARY;
+    for (const card of toTop) {
+      const idx = library.indexOf(card);
+      if (idx >= 0) library.splice(idx, 1);
+    }
+    for (let i = orderedTop.length - 1; i >= 0; i--) {
+      library.push(orderedTop[i]);
+    }
+
+    const event: GameEvent = {
+      type: GameEventType.SURVEIL,
+      timestamp: getNextTimestamp(this.state),
+      player,
+      count,
+    };
+    this.state.eventLog.push(event);
+    this.eventBus.emit(event);
+  }
+
   mill(player: PlayerId, count: number): void {
     const topCards = this.zoneManager.peekTop(this.state, player, count);
     const milledIds: ObjectId[] = [];
